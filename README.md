@@ -4,13 +4,20 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 18A pushes the PG OS V2.11 baseline to GitHub:
+
+- `origin` points to `https://github.com/liwenbo-netizen/pg-os-operation-system.git`
+- Remote branch `master` tracks the Phase 17C baseline
+- Baseline commit `2f8941b` is backed up on GitHub
+- Secret hygiene still passes after remote setup
+
+Earlier completed phases:
+
 Phase 17C creates the first Git baseline commit for the UAT-ready PG OS V2.11 system:
 
 - Baseline commit is prepared after secret hygiene and staged-file review
 - `.env.local` and generated artifacts remain ignored
 - Commit message: `baseline: PG OS V2.11 UAT-ready operation system`
-
-Earlier completed phases:
 
 Phase 17B captures the UAT-ready release snapshot and Git baseline readiness:
 
@@ -218,6 +225,10 @@ Release snapshot and baseline review:
 Git baseline commit:
 
 [Phase 17C Git Baseline Commit Report](docs/development-package/phase-17C-git-baseline-commit.md)
+
+GitHub remote baseline push:
+
+[Phase 18A GitHub Remote Push Report](docs/development-package/phase-18A-github-remote-push.md)
 
 ## Development Rules
 
