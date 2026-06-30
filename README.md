@@ -4,14 +4,21 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 18C prepares the app for Vercel deployment:
+
+- `vercel.json` configures Vite build output and SPA route rewrites
+- `npm run validate:phase18c` runs the deployment-prep local UAT gate
+- Production env values should be configured in Vercel project settings
+- Service-role and UAT password secrets remain local/operator-only
+
+Earlier completed phases:
+
 Phase 18B adds GitHub Actions CI for the local UAT gate:
 
 - `.github/workflows/ci.yml` runs on push and pull request to `master`
 - CI uses Node.js 22, `npm ci`, and `npm run validate:phase18b`
 - CI covers secret hygiene, tests, type check, build, and domain/schema alignment
 - Live Supabase RLS and write probes remain manual UAT/release gates
-
-Earlier completed phases:
 
 Phase 18A pushes the PG OS V2.11 baseline to GitHub:
 
@@ -185,6 +192,7 @@ npm run validate:phase16b
 npm run validate:phase17a
 npm run validate:phase17b
 npm run validate:phase18b
+npm run validate:phase18c
 npm run validate:uat:local
 ```
 
@@ -241,6 +249,10 @@ GitHub remote baseline push:
 GitHub Actions CI local gate:
 
 [Phase 18B GitHub Actions CI Report](docs/development-package/phase-18B-github-actions-ci-local-gate.md)
+
+Deployment prep:
+
+[Phase 18C Deployment Prep Report](docs/development-package/phase-18C-deployment-prep.md)
 
 ## Development Rules
 
