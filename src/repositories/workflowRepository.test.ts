@@ -1,0 +1,417 @@
+import { describe, expect, it } from "vitest";
+import { LocalWorkflowRepository } from "./localWorkflowRepository";
+import { SupabaseWorkflowRepository, type SupabaseLike } from "./supabaseWorkflowRepository";
+import { createFixtureWorkflowSnapshot } from "./workflowRepository";
+
+type Row = Record<string, unknown>;
+
+class FakeSupabase implements SupabaseLike {
+  readonly writes: Record<string, Row[]> = {};
+
+  constructor(
+    private readonly tables: Record<string, Row[]> = {},
+    private readonly failingTables = new Set<string>()
+  ) {}
+
+  from(table: string) {
+    return {
+      select: async () => {
+        if (this.failingTables.has(table)) {
+          return { data: null, error: { message: `${table} blocked` } };
+        }
+
+        return { data: this.tables[table] ?? [], error: null };
+      },
+      upsert: async (rows: Row[]) => {
+        this.writes[table] = rows;
+        return { data: rows, error: null };
+      }
+    };
+  }
+}
+
+function uuid(index: number) {
+  return `${String(index).padStart(8, "0")}-0000-4000-8000-${String(index).padStart(12, "0")}`;
+}
+
+describe("workflow repositories", () => {
+  it("loads a fixture snapshot without requiring Supabase", async () => {
+    const repository = new LocalWorkflowRepository();
+    const result = await repository.loadSnapshot();
+
+    expect(result.health.mode).toBe("fixture");
+    expect(result.snapshot.mediaState.publishers.length).toBeGreaterThan(0);
+    expect(result.snapshot.salesState.proposals.length).toBeGreaterThan(0);
+    expect(result.snapshot.workbenchState.okrObjectives.length).toBeGreaterThan(0);
+  });
+
+  it("maps Supabase tables into the Phase 4-10 workflow snapshot", async () => {
+    const publisherId = uuid(1);
+    const advertiserId = uuid(2);
+    const opportunityId = uuid(3);
+    const proposalId = uuid(4);
+    const selectionId = uuid(5);
+    const campaignId = uuid(6);
+    const allocationId = uuid(7);
+    const diagnosticCaseId = uuid(8);
+    const evidenceId = uuid(9);
+    const settlementId = uuid(10);
+    const contractId = uuid(11);
+    const sopId = uuid(12);
+    const workItemId = uuid(13);
+    const objectiveId = uuid(14);
+    const keyResultId = uuid(15);
+
+    const fakeSupabase = new FakeSupabase({
+      publishers: [
+        {
+          id: publisherId,
+          name: "DB Publisher",
+          region: "CN",
+          media_type: "CTV",
+          integration_type: "VAST",
+          technical_live_status: "technical_live_passed",
+          commercial_test_status: "test_passed",
+          sales_scale_status: "scale_ready",
+          risk_level: "medium",
+          daily_requests: 1000
+        }
+      ],
+      commercial_tests: [
+        {
+          id: uuid(16),
+          publisher_id: publisherId,
+          test_name: "DB test",
+          status: "test_passed",
+          target_budget: "1200",
+          metrics: { spend: 1100, fill_rate: 0.61, clear_rate: 0.72, ivt_rate: 0.01 }
+        }
+      ],
+      advertisers: [{ id: advertiserId, name: "DB Advertiser", industry: "Fitness", region: "CN", status: "active" }],
+      opportunities: [
+        {
+          id: opportunityId,
+          advertiser_id: advertiserId,
+          name: "DB Opportunity",
+          stage: "proposal_drafting",
+          expected_budget: 5000,
+          pain_points: ["scale"]
+        }
+      ],
+      proposals: [{ id: proposalId, opportunity_id: opportunityId, name: "DB Proposal", status: "internal_review", budget: 5000 }],
+      proposal_media_selections: [
+        {
+          id: selectionId,
+          proposal_id: proposalId,
+          publisher_id: publisherId,
+          guard_status: "allowed",
+          planned_budget: 2000
+        }
+      ],
+      campaigns: [
+        {
+          id: campaignId,
+          proposal_id: proposalId,
+          advertiser_id: advertiserId,
+          name: "DB Campaign",
+          status: "pending_approval",
+          launch_check: { passed: true }
+        }
+      ],
+      campaign_media_allocations: [
+        {
+          id: allocationId,
+          campaign_id: campaignId,
+          publisher_id: publisherId,
+          guard_status: "allowed",
+          allocation_budget: 2000
+        }
+      ],
+      quality_diagnostic_cases: [
+        {
+          id: diagnosticCaseId,
+          case_no: "DC-DB",
+          case_type: "quality_drop",
+          publisher_id: publisherId,
+          status: "opened",
+          severity: "high",
+          owner_role: "data_analyst",
+          is_blocking_sales_scale: true,
+          is_blocking_settlement: false,
+          metadata: { current_blocker: "Investigating", next_action: "Collect evidence" }
+        }
+      ],
+      quality_diagnostic_evidence: [
+        {
+          id: evidenceId,
+          case_id: diagnosticCaseId,
+          title: "Funnel",
+          evidence_type: "funnel_metric",
+          content: "Metric snapshot",
+          data: { metric_name: "fill_rate", baseline_value: 0.8, current_value: 0.4, status: "collected" }
+        }
+      ],
+      settlements: [
+        {
+          id: settlementId,
+          campaign_id: campaignId,
+          publisher_id: publisherId,
+          status: "pending_review",
+          amount: 3000,
+          currency: "USD",
+          metadata: { reconciliationCompleted: true, payable_amount: 2900 }
+        }
+      ],
+      contracts: [
+        {
+          id: contractId,
+          object_type: "publisher",
+          object_id: publisherId,
+          contract_name: "CON-DB",
+          counterparty: "DB Publisher",
+          status: "legal_review",
+          metadata: {
+            contract_no: "CON-DB",
+            contract_type: "publisher_framework",
+            owner_role: "legal_manager",
+            requested_by_role: "operations_director",
+            risk_level: "high",
+            next_action: "Legal review"
+          }
+        }
+      ],
+      sop_cards: [
+        {
+          id: sopId,
+          title: "DB SOP",
+          scenario: "Launch",
+          role_code: "product_owner",
+          content: "Step 1",
+          related_route: "/guide",
+          updated_at: "2026-06-29T00:00:00.000Z",
+          metadata: {
+            module: "Guide",
+            visible_roles: ["product_owner"],
+            status: "published",
+            priority: "P0",
+            summary: "DB SOP summary",
+            steps: ["Step 1"],
+            version: 2
+          }
+        }
+      ],
+      work_items: [
+        {
+          id: workItemId,
+          title: "DB Work Item",
+          object_type: "campaign",
+          object_id: campaignId,
+          owner_role: "operations_director",
+          status: "open",
+          priority: "high",
+          metadata: { module: "Campaigns", related_route: "/campaigns/:id/wizard", next_action: "Approve launch" }
+        }
+      ],
+      okr_objectives: [{ id: objectiveId, title: "DB OKR", owner_role: "operations_director", period: "2026-Q3", status: "active" }],
+      okr_key_results: [
+        {
+          id: keyResultId,
+          objective_id: objectiveId,
+          title: "Ready publishers",
+          target_value: 10,
+          current_value: 8,
+          unit: "publishers"
+        }
+      ]
+    });
+
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const result = await repository.loadSnapshot();
+
+    expect(result.health).toMatchObject({ mode: "supabase", source: "supabase" });
+    expect(result.snapshot.mediaState.publishers[0]).toMatchObject({ id: publisherId, name: "DB Publisher" });
+    expect(result.snapshot.mediaState.commercialTests[0]).toMatchObject({ fill_rate: 0.61, spend: 1100 });
+    expect(result.snapshot.salesState.proposals[0].selectedPublisherIds).toEqual([publisherId]);
+    expect(result.snapshot.salesState.campaigns[0]).toMatchObject({ publisherIds: [publisherId], launchChecklistPassed: true });
+    expect(result.snapshot.mediaState.diagnosticEvidence[0]).toMatchObject({ diagnostic_case_id: diagnosticCaseId, metric_name: "fill_rate" });
+    expect(result.snapshot.financeState.settlements[0]).toMatchObject({ reconciliationCompleted: true, payable_amount: 2900 });
+    expect(result.snapshot.contractState.contracts[0]).toMatchObject({ contract_no: "CON-DB", publisher_id: publisherId });
+    expect(result.snapshot.guideState.sopCards[0]).toMatchObject({ steps: ["Step 1"], version: 2 });
+    expect(result.snapshot.workbenchState.tasks[0]).toMatchObject({ priority: "P0", source_object_id: campaignId });
+    expect(result.snapshot.workbenchState.okrObjectives[0]).toMatchObject({
+      target_value: 10,
+      current_value: 8,
+      status: "on_track"
+    });
+  });
+
+  it("falls back per table when a Supabase read fails", async () => {
+    const repository = new SupabaseWorkflowRepository(new FakeSupabase({}, new Set(["publishers"])));
+    const result = await repository.loadSnapshot();
+
+    expect(result.health.source).toBe("supabase-with-fallback");
+    expect(result.health.warnings[0]).toContain("publishers");
+    expect(result.snapshot.mediaState.publishers.length).toBeGreaterThan(0);
+  });
+
+  it("saves UUID-backed rows and skips fixture-only slug ids", async () => {
+    const fakeSupabase = new FakeSupabase();
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const snapshot = createFixtureWorkflowSnapshot();
+    const publisherId = uuid(30);
+    const advertiserId = uuid(31);
+    const opportunityId = uuid(32);
+    const proposalId = uuid(33);
+    const selectionId = uuid(34);
+
+    snapshot.mediaState.publishers = [
+      snapshot.mediaState.publishers[0],
+      {
+        ...snapshot.mediaState.publishers[0],
+        id: publisherId,
+        name: "UUID Publisher"
+      }
+    ];
+    snapshot.salesState.advertisers = [
+      {
+        ...snapshot.salesState.advertisers[0],
+        id: advertiserId
+      }
+    ];
+    snapshot.salesState.opportunities = [
+      {
+        ...snapshot.salesState.opportunities[0],
+        id: opportunityId,
+        advertiser_id: advertiserId
+      }
+    ];
+    snapshot.salesState.proposals = [
+      {
+        ...snapshot.salesState.proposals[0],
+        id: proposalId,
+        opportunity_id: opportunityId,
+        selectedPublisherIds: [publisherId]
+      }
+    ];
+    snapshot.salesState.proposalMediaSelections = [
+      {
+        ...snapshot.salesState.proposalMediaSelections[0],
+        id: selectionId,
+        proposal_id: proposalId,
+        publisher_id: publisherId
+      }
+    ];
+
+    const result = await repository.saveSnapshot(snapshot);
+
+    expect(result.savedTables).toContain("publishers");
+    expect(result.savedTables).toContain("proposals");
+    expect(fakeSupabase.writes.publishers).toEqual([
+      expect.objectContaining({ id: publisherId, name: "UUID Publisher" })
+    ]);
+    expect(fakeSupabase.writes.proposals).toEqual([
+      expect.objectContaining({
+        id: proposalId,
+        metadata: { selectedPublisherIds: [publisherId] }
+      })
+    ]);
+    expect(result.skippedWrites.some((write) => write.id === "publisher-233")).toBe(true);
+  });
+
+  it("binds Supabase writes to the authenticated actor audit fields", async () => {
+    const fakeSupabase = new FakeSupabase();
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const snapshot = createFixtureWorkflowSnapshot();
+    const actorId = uuid(40);
+    const publisherId = uuid(41);
+    const auditEventId = uuid(42);
+    const businessEventId = uuid(43);
+
+    snapshot.mediaState.publishers = [
+      {
+        ...snapshot.mediaState.publishers[0],
+        id: publisherId,
+        name: "Actor Publisher"
+      }
+    ];
+    snapshot.mediaState.auditEvents = [
+      {
+        id: auditEventId,
+        actorUserId: "mock-media-manager",
+        action: "publisher.created",
+        objectType: "publisher",
+        objectId: publisherId,
+        allowed: true,
+        reasonCode: "TEST_ACTOR_BINDING",
+        createdAt: "2026-06-29T00:00:00.000Z"
+      }
+    ];
+    snapshot.mediaState.businessEvents = [
+      {
+        id: businessEventId,
+        eventCode: "publisher.created",
+        objectType: "publisher",
+        objectId: publisherId,
+        ownerRole: "media_manager",
+        createdAt: "2026-06-29T00:00:00.000Z",
+        payload: {}
+      }
+    ];
+
+    await repository.saveSnapshot(snapshot, {
+      actor: {
+        id: actorId,
+        activeRole: "media_manager"
+      }
+    });
+
+    expect(fakeSupabase.writes.publishers).toEqual([
+      expect.objectContaining({
+        id: publisherId,
+        owner_user_id: actorId,
+        created_by: actorId,
+        updated_by: actorId
+      })
+    ]);
+    expect(fakeSupabase.writes.audit_logs).toEqual([
+      expect.objectContaining({
+        id: auditEventId,
+        actor_user_id: actorId
+      })
+    ]);
+    expect(fakeSupabase.writes.module_business_events).toEqual([
+      expect.objectContaining({
+        id: businessEventId,
+        owner_user_id: actorId
+      })
+    ]);
+  });
+
+  it("does not write audit foreign keys for mock non-UUID actors", async () => {
+    const fakeSupabase = new FakeSupabase();
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const snapshot = createFixtureWorkflowSnapshot();
+    const publisherId = uuid(44);
+
+    snapshot.mediaState.publishers = [
+      {
+        ...snapshot.mediaState.publishers[0],
+        id: publisherId,
+        name: "Mock Actor Publisher"
+      }
+    ];
+
+    await repository.saveSnapshot(snapshot, {
+      actor: {
+        id: "mock-media-manager",
+        activeRole: "media_manager"
+      }
+    });
+
+    expect(fakeSupabase.writes.publishers).toEqual([
+      expect.not.objectContaining({
+        owner_user_id: expect.any(String)
+      })
+    ]);
+  });
+});

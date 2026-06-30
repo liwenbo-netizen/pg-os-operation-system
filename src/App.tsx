@@ -1,0 +1,395 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AppShell } from "./app/AppShell";
+import { ContractWorkspacePage } from "./pages/contracts/ContractWorkspacePage";
+import { DiagnosticCasePage } from "./pages/diagnostics/DiagnosticCasePage";
+import { FinanceSettlementPage } from "./pages/finance/FinanceSettlementPage";
+import { GuideCenterPage } from "./pages/guide/GuideCenterPage";
+import { LoginPage } from "./pages/LoginPage";
+import { MediaExperiencePage } from "./pages/media/MediaExperiencePage";
+import { RoutePlaceholderPage } from "./pages/RoutePlaceholderPage";
+import { SalesExperiencePage } from "./pages/sales/SalesExperiencePage";
+import { WorkbenchOperationsPage } from "./pages/workbench/WorkbenchOperationsPage";
+import { roleCodes, roleDefinitions, type RoleCode } from "./constants/roles";
+import { getDefaultRouteForRole, routeDefinitions } from "./routes/routes";
+import { canViewRoute } from "./routes/routeGuards";
+import { createInitialContractWorkflowState } from "./services/contractService";
+import { createInitialFinanceWorkflowState } from "./services/financeSettlementService";
+import { createInitialMediaWorkflowState } from "./services/mediaWorkflowService";
+import { createInitialSalesWorkflowState } from "./services/salesWorkflowService";
+import { createInitialGuideWorkflowState } from "./services/sopService";
+import { createInitialWorkbenchWorkflowState } from "./services/workbenchService";
+import { createWorkflowRepository } from "./repositories/workflowRepositoryFactory";
+import type { WorkflowRepositoryHealth, WorkflowSnapshot } from "./repositories/workflowRepository";
+import {
+  createAuthSessionRepository,
+  type AuthSessionMode,
+  type AuthSessionResult,
+  type SupabasePasswordSignInInput
+} from "./repositories/authSessionRepository";
+import type { BusinessUser } from "./types/domain";
+
+export function App() {
+  const [activeRole, setActiveRole] = useState<RoleCode>("ceo");
+  const [activePath, setActivePath] = useState(getDefaultRouteForRole("ceo"));
+  const [activeUser, setActiveUser] = useState<BusinessUser | null>(null);
+  const [authMode, setAuthMode] = useState<AuthSessionMode>("mock");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | undefined>();
+  const [authWarnings, setAuthWarnings] = useState<string[]>([]);
+  const [mediaWorkflowState, setMediaWorkflowState] = useState(createInitialMediaWorkflowState);
+  const [salesWorkflowState, setSalesWorkflowState] = useState(createInitialSalesWorkflowState);
+  const [financeWorkflowState, setFinanceWorkflowState] = useState(createInitialFinanceWorkflowState);
+  const [contractWorkflowState, setContractWorkflowState] = useState(createInitialContractWorkflowState);
+  const [guideWorkflowState, setGuideWorkflowState] = useState(createInitialGuideWorkflowState);
+  const [workbenchWorkflowState, setWorkbenchWorkflowState] = useState(createInitialWorkbenchWorkflowState);
+  const [workflowRepository] = useState(() => createWorkflowRepository());
+  const [authSessionRepository] = useState(() => createAuthSessionRepository());
+  const [repositoryHealth, setRepositoryHealth] = useState<WorkflowRepositoryHealth>(() => ({
+    mode: workflowRepository.mode,
+    source: workflowRepository.mode === "supabase" ? "supabase-loading" : "fixtureRepository",
+    loadedAt: new Date().toISOString(),
+    warnings: []
+  }));
+  const repositoryLoadedRef = useRef(false);
+  const skipNextSaveRef = useRef(true);
+
+  const visibleRoutes = useMemo(
+    () => routeDefinitions.filter((route) => canViewRoute(activeRole, route.path).allowed),
+    [activeRole]
+  );
+  const availableRoles = useMemo(
+    () => (authMode === "mock" ? roleCodes : activeUser?.roles ?? [activeRole]),
+    [activeRole, activeUser?.roles, authMode]
+  );
+  const authSessionStatus = useMemo(
+    () => ({
+      label: authMode === "supabase" ? "Supabase auth" : "Mock auth",
+      detail: activeUser
+        ? `${activeUser.email} / ${activeUser.roles.map((role) => roleDefinitions[role].name).join(", ")}`
+        : "Not signed in",
+      warningCount: authWarnings.length + (authError ? 1 : 0)
+    }),
+    [activeUser, authError, authMode, authWarnings.length]
+  );
+  const repositoryStatus = useMemo(() => {
+    const warningCount = repositoryHealth.warnings.length + (repositoryHealth.skippedWrites?.length ?? 0);
+    const label =
+      repositoryHealth.mode === "supabase"
+        ? repositoryHealth.source === "supabase-loading"
+          ? "Supabase loading"
+          : warningCount > 0
+            ? "Supabase warning"
+            : "Supabase synced"
+        : "Fixture data";
+
+    return {
+      label,
+      detail: `${repositoryHealth.source} / ${repositoryHealth.loadedAt}`,
+      warningCount
+    };
+  }, [repositoryHealth]);
+
+  const activeRoute =
+    visibleRoutes.find((route) => route.path === activePath) ?? visibleRoutes[0] ?? routeDefinitions[0];
+
+  useEffect(() => {
+    if (!authSessionRepository.supportsSupabase) {
+      return;
+    }
+
+    let cancelled = false;
+    setAuthLoading(true);
+
+    authSessionRepository
+      .getCurrentSessionUser(activeRole)
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+
+        applyAuthResult(result, { silentSignedOut: true });
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setAuthLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authSessionRepository]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    workflowRepository
+      .loadSnapshot()
+      .then(({ snapshot, health }) => {
+        if (cancelled) {
+          return;
+        }
+
+        setMediaWorkflowState(snapshot.mediaState);
+        setSalesWorkflowState(snapshot.salesState);
+        setFinanceWorkflowState(snapshot.financeState);
+        setContractWorkflowState(snapshot.contractState);
+        setGuideWorkflowState(snapshot.guideState);
+        setWorkbenchWorkflowState(snapshot.workbenchState);
+        setRepositoryHealth(health);
+        repositoryLoadedRef.current = true;
+        skipNextSaveRef.current = true;
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        setRepositoryHealth({
+          mode: workflowRepository.mode,
+          source: "fixtureRepository",
+          loadedAt: new Date().toISOString(),
+          warnings: [error instanceof Error ? error.message : "Workflow repository load failed."]
+        });
+        repositoryLoadedRef.current = true;
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [workflowRepository]);
+
+  useEffect(() => {
+    if (!repositoryLoadedRef.current || workflowRepository.mode !== "supabase") {
+      return undefined;
+    }
+
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return undefined;
+    }
+
+    const snapshot: WorkflowSnapshot = {
+      mediaState: mediaWorkflowState,
+      salesState: salesWorkflowState,
+      financeState: financeWorkflowState,
+      contractState: contractWorkflowState,
+      guideState: guideWorkflowState,
+      workbenchState: workbenchWorkflowState
+    };
+    const saveHandle = window.setTimeout(() => {
+      workflowRepository
+        .saveSnapshot(snapshot, { actor: activeUser })
+        .then((result) => {
+          setRepositoryHealth({
+            mode: result.mode,
+            source: result.warnings.length > 0 ? "supabase-save-warning" : "supabase",
+            loadedAt: new Date().toISOString(),
+            warnings: result.warnings,
+            skippedWrites: result.skippedWrites
+          });
+        })
+        .catch((error) => {
+          setRepositoryHealth({
+            mode: workflowRepository.mode,
+            source: "supabase-save-error",
+            loadedAt: new Date().toISOString(),
+            warnings: [error instanceof Error ? error.message : "Workflow repository save failed."]
+          });
+        });
+    }, 700);
+
+    return () => window.clearTimeout(saveHandle);
+  }, [
+    contractWorkflowState,
+    financeWorkflowState,
+    guideWorkflowState,
+    mediaWorkflowState,
+    salesWorkflowState,
+    workflowRepository,
+    workbenchWorkflowState
+  ]);
+
+  function applyAuthResult(result: AuthSessionResult, options?: { silentSignedOut?: boolean }) {
+    setAuthWarnings(result.warnings);
+
+    if (result.status === "authenticated" && result.user) {
+      setActiveUser(result.user);
+      setAuthMode(result.mode);
+      setAuthError(undefined);
+      setActiveRole(result.user.activeRole);
+      setActivePath(getDefaultRouteForRole(result.user.activeRole));
+      return;
+    }
+
+    if (result.status === "signed_out") {
+      setActiveUser(null);
+      setAuthMode(result.mode);
+      setAuthError(options?.silentSignedOut ? undefined : result.error);
+      return;
+    }
+
+    setAuthError(result.error ?? "Authentication failed.");
+  }
+
+  async function handleMockSignIn(nextRole: RoleCode) {
+    setAuthLoading(true);
+    try {
+      applyAuthResult(await authSessionRepository.signInWithRole(nextRole));
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleSupabaseSignIn(input: SupabasePasswordSignInInput) {
+    setAuthLoading(true);
+    try {
+      applyAuthResult(await authSessionRepository.signInWithPassword(input));
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleSignOut() {
+    setAuthLoading(true);
+    try {
+      if (authMode === "supabase") {
+        const result = await authSessionRepository.signOut();
+        if (result.status === "error") {
+          applyAuthResult(result);
+          return;
+        }
+      }
+      setActiveUser(null);
+      setAuthMode("mock");
+      setAuthError(undefined);
+      setAuthWarnings([]);
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  function handleRoleChange(nextRole: RoleCode) {
+    if (authMode === "supabase" && activeUser && !activeUser.roles.includes(nextRole)) {
+      setAuthWarnings([`${roleDefinitions[nextRole].name} is not assigned to ${activeUser.email}.`]);
+      return;
+    }
+
+    setActiveRole(nextRole);
+    setActiveUser((currentUser) =>
+      currentUser
+        ? {
+            ...currentUser,
+            activeRole: nextRole,
+            roles: authMode === "mock" ? [nextRole] : currentUser.roles
+          }
+        : currentUser
+    );
+    setActivePath(getDefaultRouteForRole(nextRole));
+  }
+
+  if (!activeUser) {
+    return (
+      <LoginPage
+        selectedRole={activeRole}
+        authLoading={authLoading}
+        authError={authError}
+        authWarnings={authWarnings}
+        isSupabaseAvailable={authSessionRepository.supportsSupabase}
+        onRoleChange={setActiveRole}
+        onMockSignIn={handleMockSignIn}
+        onSupabaseSignIn={handleSupabaseSignIn}
+      />
+    );
+  }
+
+  return (
+    <AppShell
+      activePath={activeRoute.path}
+      activeRole={activeRole}
+      routes={visibleRoutes}
+      onRouteChange={setActivePath}
+      onRoleChange={handleRoleChange}
+      onSignOut={handleSignOut}
+      repositoryStatus={repositoryStatus}
+      authSessionStatus={authSessionStatus}
+      availableRoles={availableRoles}
+    >
+      {activeRoute.path === "/workbench" || activeRoute.path === "/ceo/dashboard" ? (
+        <WorkbenchOperationsPage
+          route={activeRoute}
+          role={roleDefinitions[activeRole]}
+          user={activeUser}
+          state={workbenchWorkflowState}
+          mediaState={mediaWorkflowState}
+          salesState={salesWorkflowState}
+          financeState={financeWorkflowState}
+          contractState={contractWorkflowState}
+          guideState={guideWorkflowState}
+          onStateChange={setWorkbenchWorkflowState}
+        />
+      ) : activeRoute.path.startsWith("/media/") ? (
+        <MediaExperiencePage
+          route={activeRoute}
+          role={roleDefinitions[activeRole]}
+          user={activeUser}
+          state={mediaWorkflowState}
+          onStateChange={setMediaWorkflowState}
+          onRouteChange={setActivePath}
+        />
+      ) : activeRoute.path.startsWith("/sales/") ||
+        activeRoute.path.startsWith("/proposals/") ||
+        activeRoute.path.startsWith("/campaigns/") ? (
+        <SalesExperiencePage
+          route={activeRoute}
+          role={roleDefinitions[activeRole]}
+          user={activeUser}
+          state={salesWorkflowState}
+          mediaState={mediaWorkflowState}
+          onStateChange={setSalesWorkflowState}
+          onRouteChange={setActivePath}
+        />
+      ) : activeRoute.path.startsWith("/diagnostics/") ? (
+        <DiagnosticCasePage
+          route={activeRoute}
+          role={roleDefinitions[activeRole]}
+          user={activeUser}
+          state={mediaWorkflowState}
+          salesState={salesWorkflowState}
+          onStateChange={setMediaWorkflowState}
+        />
+      ) : activeRoute.path.startsWith("/finance/") ? (
+        <FinanceSettlementPage
+          route={activeRoute}
+          role={roleDefinitions[activeRole]}
+          user={activeUser}
+          state={financeWorkflowState}
+          mediaState={mediaWorkflowState}
+          salesState={salesWorkflowState}
+          onStateChange={setFinanceWorkflowState}
+        />
+      ) : activeRoute.path.startsWith("/contracts/") ? (
+        <ContractWorkspacePage
+          route={activeRoute}
+          role={roleDefinitions[activeRole]}
+          user={activeUser}
+          state={contractWorkflowState}
+          mediaState={mediaWorkflowState}
+          salesState={salesWorkflowState}
+          financeState={financeWorkflowState}
+          onStateChange={setContractWorkflowState}
+        />
+      ) : activeRoute.path === "/guide" ? (
+        <GuideCenterPage
+          route={activeRoute}
+          role={roleDefinitions[activeRole]}
+          user={activeUser}
+          state={guideWorkflowState}
+          onStateChange={setGuideWorkflowState}
+        />
+      ) : (
+        <RoutePlaceholderPage route={activeRoute} role={roleDefinitions[activeRole]} />
+      )}
+    </AppShell>
+  );
+}
