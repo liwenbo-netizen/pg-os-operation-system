@@ -33,6 +33,8 @@
     "validate:phase17b": "node scripts/validate-uat.mjs",
     "validate:phase18b": "node scripts/validate-uat.mjs --local-only",
     "validate:phase18c": "node scripts/validate-uat.mjs --local-only",
+    "validate:phase18d": "vitest run scripts/validate-production-deployment-smoke.test.mjs && node scripts/validate-production-deployment-smoke.mjs --config-only",
+    "smoke:production": "node scripts/validate-production-deployment-smoke.mjs",
     "bootstrap:uat-auth:dry-run": "node scripts/supabase-uat-auth-bootstrap.mjs --dry-run",
     "bootstrap:uat-auth": "node scripts/supabase-uat-auth-bootstrap.mjs --apply",
     "verify:uat-rls:dry-run": "node scripts/validate-supabase-uat-rls.mjs --dry-run",

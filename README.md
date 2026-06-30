@@ -4,14 +4,21 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 18D adds the production deployment smoke gate:
+
+- `npm run validate:phase18d` checks Vercel config and smoke-gate wiring
+- `npm run smoke:production -- --url <deployment-url>` verifies deployed SPA routes
+- Deep-link smoke paths cover Workbench, Guide, Contract, Finance, Media, and Sales surfaces
+- Live Supabase write probes remain local/manual release gates
+
+Earlier completed phases:
+
 Phase 18C prepares the app for Vercel deployment:
 
 - `vercel.json` configures Vite build output and SPA route rewrites
 - `npm run validate:phase18c` runs the deployment-prep local UAT gate
 - Production env values should be configured in Vercel project settings
 - Service-role and UAT password secrets remain local/operator-only
-
-Earlier completed phases:
 
 Phase 18B adds GitHub Actions CI for the local UAT gate:
 
@@ -193,6 +200,7 @@ npm run validate:phase17a
 npm run validate:phase17b
 npm run validate:phase18b
 npm run validate:phase18c
+npm run validate:phase18d
 npm run validate:uat:local
 ```
 
@@ -253,6 +261,10 @@ GitHub Actions CI local gate:
 Deployment prep:
 
 [Phase 18C Deployment Prep Report](docs/development-package/phase-18C-deployment-prep.md)
+
+Production smoke gate:
+
+[Phase 18D Production Smoke Gate Report](docs/development-package/phase-18D-production-smoke-gate.md)
 
 ## Development Rules
 
