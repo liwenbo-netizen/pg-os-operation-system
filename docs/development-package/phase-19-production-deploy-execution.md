@@ -48,6 +48,12 @@ Deployment should therefore be executed through Vercel Web:
 https://vercel.com/new
 ```
 
+Project import URL:
+
+```text
+https://vercel.com/new/import?repository-name=pg-os-operation-system&s=https%3A%2F%2Fgithub.com%2Fliwenbo-netizen%2Fpg-os-operation-system&teamSlug=liwenbo-netizens-projects
+```
+
 ## Vercel Import Settings
 
 Import this GitHub repository:
@@ -82,6 +88,12 @@ VITE_SUPABASE_ANON_KEY
 APP_ENV=production
 APP_BASE_URL=<vercel-production-url>
 ```
+
+Frontend runtime note:
+
+- The browser app reads `VITE_SUPABASE_URL`.
+- The browser app reads `VITE_SUPABASE_ANON_KEY`.
+- `APP_ENV` and `APP_BASE_URL` are deployment metadata for operator/runbook consistency.
 
 Do not set these in Vercel:
 
