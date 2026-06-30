@@ -4,12 +4,12 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
-Phase 19 executes the Vercel production deployment handoff:
+Phase 19 deployed the Vercel production app:
 
-- Repository is ready for Vercel Web import from `liwenbo-netizen/pg-os-operation-system`
-- Vercel CLI is not installed locally, so deployment requires Vercel account authorization in the UI
-- Production smoke runs with `npm run smoke:production -- --url <deployment-url>`
-- Full live UAT remains a local/manual release gate after deployment
+- Production URL: `https://pg-os-operation-system.vercel.app/`
+- Vercel Web import from `liwenbo-netizen/pg-os-operation-system` is complete
+- Production smoke passed with `npm run smoke:production -- --url https://pg-os-operation-system.vercel.app/`
+- Post-deploy full UAT passed with `npm run validate:uat`
 
 Earlier completed phases:
 

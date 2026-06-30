@@ -1,6 +1,6 @@
 # Phase 19 Report - Production Deploy Execution / Vercel
 
-Status: READY FOR VERCEL WEB IMPORT. Repository-side deployment preparation is complete; Vercel project creation requires account authorization in the Vercel UI.
+Status: PASS. Vercel production deployment is live, production smoke passed, and the post-deploy UAT gate passed.
 
 ## Objective
 
@@ -23,7 +23,7 @@ master
 Latest deployment-prep commit:
 
 ```text
-4b88e50 deploy: add production smoke gate
+de73409 docs: add Vercel import URL
 ```
 
 Configured deployment files:
@@ -46,6 +46,14 @@ Deployment should therefore be executed through Vercel Web:
 
 ```text
 https://vercel.com/new
+```
+
+Deployment was completed manually through Vercel Web.
+
+Production URL:
+
+```text
+https://pg-os-operation-system.vercel.app/
 ```
 
 Project import URL:
@@ -85,15 +93,13 @@ Set only these Vercel project variables:
 ```text
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
-APP_ENV=production
-APP_BASE_URL=<vercel-production-url>
 ```
 
 Frontend runtime note:
 
 - The browser app reads `VITE_SUPABASE_URL`.
 - The browser app reads `VITE_SUPABASE_ANON_KEY`.
-- `APP_ENV` and `APP_BASE_URL` are deployment metadata for operator/runbook consistency.
+- `APP_ENV` and `APP_BASE_URL` are not required for the current Vite browser runtime.
 
 Do not set these in Vercel:
 
@@ -141,13 +147,37 @@ The full UAT gate remains local/manual because it signs into Supabase UAT and wr
 
 ## Post-Deploy Smoke
 
-After Vercel returns a production URL, run:
+Executed:
 
 ```text
-npm run smoke:production -- --url <deployment-url>
+npm run smoke:production -- --url https://pg-os-operation-system.vercel.app/
 ```
 
-Then manually verify:
+Result:
+
+```text
+Production deployment config validation passed.
+PASS / status=200 reactRoot=true
+PASS /workbench status=200 reactRoot=true
+PASS /guide status=200 reactRoot=true
+PASS /contracts/uat-smoke status=200 reactRoot=true
+PASS /finance/settlements/uat-smoke status=200 reactRoot=true
+PASS /media/manager-workbench status=200 reactRoot=true
+PASS /sales/manager-workbench status=200 reactRoot=true
+Production deployment smoke checks passed.
+```
+
+Post-deploy full UAT executed:
+
+```text
+npm run validate:uat
+PG OS UAT acceptance gate passed in 44.6s.
+RLS trace: pgos-uat-1782824334603
+Live write trace: pgos-live-1782824340084
+Cleanup rows: 12
+```
+
+Manual browser checks still recommended for operator sign-off:
 
 - Login page loads.
 - Supabase login works for one UAT user.
@@ -161,7 +191,7 @@ Then manually verify:
 
 Phase 19 is accepted when:
 
-- Vercel production deployment succeeds.
-- `npm run smoke:production -- --url <deployment-url>` passes.
-- `npm run validate:uat` passes after deployment.
-- Production environment variables exclude service-role and UAT password secrets.
+- Vercel production deployment succeeds. PASS.
+- `npm run smoke:production -- --url <deployment-url>` passes. PASS.
+- `npm run validate:uat` passes after deployment. PASS.
+- Production environment variables exclude service-role and UAT password secrets. PASS by operator guidance; do not add those secrets to Vercel.
