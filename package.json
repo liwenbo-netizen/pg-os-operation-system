@@ -31,6 +31,7 @@
     "validate:phase16b": "vitest run scripts/validate-domain-schema-alignment.test.mjs && node scripts/validate-domain-schema-alignment.mjs",
     "validate:phase17a": "vitest run scripts/validate-secret-hygiene.test.mjs && node scripts/validate-secret-hygiene.mjs",
     "validate:phase17b": "node scripts/validate-uat.mjs",
+    "validate:phase18b": "node scripts/validate-uat.mjs --local-only",
     "bootstrap:uat-auth:dry-run": "node scripts/supabase-uat-auth-bootstrap.mjs --dry-run",
     "bootstrap:uat-auth": "node scripts/supabase-uat-auth-bootstrap.mjs --apply",
     "verify:uat-rls:dry-run": "node scripts/validate-supabase-uat-rls.mjs --dry-run",

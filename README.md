@@ -4,14 +4,21 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 18B adds GitHub Actions CI for the local UAT gate:
+
+- `.github/workflows/ci.yml` runs on push and pull request to `master`
+- CI uses Node.js 22, `npm ci`, and `npm run validate:phase18b`
+- CI covers secret hygiene, tests, type check, build, and domain/schema alignment
+- Live Supabase RLS and write probes remain manual UAT/release gates
+
+Earlier completed phases:
+
 Phase 18A pushes the PG OS V2.11 baseline to GitHub:
 
 - `origin` points to `https://github.com/liwenbo-netizen/pg-os-operation-system.git`
 - Remote branch `master` tracks the Phase 17C baseline
 - Baseline commit `2f8941b` is backed up on GitHub
 - Secret hygiene still passes after remote setup
-
-Earlier completed phases:
 
 Phase 17C creates the first Git baseline commit for the UAT-ready PG OS V2.11 system:
 
@@ -177,6 +184,7 @@ npm run validate:phase15
 npm run validate:phase16b
 npm run validate:phase17a
 npm run validate:phase17b
+npm run validate:phase18b
 npm run validate:uat:local
 ```
 
@@ -229,6 +237,10 @@ Git baseline commit:
 GitHub remote baseline push:
 
 [Phase 18A GitHub Remote Push Report](docs/development-package/phase-18A-github-remote-push.md)
+
+GitHub Actions CI local gate:
+
+[Phase 18B GitHub Actions CI Report](docs/development-package/phase-18B-github-actions-ci-local-gate.md)
 
 ## Development Rules
 
