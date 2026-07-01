@@ -11,6 +11,17 @@ export type SystemHealthCheck = {
   detail: string;
 };
 
+export type SystemHealthEventSource = "supabase" | "supabase_partial" | "snapshot";
+
+export type SystemHealthEventCoverage = {
+  source: SystemHealthEventSource;
+  auditCount: number;
+  businessCount: number;
+  sampleSize: number;
+  loadedAt: string;
+  warningCount: number;
+};
+
 export type ObservabilityEvent = {
   id: string;
   type: "audit" | "business";
@@ -33,6 +44,7 @@ export type SystemHealthInput = {
   supportsSupabase: boolean;
   user: BusinessUser;
   snapshot: WorkflowSnapshot;
+  eventCoverage?: SystemHealthEventCoverage;
 };
 
 function countAuditEvents(snapshot: WorkflowSnapshot) {
@@ -41,6 +53,44 @@ function countAuditEvents(snapshot: WorkflowSnapshot) {
 
 function countBusinessEvents(snapshot: WorkflowSnapshot) {
   return collectBusinessEvents(snapshot).length;
+}
+
+function eventSourceLabel(source: SystemHealthEventSource) {
+  if (source === "supabase") {
+    return "Supabase live";
+  }
+
+  if (source === "supabase_partial") {
+    return "Supabase partial";
+  }
+
+  return "Snapshot fallback";
+}
+
+function buildSnapshotEventCoverage(snapshot: WorkflowSnapshot, loadedAt: string): SystemHealthEventCoverage {
+  const auditCount = countAuditEvents(snapshot);
+  const businessCount = countBusinessEvents(snapshot);
+
+  return {
+    source: "snapshot",
+    auditCount,
+    businessCount,
+    sampleSize: auditCount + businessCount,
+    loadedAt,
+    warningCount: 0
+  };
+}
+
+function buildEventHealthCheck(input: SystemHealthInput): SystemHealthCheck {
+  const coverage = input.eventCoverage ?? buildSnapshotEventCoverage(input.snapshot, input.repositoryHealth.loadedAt);
+  const totalEvents = coverage.auditCount + coverage.businessCount;
+
+  return {
+    id: "events",
+    label: "Audit and business events",
+    status: coverage.warningCount > 0 ? "warning" : totalEvents > 0 ? "ok" : "warning",
+    detail: `${eventSourceLabel(coverage.source)}: ${coverage.auditCount} audit event(s), ${coverage.businessCount} business event(s) in latest ${coverage.sampleSize} event(s). Loaded at ${coverage.loadedAt}.`
+  };
 }
 
 export function buildSystemHealthChecks(input: SystemHealthInput): SystemHealthCheck[] {
@@ -73,12 +123,7 @@ export function buildSystemHealthChecks(input: SystemHealthInput): SystemHealthC
       status: input.authWarningCount + input.repositoryWarningCount > 0 ? "warning" : "ok",
       detail: `${input.authWarningCount} auth warning(s), ${input.repositoryWarningCount} repository warning(s).`
     },
-    {
-      id: "events",
-      label: "Audit and business events",
-      status: countAuditEvents(input.snapshot) + countBusinessEvents(input.snapshot) > 0 ? "ok" : "warning",
-      detail: `${countAuditEvents(input.snapshot)} audit event(s), ${countBusinessEvents(input.snapshot)} business event(s).`
-    },
+    buildEventHealthCheck(input),
     {
       id: "route",
       label: "Active route",

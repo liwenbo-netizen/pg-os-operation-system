@@ -1,9 +1,20 @@
-import { Activity, AlertTriangle, CheckCircle2, Database, KeyRound } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Database, KeyRound, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { roleDefinitions } from "../../constants/roles";
+import {
+  createAuditEventRepository,
+  createSnapshotAuditEventPage,
+  type AuditEventPage,
+  type AuditEventSource
+} from "../../repositories/auditEventRepository";
 import type { AppRoute } from "../../routes/routes";
 import type { WorkflowRepositoryHealth, WorkflowSnapshot } from "../../repositories/workflowRepository";
 import type { BusinessUser } from "../../types/domain";
-import { buildSystemHealthChecks, type HealthCheckStatus } from "../../services/observabilityService";
+import {
+  buildSystemHealthChecks,
+  type HealthCheckStatus,
+  type SystemHealthEventCoverage
+} from "../../services/observabilityService";
 
 type StatusProps = {
   status: HealthCheckStatus;
@@ -18,6 +29,32 @@ function StatusPill({ status }: StatusProps) {
         : "border-red-200 bg-red-50 text-red-700";
 
   return <span className={`rounded border px-2 py-0.5 text-xs font-semibold uppercase tracking-normal ${styles}`}>{status}</span>;
+}
+
+const EVENT_SAMPLE_SIZE = 25;
+
+function eventSourceLabel(source: AuditEventSource) {
+  if (source === "supabase") {
+    return "Supabase live";
+  }
+
+  if (source === "supabase_partial") {
+    return "Supabase partial";
+  }
+
+  return "Snapshot fallback";
+}
+
+function eventSourceClassName(source: AuditEventSource) {
+  if (source === "supabase") {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+
+  if (source === "supabase_partial") {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+
+  return "border-slate-200 bg-slate-50 text-slate-600";
 }
 
 type SystemHealthPageProps = {
@@ -43,6 +80,63 @@ export function SystemHealthPage({
   supportsSupabase,
   user
 }: SystemHealthPageProps) {
+  const eventRepository = useMemo(() => createAuditEventRepository(), []);
+  const [eventPage, setEventPage] = useState<AuditEventPage>(() =>
+    createSnapshotAuditEventPage(snapshot, { page: 0, pageSize: EVENT_SAMPLE_SIZE })
+  );
+  const [isEventLoading, setIsEventLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setIsEventLoading(true);
+
+    eventRepository
+      .loadPage({ snapshot, page: 0, pageSize: EVENT_SAMPLE_SIZE })
+      .then((result) => {
+        if (active) {
+          setEventPage(result);
+        }
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+
+        setEventPage(
+          createSnapshotAuditEventPage(snapshot, {
+            page: 0,
+            pageSize: EVENT_SAMPLE_SIZE,
+            warnings: [
+              `Audit event source: ${error instanceof Error ? error.message : "load failed"}`,
+              "Showing the current frontend snapshot."
+            ]
+          })
+        );
+      })
+      .finally(() => {
+        if (active) {
+          setIsEventLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [eventRepository, snapshot]);
+
+  const eventCoverage = useMemo<SystemHealthEventCoverage>(() => {
+    const auditCount = eventPage.events.filter((event) => event.type === "audit").length;
+    const businessCount = eventPage.events.filter((event) => event.type === "business").length;
+
+    return {
+      source: eventPage.source,
+      auditCount,
+      businessCount,
+      sampleSize: eventPage.events.length,
+      loadedAt: eventPage.loadedAt,
+      warningCount: eventPage.warnings.length
+    };
+  }, [eventPage]);
   const checks = buildSystemHealthChecks({
     activePath,
     activeRole: user.activeRole,
@@ -52,9 +146,16 @@ export function SystemHealthPage({
     repositoryWarningCount,
     supportsSupabase,
     user,
-    snapshot
+    snapshot,
+    eventCoverage
   });
-  const warningItems = [...repositoryHealth.warnings, ...(repositoryHealth.skippedWrites ?? []).map((write) => `${write.table}: ${write.reason}`)];
+  const eventWarningItems = eventPage.warnings.map((warning) => `events: ${warning}`);
+  const warningItems = [
+    ...repositoryHealth.warnings,
+    ...(repositoryHealth.skippedWrites ?? []).map((write) => `${write.table}: ${write.reason}`),
+    ...eventWarningItems
+  ];
+  const eventSourceClass = eventSourceClassName(eventPage.source);
 
   return (
     <section className="space-y-6">
@@ -91,7 +192,7 @@ export function SystemHealthPage({
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-4">
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <KeyRound className="size-5 text-blue-600" aria-hidden="true" />
           <h2 className="mt-3 text-sm font-semibold text-slate-900">Auth mode</h2>
@@ -103,6 +204,22 @@ export function SystemHealthPage({
           <h2 className="mt-3 text-sm font-semibold text-slate-900">Repository</h2>
           <p className="mt-2 text-sm text-slate-600">{repositoryHealth.mode}</p>
           <p className="mt-1 text-xs text-slate-500">{repositoryHealth.source}</p>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+          {isEventLoading ? (
+            <RefreshCw className="size-5 animate-spin text-blue-600" aria-hidden="true" />
+          ) : (
+            <Database className="size-5 text-blue-600" aria-hidden="true" />
+          )}
+          <h2 className="mt-3 text-sm font-semibold text-slate-900">Event source</h2>
+          <p className="mt-2">
+            <span className={`rounded border px-2 py-0.5 text-xs font-semibold ${eventSourceClass}`}>
+              {eventSourceLabel(eventPage.source)}
+            </span>
+          </p>
+          <p className="mt-2 text-xs text-slate-500">
+            {eventCoverage.auditCount} audit / {eventCoverage.businessCount} business / {eventCoverage.sampleSize} loaded
+          </p>
         </div>
         <div className="rounded-lg border border-slate-200 bg-white p-4">
           <Activity className="size-5 text-blue-600" aria-hidden="true" />

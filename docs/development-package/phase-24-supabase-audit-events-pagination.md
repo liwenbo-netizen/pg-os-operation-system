@@ -74,6 +74,20 @@ Regression expectations:
 - Production smoke continues to include `/audit/events`.
 - Manual production UAT should log in as an audit-capable role and confirm the page source shows `Supabase live` or `Supabase partial` instead of snapshot-only state.
 
+## Manual Production Sign-Off
+
+Operator sign-off was completed on the production deployment:
+
+```text
+URL: https://pg-os-operation-system.vercel.app/audit/events
+Role: CEO
+Result: Supabase live source badge visible
+Observed event: publisher.created / module_business_events / business
+Decision: PASS
+```
+
+This confirms the production `/audit/events` route is no longer limited to the current frontend snapshot and can read the live Supabase event stream through the browser anon session.
+
 ## Acceptance Criteria
 
 Phase 24 is accepted when:
