@@ -4,14 +4,21 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 21 completed automated production manual login / role UAT preflight:
+
+- `npm run validate:phase21` passed for production manual login UAT gate wiring
+- `npm run smoke:production:manual-login -- --url https://pg-os-operation-system.vercel.app/` passed for production route shells, Supabase UAT sign-in, profile/user_roles binding, and representative role boundaries
+- Manual browser sign-off covers Supabase login UX, role badge, role selector, Workbench, Guide, and `audit_viewer` read-only behavior
+- Secret rotation is documented as deferred until formal production usage
+
+Earlier completed phases:
+
 Phase 20 completed the production auth readiness gate:
 
 - `npm run validate:phase20` passed for script and config wiring
 - `npm run smoke:production:auth -- --url https://pg-os-operation-system.vercel.app/` passed after Vercel Production env redeploy
 - The production bundle was checked for accidental service-role and UAT password leakage
 - Secret values are never printed by the gate
-
-Earlier completed phases:
 
 Phase 19 deployed the Vercel production app:
 
@@ -216,6 +223,7 @@ npm run validate:phase18b
 npm run validate:phase18c
 npm run validate:phase18d
 npm run validate:phase20
+npm run validate:phase21
 npm run validate:uat:local
 ```
 
@@ -288,6 +296,10 @@ Production deploy execution:
 Production auth readiness:
 
 [Phase 20 Production Auth Readiness Report](docs/development-package/phase-20-production-auth-readiness.md)
+
+Production manual login / role UAT:
+
+[Phase 21 Production Manual Login / Role UAT Report](docs/development-package/phase-21-production-manual-login-role-uat.md)
 
 ## Development Rules
 
