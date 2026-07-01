@@ -21,5 +21,20 @@ describe("canViewRoute", () => {
       allowed: true
     });
   });
-});
 
+  it("allows all signed-in roles into system health", () => {
+    expect(canViewRoute("media_manager", "/system/health")).toMatchObject({
+      allowed: true
+    });
+  });
+
+  it("keeps audit events limited to audit-capable roles", () => {
+    expect(canViewRoute("audit_viewer", "/audit/events")).toMatchObject({
+      allowed: true
+    });
+    expect(canViewRoute("media_manager", "/audit/events")).toMatchObject({
+      allowed: false,
+      reason_code: "ROLE_ROUTE_FORBIDDEN"
+    });
+  });
+});

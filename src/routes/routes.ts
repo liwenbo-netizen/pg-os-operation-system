@@ -233,6 +233,34 @@ export const routeDefinitions: AppRoute[] = [
     sections: ["Search", "Role filters", "Scenario cards", "Common SOP", "Glossary"]
   },
   {
+    path: "/system/health",
+    title: "System Health",
+    module: "Observability",
+    pageType: "Health",
+    priority: "P0",
+    allowedRoles: allRoles,
+    service: "ObservabilityService",
+    guard: "canViewRoute",
+    uat: "UAT-015",
+    primaryAction: "Review system health",
+    summarySignals: ["Auth mode", "Repository source", "Runtime warnings", "Event coverage"],
+    sections: ["Auth status", "Repository status", "Runtime warnings", "Event counts", "Active route"]
+  },
+  {
+    path: "/audit/events",
+    title: "Audit Events",
+    module: "Observability",
+    pageType: "Audit Console",
+    priority: "P0",
+    allowedRoles: ["ceo", "system_admin", "audit_viewer"],
+    service: "ObservabilityService",
+    guard: "canViewRoute",
+    uat: "UAT-015",
+    primaryAction: "Review audit stream",
+    summarySignals: ["Audit events", "Business events", "Blocked actions", "Actor trace"],
+    sections: ["Event stream", "Module filter", "Object trace", "Allowed and blocked actions"]
+  },
+  {
     path: "/admin",
     title: "Admin Shell",
     module: "Admin",

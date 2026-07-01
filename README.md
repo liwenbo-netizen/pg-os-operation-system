@@ -4,6 +4,16 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 23 adds production observability / error and audit console:
+
+- Runtime error boundary prevents unrecoverable blank screens
+- `/system/health` shows auth, repository, warning, route, and event coverage signals
+- `/audit/events` gives `ceo`, `system_admin`, and `audit_viewer` a read-only audit/business event stream
+- `npm run validate:phase23` checks observability wiring
+- Production smoke now covers `/system/health` and `/audit/events`
+
+Earlier completed phases:
+
 Phase 22 completed production UX / manual sign-off:
 
 - Production URL: `https://pg-os-operation-system.vercel.app/`
@@ -11,8 +21,6 @@ Phase 22 completed production UX / manual sign-off:
 - `npm run smoke:production:auth -- --url https://pg-os-operation-system.vercel.app/` passed after the fix
 - Phase 21 automated role/RLS preflight remains the supporting evidence for representative roles, including `audit_viewer` write blocking
 - Secret rotation remains tracked as a pre-formal-production security item while the system is still in testing and polishing
-
-Earlier completed phases:
 
 Phase 21 completed automated production manual login / role UAT preflight:
 
@@ -232,6 +240,7 @@ npm run validate:phase18c
 npm run validate:phase18d
 npm run validate:phase20
 npm run validate:phase21
+npm run validate:phase23
 npm run validate:uat:local
 ```
 
@@ -312,6 +321,10 @@ Production manual login / role UAT:
 Production UX / manual sign-off completion:
 
 [Phase 22 Production UX / Manual Sign-off Completion Report](docs/development-package/phase-22-production-ux-manual-signoff-completion.md)
+
+Production observability / error and audit console:
+
+[Phase 23 Production Observability Report](docs/development-package/phase-23-production-observability.md)
 
 ## Development Rules
 

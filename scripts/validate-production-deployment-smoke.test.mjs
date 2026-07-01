@@ -38,6 +38,8 @@ describe("validate-production-deployment-smoke", () => {
   it("covers root and representative deep links", () => {
     expect(productionSmokePaths).toContain("/");
     expect(productionSmokePaths).toContain("/workbench");
+    expect(productionSmokePaths).toContain("/system/health");
+    expect(productionSmokePaths).toContain("/audit/events");
     expect(productionSmokePaths).toContain("/contracts/uat-smoke");
     expect(productionSmokePaths).toContain("/finance/settlements/uat-smoke");
   });

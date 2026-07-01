@@ -8,6 +8,8 @@ import { LoginPage } from "./pages/LoginPage";
 import { MediaExperiencePage } from "./pages/media/MediaExperiencePage";
 import { RoutePlaceholderPage } from "./pages/RoutePlaceholderPage";
 import { SalesExperiencePage } from "./pages/sales/SalesExperiencePage";
+import { AuditEventConsolePage } from "./pages/audit/AuditEventConsolePage";
+import { SystemHealthPage } from "./pages/system/SystemHealthPage";
 import { WorkbenchOperationsPage } from "./pages/workbench/WorkbenchOperationsPage";
 import { roleCodes, roleDefinitions, type RoleCode } from "./constants/roles";
 import { getDefaultRouteForRole, routeDefinitions } from "./routes/routes";
@@ -88,6 +90,24 @@ export function App() {
       warningCount
     };
   }, [repositoryHealth]);
+  const workflowSnapshot = useMemo<WorkflowSnapshot>(
+    () => ({
+      mediaState: mediaWorkflowState,
+      salesState: salesWorkflowState,
+      financeState: financeWorkflowState,
+      contractState: contractWorkflowState,
+      guideState: guideWorkflowState,
+      workbenchState: workbenchWorkflowState
+    }),
+    [
+      contractWorkflowState,
+      financeWorkflowState,
+      guideWorkflowState,
+      mediaWorkflowState,
+      salesWorkflowState,
+      workbenchWorkflowState
+    ]
+  );
 
   const activeRoute =
     visibleRoutes.find((route) => route.path === activePath) ?? visibleRoutes[0] ?? routeDefinitions[0];
@@ -315,7 +335,21 @@ export function App() {
       authSessionStatus={authSessionStatus}
       availableRoles={availableRoles}
     >
-      {activeRoute.path === "/workbench" || activeRoute.path === "/ceo/dashboard" ? (
+      {activeRoute.path === "/system/health" ? (
+        <SystemHealthPage
+          activePath={activeRoute.path}
+          authMode={authMode}
+          authWarningCount={authWarnings.length + (authError ? 1 : 0)}
+          repositoryHealth={repositoryHealth}
+          repositoryWarningCount={repositoryHealth.warnings.length + (repositoryHealth.skippedWrites?.length ?? 0)}
+          route={activeRoute}
+          snapshot={workflowSnapshot}
+          supportsSupabase={authSessionRepository.supportsSupabase}
+          user={activeUser}
+        />
+      ) : activeRoute.path === "/audit/events" ? (
+        <AuditEventConsolePage route={activeRoute} snapshot={workflowSnapshot} user={activeUser} />
+      ) : activeRoute.path === "/workbench" || activeRoute.path === "/ceo/dashboard" ? (
         <WorkbenchOperationsPage
           route={activeRoute}
           role={roleDefinitions[activeRole]}
