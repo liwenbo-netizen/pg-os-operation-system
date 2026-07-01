@@ -4,6 +4,16 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 27 completed audit event display normalization:
+
+- `auth.*` audit events now display as `Auth` instead of `Guide`
+- `route.*` and `role.*` audit events now display as `System`
+- Guide/SOP event display inference remains intact
+- Phase 26 production UAT PASS is recorded in the development package
+- `npm run validate:phase27` passed for display normalization wiring
+
+Earlier completed phases:
+
 Phase 26 completed real audit event write coverage:
 
 - PG OS now writes `auth.sign_in`, `auth.sign_out`, role-switch, and route-access events to Supabase `audit_logs`
@@ -11,8 +21,6 @@ Phase 26 completed real audit event write coverage:
 - Route paths and non-UUID identifiers are kept in `after_data`, while UUID columns are guarded
 - `/audit/events` can now show both `audit` and `business` event classes
 - `npm run validate:phase26` passed for audit write coverage wiring
-
-Earlier completed phases:
 
 Phase 25 completed System Health live observability alignment:
 
@@ -267,6 +275,7 @@ npm run validate:phase23
 npm run validate:phase24
 npm run validate:phase25
 npm run validate:phase26
+npm run validate:phase27
 npm run validate:uat:local
 ```
 

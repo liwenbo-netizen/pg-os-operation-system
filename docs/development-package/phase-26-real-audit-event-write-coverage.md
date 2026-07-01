@@ -72,12 +72,22 @@ npm run validate:secret-hygiene
 
 ## Production UAT
 
-After deployment, an audit-capable role should verify `/audit/events` shows both event classes:
+Production UAT was completed with the CEO role after Vercel deployment:
 
 ```text
-business: publisher.created or another module_business_events row
-audit: auth.sign_in, route.visit, role.switch, or auth.sign_out
+URL: https://pg-os-operation-system.vercel.app/
+Role: CEO
+System Health: Supabase live, 10 audit event(s), 2 business event(s)
+Audit Events: Supabase live
+Observed audit events: auth.sign_in, auth.sign_out, route.visit
+Observed audit status: allowed
+Decision: PASS
 ```
+
+This confirms `/audit/events` shows both event classes from the live Supabase source:
+
+- `audit_logs`: `auth.sign_in`, `auth.sign_out`, `route.visit`.
+- `module_business_events`: existing business workflow events.
 
 ## Acceptance Criteria
 

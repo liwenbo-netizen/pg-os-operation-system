@@ -92,6 +92,14 @@ export function inferObservabilityModule(objectType: string, code = "") {
   const normalizedObjectType = objectType.toLowerCase();
   const normalizedCode = code.toLowerCase();
 
+  if (normalizedCode.startsWith("auth.")) {
+    return "Auth";
+  }
+
+  if (normalizedCode.startsWith("role.") || normalizedCode.startsWith("route.")) {
+    return "System";
+  }
+
   if (["publisher"].includes(normalizedObjectType) || normalizedCode.includes("publisher")) {
     return "Media";
   }
@@ -120,8 +128,12 @@ export function inferObservabilityModule(objectType: string, code = "") {
     return "Workbench";
   }
 
-  if (normalizedObjectType === "route" || normalizedCode.includes("sop") || normalizedCode.includes("guide")) {
+  if (normalizedCode.includes("sop") || normalizedCode.includes("guide")) {
     return "Guide";
+  }
+
+  if (normalizedObjectType === "route") {
+    return "System";
   }
 
   return "System";

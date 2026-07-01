@@ -214,6 +214,9 @@ describe("auditEventRepository", () => {
   it("infers the display module for known object types", () => {
     expect(inferObservabilityModule("diagnostic_case")).toBe("Diagnostics");
     expect(inferObservabilityModule("route", "guide.opened")).toBe("Guide");
+    expect(inferObservabilityModule("route", "auth.sign_in")).toBe("Auth");
+    expect(inferObservabilityModule("route", "route.visit")).toBe("System");
+    expect(inferObservabilityModule("route", "role.switch")).toBe("System");
     expect(inferObservabilityModule("workbench_task")).toBe("Workbench");
   });
 });
