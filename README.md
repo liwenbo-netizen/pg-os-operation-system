@@ -4,6 +4,15 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 24 completed Supabase audit event pagination:
+
+- `/audit/events` now loads live `audit_logs` and `module_business_events` through the configured Supabase anon session
+- The audit event console has read-only pagination, refresh, source status, and warning visibility
+- Snapshot events remain as the fallback when Supabase is unavailable or both event queries fail
+- `npm run validate:phase24` passed for repository mapping, pagination, and config wiring
+
+Earlier completed phases:
+
 Phase 23 completed production observability / error and audit console:
 
 - Runtime error boundary prevents unrecoverable blank screens
@@ -11,8 +20,6 @@ Phase 23 completed production observability / error and audit console:
 - `/audit/events` gives `ceo`, `system_admin`, and `audit_viewer` a read-only audit/business event stream
 - `npm run validate:phase23` passed for observability wiring
 - Production smoke covers and passed `/system/health` and `/audit/events`
-
-Earlier completed phases:
 
 Phase 22 completed production UX / manual sign-off:
 
@@ -241,6 +248,7 @@ npm run validate:phase18d
 npm run validate:phase20
 npm run validate:phase21
 npm run validate:phase23
+npm run validate:phase24
 npm run validate:uat:local
 ```
 
