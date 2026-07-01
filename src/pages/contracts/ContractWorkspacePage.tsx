@@ -6,6 +6,7 @@ import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
 import { contractService } from "../../services/contractService";
 import type {
+  AuditEvent,
   BusinessUser,
   ContractWorkflowState,
   EntityId,
@@ -24,6 +25,7 @@ type ContractWorkspacePageProps = {
   salesState: SalesWorkflowState;
   financeState: FinanceWorkflowState;
   onStateChange: (state: ContractWorkflowState) => void;
+  onAuditEvent: (event: AuditEvent) => void;
 };
 
 type ActionMessage = {
@@ -60,7 +62,8 @@ export function ContractWorkspacePage({
   mediaState,
   salesState,
   financeState,
-  onStateChange
+  onStateChange,
+  onAuditEvent
 }: ContractWorkspacePageProps) {
   const [selectedContractId, setSelectedContractId] = useState<EntityId>("contract-233-framework");
   const [message, setMessage] = useState<ActionMessage | null>(null);
@@ -81,6 +84,9 @@ export function ContractWorkspacePage({
   function runAction(title: string, action: () => ReturnType<typeof contractService.approveLegalReview>) {
     const result = action();
     onStateChange(result.state);
+    if (result.auditEvent) {
+      onAuditEvent(result.auditEvent);
+    }
     setMessage({ title, guard: result.guard });
   }
 

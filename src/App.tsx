@@ -20,6 +20,7 @@ import { createInitialMediaWorkflowState } from "./services/mediaWorkflowService
 import { createInitialSalesWorkflowState } from "./services/salesWorkflowService";
 import { createInitialGuideWorkflowState } from "./services/sopService";
 import { createInitialWorkbenchWorkflowState } from "./services/workbenchService";
+import { buildBusinessAuditAfterData } from "./services/businessAuditCoverage";
 import { createWorkflowRepository } from "./repositories/workflowRepositoryFactory";
 import type { WorkflowRepositoryHealth, WorkflowSnapshot } from "./repositories/workflowRepository";
 import {
@@ -29,7 +30,7 @@ import {
   type SupabasePasswordSignInInput
 } from "./repositories/authSessionRepository";
 import { createAuditLogRepository, type AuditLogWriteInput } from "./repositories/auditLogRepository";
-import type { BusinessUser } from "./types/domain";
+import type { AuditEvent, BusinessUser } from "./types/domain";
 
 export function App() {
   const [activeRole, setActiveRole] = useState<RoleCode>("ceo");
@@ -408,6 +409,23 @@ export function App() {
     setActivePath(nextPath);
   }
 
+  function handleWorkflowAuditEvent(event: AuditEvent) {
+    if (!activeUser) {
+      return;
+    }
+
+    void recordAuditLogForUser(activeUser, {
+      id: event.id,
+      action: event.action,
+      objectType: event.objectType,
+      objectId: event.objectId,
+      allowed: event.allowed,
+      reasonCode: event.reasonCode,
+      afterData: buildBusinessAuditAfterData(event, activeUser.activeRole),
+      createdAt: event.createdAt
+    });
+  }
+
   async function recordAuditLogForUser(
     user: BusinessUser,
     input: Omit<AuditLogWriteInput, "actorUserId">,
@@ -488,6 +506,7 @@ export function App() {
           user={activeUser}
           state={mediaWorkflowState}
           onStateChange={setMediaWorkflowState}
+          onAuditEvent={handleWorkflowAuditEvent}
           onRouteChange={setActivePath}
         />
       ) : activeRoute.path.startsWith("/sales/") ||
@@ -500,6 +519,7 @@ export function App() {
           state={salesWorkflowState}
           mediaState={mediaWorkflowState}
           onStateChange={setSalesWorkflowState}
+          onAuditEvent={handleWorkflowAuditEvent}
           onRouteChange={setActivePath}
         />
       ) : activeRoute.path.startsWith("/diagnostics/") ? (
@@ -520,6 +540,7 @@ export function App() {
           mediaState={mediaWorkflowState}
           salesState={salesWorkflowState}
           onStateChange={setFinanceWorkflowState}
+          onAuditEvent={handleWorkflowAuditEvent}
         />
       ) : activeRoute.path.startsWith("/contracts/") ? (
         <ContractWorkspacePage
@@ -531,6 +552,7 @@ export function App() {
           salesState={salesWorkflowState}
           financeState={financeWorkflowState}
           onStateChange={setContractWorkflowState}
+          onAuditEvent={handleWorkflowAuditEvent}
         />
       ) : activeRoute.path === "/guide" ? (
         <GuideCenterPage

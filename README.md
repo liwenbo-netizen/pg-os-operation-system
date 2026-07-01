@@ -4,6 +4,16 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 29 completed direct business audit writes:
+
+- Media, Sales, Finance, and Contract button actions now emit direct audit callbacks
+- App writes returned workflow `auditEvent` objects through `AuditLogRepository`
+- Direct writes reuse `event.id` and `buildBusinessAuditAfterData` so `/audit/events` can show business audit rows independently of bulk workflow save warnings
+- `npm run validate:phase29` validates the direct write wiring
+- `npm run validate:uat:local` now includes the Phase 29 direct audit gate
+
+Earlier completed phases:
+
 Phase 28 completed business audit write coverage:
 
 - Core Media, Sales, Campaigns, Finance, and Contract workflow actions now have an explicit audit coverage manifest
@@ -11,8 +21,6 @@ Phase 28 completed business audit write coverage:
 - Covered audit rows include business module, workflow action, workflow surface, criticality, actor role, allowed, and reason code metadata
 - `npm run validate:phase28` validates coverage manifest, repository persistence wiring, tests, and documentation
 - `npm run validate:uat:local` now includes the Phase 28 audit coverage gate
-
-Earlier completed phases:
 
 Phase 27 completed audit event display normalization:
 
@@ -286,6 +294,7 @@ npm run validate:phase25
 npm run validate:phase26
 npm run validate:phase27
 npm run validate:phase28
+npm run validate:phase29
 npm run validate:uat:local
 ```
 
@@ -374,6 +383,10 @@ Production observability / error and audit console:
 Business audit write coverage:
 
 [Phase 28 Business Audit Write Coverage Report](docs/development-package/phase-28-business-audit-write-coverage.md)
+
+Direct business audit writes:
+
+[Phase 29 Direct Business Audit Writes Report](docs/development-package/phase-29-direct-business-audit-writes.md)
 
 ## Development Rules
 

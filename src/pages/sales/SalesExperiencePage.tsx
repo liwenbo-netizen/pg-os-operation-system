@@ -5,7 +5,7 @@ import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
 import { salesWorkflowService } from "../../services/salesWorkflowService";
-import type { BusinessUser, EntityId, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
+import type { AuditEvent, BusinessUser, EntityId, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
 
 type SalesExperiencePageProps = {
@@ -15,6 +15,7 @@ type SalesExperiencePageProps = {
   state: SalesWorkflowState;
   mediaState: MediaWorkflowState;
   onStateChange: (state: SalesWorkflowState) => void;
+  onAuditEvent: (event: AuditEvent) => void;
   onRouteChange: (path: string) => void;
 };
 
@@ -56,6 +57,7 @@ export function SalesExperiencePage({
   state,
   mediaState,
   onStateChange,
+  onAuditEvent,
   onRouteChange
 }: SalesExperiencePageProps) {
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<EntityId>("opportunity-daily-yoga-q3");
@@ -83,6 +85,9 @@ export function SalesExperiencePage({
   function runAction(title: string, action: () => ReturnType<typeof salesWorkflowService.createAdvertiser>) {
     const result = action();
     onStateChange(result.state);
+    if (result.auditEvent) {
+      onAuditEvent(result.auditEvent);
+    }
     setMessage({ title, guard: result.guard });
   }
 

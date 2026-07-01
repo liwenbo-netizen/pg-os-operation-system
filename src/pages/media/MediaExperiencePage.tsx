@@ -5,7 +5,7 @@ import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
 import { mediaWorkflowService } from "../../services/mediaWorkflowService";
-import type { BusinessUser, EntityId, MediaWorkflowState, Publisher } from "../../types/domain";
+import type { AuditEvent, BusinessUser, EntityId, MediaWorkflowState, Publisher } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
 
 type MediaExperiencePageProps = {
@@ -14,6 +14,7 @@ type MediaExperiencePageProps = {
   user: BusinessUser;
   state: MediaWorkflowState;
   onStateChange: (state: MediaWorkflowState) => void;
+  onAuditEvent: (event: AuditEvent) => void;
   onRouteChange: (path: string) => void;
 };
 
@@ -53,6 +54,7 @@ export function MediaExperiencePage({
   user,
   state,
   onStateChange,
+  onAuditEvent,
   onRouteChange
 }: MediaExperiencePageProps) {
   const [selectedPublisherId, setSelectedPublisherId] = useState<EntityId>("publisher-new-ctv");
@@ -68,6 +70,9 @@ export function MediaExperiencePage({
   function runAction(title: string, action: () => ReturnType<typeof mediaWorkflowService.createPublisher>) {
     const result = action();
     onStateChange(result.state);
+    if (result.auditEvent) {
+      onAuditEvent(result.auditEvent);
+    }
     setMessage({ title, guard: result.guard });
   }
 
@@ -570,4 +575,3 @@ function DetailPanel({
     </article>
   );
 }
-

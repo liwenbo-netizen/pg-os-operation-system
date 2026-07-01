@@ -5,7 +5,7 @@ import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
 import { financeSettlementService } from "../../services/financeSettlementService";
-import type { BusinessUser, EntityId, FinanceWorkflowState, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
+import type { AuditEvent, BusinessUser, EntityId, FinanceWorkflowState, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
 
 type FinanceSettlementPageProps = {
@@ -16,6 +16,7 @@ type FinanceSettlementPageProps = {
   mediaState: MediaWorkflowState;
   salesState: SalesWorkflowState;
   onStateChange: (state: FinanceWorkflowState) => void;
+  onAuditEvent: (event: AuditEvent) => void;
 };
 
 type ActionMessage = {
@@ -42,7 +43,8 @@ export function FinanceSettlementPage({
   state,
   mediaState,
   salesState,
-  onStateChange
+  onStateChange,
+  onAuditEvent
 }: FinanceSettlementPageProps) {
   const [selectedSettlementId, setSelectedSettlementId] = useState<EntityId>("settlement-clean");
   const [message, setMessage] = useState<ActionMessage | null>(null);
@@ -63,6 +65,9 @@ export function FinanceSettlementPage({
   function runAction(title: string, action: () => ReturnType<typeof financeSettlementService.confirmSettlement>) {
     const result = action();
     onStateChange(result.state);
+    if (result.auditEvent) {
+      onAuditEvent(result.auditEvent);
+    }
     setMessage({ title, guard: result.guard });
   }
 
