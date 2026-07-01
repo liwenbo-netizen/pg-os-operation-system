@@ -2,6 +2,12 @@
 
 Status: AUTOMATED PREFLIGHT PASS. Production login and role UAT preflight passed; manual browser sign-off remains for visual login UX confirmation.
 
+Update after manual browser attempt:
+
+- `media_manager` Supabase login initially failed with `Invalid path specified in request URL`.
+- Root cause: Vercel `VITE_SUPABASE_URL` can be entered with a Supabase service path such as `/rest/v1/`, while the browser `createClient()` call requires the project root URL.
+- Fix: the frontend now normalizes known Supabase service paths before creating the browser client.
+
 ## Objective
 
 Verify that the deployed production app is usable as a real PG OS entry point after Phase 19 deployment and Phase 20 Supabase frontend env readiness.
