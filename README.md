@@ -4,6 +4,16 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 26 completed real audit event write coverage:
+
+- PG OS now writes `auth.sign_in`, `auth.sign_out`, role-switch, and route-access events to Supabase `audit_logs`
+- Audit writes use the browser anon session and never require the service role key
+- Route paths and non-UUID identifiers are kept in `after_data`, while UUID columns are guarded
+- `/audit/events` can now show both `audit` and `business` event classes
+- `npm run validate:phase26` passed for audit write coverage wiring
+
+Earlier completed phases:
+
 Phase 25 completed System Health live observability alignment:
 
 - `/system/health` now samples the live Supabase audit/business event source used by `/audit/events`
@@ -11,8 +21,6 @@ Phase 25 completed System Health live observability alignment:
 - Live event warnings are surfaced in the System Health warnings panel
 - Phase 24 CEO production sign-off is recorded in the development package
 - `npm run validate:phase25` passed for live health observability wiring
-
-Earlier completed phases:
 
 Phase 24 completed Supabase audit event pagination:
 
@@ -258,6 +266,7 @@ npm run validate:phase21
 npm run validate:phase23
 npm run validate:phase24
 npm run validate:phase25
+npm run validate:phase26
 npm run validate:uat:local
 ```
 

@@ -28,6 +28,7 @@ import {
   type AuthSessionResult,
   type SupabasePasswordSignInInput
 } from "./repositories/authSessionRepository";
+import { createAuditLogRepository, type AuditLogWriteInput } from "./repositories/auditLogRepository";
 import type { BusinessUser } from "./types/domain";
 
 export function App() {
@@ -46,6 +47,7 @@ export function App() {
   const [workbenchWorkflowState, setWorkbenchWorkflowState] = useState(createInitialWorkbenchWorkflowState);
   const [workflowRepository] = useState(() => createWorkflowRepository());
   const [authSessionRepository] = useState(() => createAuthSessionRepository());
+  const [auditLogRepository] = useState(() => createAuditLogRepository());
   const [repositoryHealth, setRepositoryHealth] = useState<WorkflowRepositoryHealth>(() => ({
     mode: workflowRepository.mode,
     source: workflowRepository.mode === "supabase" ? "supabase-loading" : "fixtureRepository",
@@ -264,7 +266,26 @@ export function App() {
   async function handleSupabaseSignIn(input: SupabasePasswordSignInInput) {
     setAuthLoading(true);
     try {
-      applyAuthResult(await authSessionRepository.signInWithPassword(input));
+      const result = await authSessionRepository.signInWithPassword(input);
+      applyAuthResult(result);
+
+      if (result.status === "authenticated" && result.user) {
+        void recordAuditLogForUser(
+          result.user,
+          {
+            action: "auth.sign_in",
+            objectType: "route",
+            allowed: true,
+            reasonCode: "AUTH_SIGN_IN",
+            afterData: {
+              requestedRole: input.requestedRole,
+              activeRole: result.user.activeRole,
+              source: result.source
+            }
+          },
+          result.mode
+        );
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -273,6 +294,23 @@ export function App() {
   async function handleSignOut() {
     setAuthLoading(true);
     try {
+      const signingOutUser = activeUser;
+      if (authMode === "supabase" && signingOutUser) {
+        await recordAuditLogForUser(
+          signingOutUser,
+          {
+            action: "auth.sign_out",
+            objectType: "route",
+            allowed: true,
+            reasonCode: "AUTH_SIGN_OUT",
+            afterData: {
+              activeRole: signingOutUser.activeRole
+            }
+          },
+          "supabase"
+        );
+      }
+
       if (authMode === "supabase") {
         const result = await authSessionRepository.signOut();
         if (result.status === "error") {
@@ -291,8 +329,31 @@ export function App() {
 
   function handleRoleChange(nextRole: RoleCode) {
     if (authMode === "supabase" && activeUser && !activeUser.roles.includes(nextRole)) {
+      void recordAuditLogForUser(activeUser, {
+        action: "role.switch.denied",
+        objectType: "route",
+        allowed: false,
+        reasonCode: "ROLE_NOT_ASSIGNED",
+        afterData: {
+          fromRole: activeUser.activeRole,
+          requestedRole: nextRole
+        }
+      });
       setAuthWarnings([`${roleDefinitions[nextRole].name} is not assigned to ${activeUser.email}.`]);
       return;
+    }
+
+    if (activeUser && activeUser.activeRole !== nextRole) {
+      void recordAuditLogForUser(activeUser, {
+        action: "role.switch",
+        objectType: "route",
+        allowed: true,
+        reasonCode: "ROLE_SWITCH",
+        afterData: {
+          fromRole: activeUser.activeRole,
+          toRole: nextRole
+        }
+      });
     }
 
     setActiveRole(nextRole);
@@ -306,6 +367,64 @@ export function App() {
         : currentUser
     );
     setActivePath(getDefaultRouteForRole(nextRole));
+  }
+
+  function handleRouteChange(nextPath: string) {
+    const guardResult = canViewRoute(activeRole, nextPath);
+    const route = routeDefinitions.find((definition) => definition.path === nextPath);
+
+    if (!guardResult.allowed) {
+      if (activeUser) {
+        void recordAuditLogForUser(activeUser, {
+          action: "route.denied",
+          objectType: "route",
+          allowed: false,
+          reasonCode: guardResult.reason_code,
+          afterData: {
+            path: nextPath,
+            role: activeRole,
+            message: guardResult.message
+          }
+        });
+      }
+      return;
+    }
+
+    if (activeUser) {
+      void recordAuditLogForUser(activeUser, {
+        action: "route.visit",
+        objectType: "route",
+        allowed: true,
+        reasonCode: "ROUTE_VISIT",
+        afterData: {
+          path: nextPath,
+          role: activeRole,
+          title: route?.title,
+          module: route?.module
+        }
+      });
+    }
+
+    setActivePath(nextPath);
+  }
+
+  async function recordAuditLogForUser(
+    user: BusinessUser,
+    input: Omit<AuditLogWriteInput, "actorUserId">,
+    mode: AuthSessionMode = authMode
+  ) {
+    if (mode !== "supabase" || !auditLogRepository.supportsSupabase) {
+      return;
+    }
+
+    const result = await auditLogRepository.recordEvent({
+      ...input,
+      actorUserId: user.id
+    });
+
+    if (!result.ok && result.warning) {
+      console.warn(result.warning);
+    }
   }
 
   if (!activeUser) {
@@ -328,7 +447,7 @@ export function App() {
       activePath={activeRoute.path}
       activeRole={activeRole}
       routes={visibleRoutes}
-      onRouteChange={setActivePath}
+      onRouteChange={handleRouteChange}
       onRoleChange={handleRoleChange}
       onSignOut={handleSignOut}
       repositoryStatus={repositoryStatus}
