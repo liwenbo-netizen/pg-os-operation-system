@@ -4,14 +4,21 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 20 completed the production auth readiness gate:
+
+- `npm run validate:phase20` passed for script and config wiring
+- `npm run smoke:production:auth -- --url https://pg-os-operation-system.vercel.app/` passed after Vercel Production env redeploy
+- The production bundle was checked for accidental service-role and UAT password leakage
+- Secret values are never printed by the gate
+
+Earlier completed phases:
+
 Phase 19 deployed the Vercel production app:
 
 - Production URL: `https://pg-os-operation-system.vercel.app/`
 - Vercel Web import from `liwenbo-netizen/pg-os-operation-system` is complete
 - Production smoke passed with `npm run smoke:production -- --url https://pg-os-operation-system.vercel.app/`
 - Post-deploy full UAT passed with `npm run validate:uat`
-
-Earlier completed phases:
 
 Phase 18D adds the production deployment smoke gate:
 
@@ -208,6 +215,7 @@ npm run validate:phase17b
 npm run validate:phase18b
 npm run validate:phase18c
 npm run validate:phase18d
+npm run validate:phase20
 npm run validate:uat:local
 ```
 
@@ -276,6 +284,10 @@ Production smoke gate:
 Production deploy execution:
 
 [Phase 19 Production Deploy Execution Report](docs/development-package/phase-19-production-deploy-execution.md)
+
+Production auth readiness:
+
+[Phase 20 Production Auth Readiness Report](docs/development-package/phase-20-production-auth-readiness.md)
 
 ## Development Rules
 
