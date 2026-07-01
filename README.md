@@ -4,14 +4,22 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 22 completed production UX / manual sign-off:
+
+- Production URL: `https://pg-os-operation-system.vercel.app/`
+- Operator confirmed the production Supabase login path works after the Supabase URL normalization fix
+- `npm run smoke:production:auth -- --url https://pg-os-operation-system.vercel.app/` passed after the fix
+- Phase 21 automated role/RLS preflight remains the supporting evidence for representative roles, including `audit_viewer` write blocking
+- Secret rotation remains tracked as a pre-formal-production security item while the system is still in testing and polishing
+
+Earlier completed phases:
+
 Phase 21 completed automated production manual login / role UAT preflight:
 
 - `npm run validate:phase21` passed for production manual login UAT gate wiring
 - `npm run smoke:production:manual-login -- --url https://pg-os-operation-system.vercel.app/` passed for production route shells, Supabase UAT sign-in, profile/user_roles binding, and representative role boundaries
 - Manual browser sign-off covers Supabase login UX, role badge, role selector, Workbench, Guide, and `audit_viewer` read-only behavior
 - Secret rotation is documented as deferred until formal production usage
-
-Earlier completed phases:
 
 Phase 20 completed the production auth readiness gate:
 
@@ -300,6 +308,10 @@ Production auth readiness:
 Production manual login / role UAT:
 
 [Phase 21 Production Manual Login / Role UAT Report](docs/development-package/phase-21-production-manual-login-role-uat.md)
+
+Production UX / manual sign-off completion:
+
+[Phase 22 Production UX / Manual Sign-off Completion Report](docs/development-package/phase-22-production-ux-manual-signoff-completion.md)
 
 ## Development Rules
 

@@ -1,12 +1,13 @@
 # Phase 21 Report - Production Manual Login / Role UAT
 
-Status: AUTOMATED PREFLIGHT PASS. Production login and role UAT preflight passed; manual browser sign-off remains for visual login UX confirmation.
+Status: PRODUCTION LOGIN PATH CONFIRMED. Automated preflight passed, the production Supabase URL issue was fixed, and the operator confirmed production login succeeds after redeploy.
 
 Update after manual browser attempt:
 
 - `media_manager` Supabase login initially failed with `Invalid path specified in request URL`.
 - Root cause: Vercel `VITE_SUPABASE_URL` can be entered with a Supabase service path such as `/rest/v1/`, while the browser `createClient()` call requires the project root URL.
 - Fix: the frontend now normalizes known Supabase service paths before creating the browser client.
+- Follow-up: after commit `b656379 fix: normalize Supabase project URL` deployed to Vercel, the operator confirmed production login succeeds.
 
 ## Objective
 
@@ -107,5 +108,5 @@ Phase 21 is accepted when:
 
 - `npm run validate:phase21` passes. PASS.
 - `npm run smoke:production:manual-login -- --url https://pg-os-operation-system.vercel.app/` passes. PASS.
-- Manual browser checklist is completed for at least `media_manager` and `audit_viewer`. PENDING OPERATOR SIGN-OFF.
+- Manual browser checklist is completed for the production Supabase login path. PASS for `media_manager`; `audit_viewer` read-only behavior remains covered by automated preflight and is recommended for visual spot-check before formal production usage.
 - Deferred secret rotation remains documented as a pre-formal-production security item. PASS.
