@@ -77,6 +77,19 @@ export function validateAuditEventDisplayNormalization(root) {
     failures.push("Phase 26 report must record the manual production UAT PASS.");
   }
 
+  const phase27 = readText(root, "docs/development-package/phase-27-audit-event-display-normalization.md");
+  if (
+    !phase27.includes("Production UAT was completed") ||
+    !phase27.includes("https://pg-os-operation-system.vercel.app/") ||
+    !phase27.includes("Observed role: `CEO`") ||
+    !phase27.includes("auth.sign_in -> Auth") ||
+    !phase27.includes("route.visit -> System") ||
+    !phase27.includes("Observed source badge: `Supabase live`") ||
+    !phase27.includes("Decision: PASS")
+  ) {
+    failures.push("Phase 27 report must record the production display normalization UAT PASS.");
+  }
+
   return failures;
 }
 

@@ -46,7 +46,13 @@ npm run validate:secret-hygiene
 
 ## Production UAT
 
-After deployment, a CEO or audit-capable role should open `/audit/events` and confirm:
+Production UAT was completed on `https://pg-os-operation-system.vercel.app/` after Vercel deployment.
+
+Observed role: `CEO`
+
+Observed route: `/audit/events`
+
+Observed result:
 
 ```text
 auth.sign_in -> Auth
@@ -56,6 +62,10 @@ role.switch -> System, when present
 publisher.created -> Media
 ```
 
+Observed source badge: `Supabase live`
+
+Decision: PASS
+
 ## Acceptance Criteria
 
 Phase 27 is accepted when:
@@ -64,4 +74,5 @@ Phase 27 is accepted when:
 - Route and role audit events display as System. PASS.
 - Guide/SOP event inference remains intact. PASS.
 - Phase 26 production sign-off remains recorded. PASS.
+- Phase 27 production sign-off is recorded after Vercel deployment. PASS.
 - `npm run validate:phase27` passes. PASS.

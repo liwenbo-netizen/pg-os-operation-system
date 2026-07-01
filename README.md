@@ -10,6 +10,7 @@ Phase 27 completed audit event display normalization:
 - `route.*` and `role.*` audit events now display as `System`
 - Guide/SOP event display inference remains intact
 - Phase 26 production UAT PASS is recorded in the development package
+- Phase 27 production UAT PASS is recorded after Vercel deployment
 - `npm run validate:phase27` passed for display normalization wiring
 
 Earlier completed phases:
