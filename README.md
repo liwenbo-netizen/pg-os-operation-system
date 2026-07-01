@@ -4,13 +4,13 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
-Phase 23 adds production observability / error and audit console:
+Phase 23 completed production observability / error and audit console:
 
 - Runtime error boundary prevents unrecoverable blank screens
 - `/system/health` shows auth, repository, warning, route, and event coverage signals
 - `/audit/events` gives `ceo`, `system_admin`, and `audit_viewer` a read-only audit/business event stream
-- `npm run validate:phase23` checks observability wiring
-- Production smoke now covers `/system/health` and `/audit/events`
+- `npm run validate:phase23` passed for observability wiring
+- Production smoke covers and passed `/system/health` and `/audit/events`
 
 Earlier completed phases:
 
