@@ -33,6 +33,12 @@ export const uatValidationSteps = [
     live: false
   },
   {
+    id: "business-audit-coverage",
+    label: "Core business audit write coverage",
+    script: "validate:phase28",
+    live: false
+  },
+  {
     id: "uat-rls",
     label: "Supabase UAT anon-session RLS gate",
     script: "verify:uat-rls",

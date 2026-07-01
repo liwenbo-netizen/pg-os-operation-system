@@ -387,6 +387,112 @@ describe("workflow repositories", () => {
     ]);
   });
 
+  it("enriches core business audit rows with Phase 28 coverage metadata", async () => {
+    const fakeSupabase = new FakeSupabase();
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const snapshot = createFixtureWorkflowSnapshot();
+    const actorId = uuid(50);
+    const publisherId = uuid(51);
+    const proposalId = uuid(52);
+    const settlementId = uuid(53);
+    const contractId = uuid(54);
+
+    snapshot.mediaState.auditEvents = [
+      {
+        id: uuid(55),
+        actorUserId: "mock-media-manager",
+        action: "publisher.create",
+        objectType: "publisher",
+        objectId: publisherId,
+        allowed: true,
+        reasonCode: "PUBLISHER_CREATED",
+        createdAt: "2026-07-01T00:00:00.000Z"
+      }
+    ];
+    snapshot.salesState.auditEvents = [
+      {
+        id: uuid(56),
+        actorUserId: "mock-sales-director",
+        action: "proposal.approve",
+        objectType: "proposal",
+        objectId: proposalId,
+        allowed: true,
+        reasonCode: "PROPOSAL_APPROVED",
+        createdAt: "2026-07-01T00:01:00.000Z"
+      }
+    ];
+    snapshot.financeState.auditEvents = [
+      {
+        id: uuid(57),
+        actorUserId: "mock-finance-manager",
+        action: "settlement.confirm",
+        objectType: "settlement",
+        objectId: settlementId,
+        allowed: true,
+        reasonCode: "SETTLEMENT_CONFIRMED",
+        createdAt: "2026-07-01T00:02:00.000Z"
+      }
+    ];
+    snapshot.contractState.auditEvents = [
+      {
+        id: uuid(58),
+        actorUserId: "mock-legal-manager",
+        action: "contract.sign",
+        objectType: "contract",
+        objectId: contractId,
+        allowed: true,
+        reasonCode: "CONTRACT_SIGNED",
+        createdAt: "2026-07-01T00:03:00.000Z"
+      }
+    ];
+
+    await repository.saveSnapshot(snapshot, {
+      actor: {
+        id: actorId,
+        activeRole: "ceo"
+      }
+    });
+
+    expect(fakeSupabase.writes.audit_logs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "publisher.create",
+          object_type: "publisher",
+          after_data: expect.objectContaining({
+            actorRole: "ceo",
+            businessAuditCoverage: "phase28_core_business_action",
+            businessModule: "Media",
+            workflowAction: "publisher.create"
+          })
+        }),
+        expect.objectContaining({
+          action: "proposal.approve",
+          object_type: "proposal",
+          after_data: expect.objectContaining({
+            businessModule: "Sales",
+            workflowAction: "proposal.approve"
+          })
+        }),
+        expect.objectContaining({
+          action: "settlement.confirm",
+          object_type: "settlement",
+          after_data: expect.objectContaining({
+            businessModule: "Finance",
+            workflowAction: "settlement.confirm"
+          })
+        }),
+        expect.objectContaining({
+          action: "contract.sign",
+          object_type: "contract",
+          after_data: expect.objectContaining({
+            businessModule: "Contracts",
+            workflowAction: "contract.sign"
+          })
+        })
+      ])
+    );
+  });
+
   it("does not write audit foreign keys for mock non-UUID actors", async () => {
     const fakeSupabase = new FakeSupabase();
     const repository = new SupabaseWorkflowRepository(fakeSupabase);

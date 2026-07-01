@@ -4,6 +4,16 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 28 completed business audit write coverage:
+
+- Core Media, Sales, Campaigns, Finance, and Contract workflow actions now have an explicit audit coverage manifest
+- Supabase workflow saves enrich covered `audit_logs.after_data` with `phase28_core_business_action`
+- Covered audit rows include business module, workflow action, workflow surface, criticality, actor role, allowed, and reason code metadata
+- `npm run validate:phase28` validates coverage manifest, repository persistence wiring, tests, and documentation
+- `npm run validate:uat:local` now includes the Phase 28 audit coverage gate
+
+Earlier completed phases:
+
 Phase 27 completed audit event display normalization:
 
 - `auth.*` audit events now display as `Auth` instead of `Guide`
@@ -12,8 +22,6 @@ Phase 27 completed audit event display normalization:
 - Phase 26 production UAT PASS is recorded in the development package
 - Phase 27 production UAT PASS is recorded after Vercel deployment
 - `npm run validate:phase27` passed for display normalization wiring
-
-Earlier completed phases:
 
 Phase 26 completed real audit event write coverage:
 
@@ -277,6 +285,7 @@ npm run validate:phase24
 npm run validate:phase25
 npm run validate:phase26
 npm run validate:phase27
+npm run validate:phase28
 npm run validate:uat:local
 ```
 
@@ -361,6 +370,10 @@ Production UX / manual sign-off completion:
 Production observability / error and audit console:
 
 [Phase 23 Production Observability Report](docs/development-package/phase-23-production-observability.md)
+
+Business audit write coverage:
+
+[Phase 28 Business Audit Write Coverage Report](docs/development-package/phase-28-business-audit-write-coverage.md)
 
 ## Development Rules
 

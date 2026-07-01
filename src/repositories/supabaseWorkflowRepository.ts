@@ -30,6 +30,7 @@ import {
   type WorkflowRepository,
   type WorkflowSnapshot
 } from "./workflowRepository";
+import { buildBusinessAuditAfterData } from "../services/businessAuditCoverage";
 
 type SupabaseErrorLike = {
   message?: string;
@@ -1042,10 +1043,7 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           action: event.action,
           object_type: event.objectType,
           object_id: optionalUuid(event.objectId),
-          after_data: {
-            allowed: event.allowed,
-            reasonCode: event.reasonCode
-          },
+          after_data: buildBusinessAuditAfterData(event, context?.actor?.activeRole),
           created_at: event.createdAt
         })),
         uuidFields: []

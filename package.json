@@ -41,6 +41,7 @@
     "validate:phase25": "vitest run src/services/observabilityService.test.ts scripts/validate-system-health-live-observability.test.mjs && node scripts/validate-system-health-live-observability.mjs --config-only",
     "validate:phase26": "vitest run src/repositories/auditLogRepository.test.ts scripts/validate-real-audit-event-write-coverage.test.mjs && node scripts/validate-real-audit-event-write-coverage.mjs --config-only",
     "validate:phase27": "vitest run src/repositories/auditEventRepository.test.ts scripts/validate-audit-event-display-normalization.test.mjs && node scripts/validate-audit-event-display-normalization.mjs --config-only",
+    "validate:phase28": "vitest run src/services/businessAuditCoverage.test.ts src/repositories/workflowRepository.test.ts scripts/validate-business-audit-write-coverage.test.mjs && node scripts/validate-business-audit-write-coverage.mjs --config-only",
     "smoke:production": "node scripts/validate-production-deployment-smoke.mjs",
     "smoke:production:auth": "node scripts/validate-production-auth-readiness.mjs",
     "smoke:production:manual-login": "node scripts/validate-production-manual-login-uat.mjs",
