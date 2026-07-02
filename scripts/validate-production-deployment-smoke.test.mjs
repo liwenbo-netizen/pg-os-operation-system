@@ -40,6 +40,7 @@ describe("validate-production-deployment-smoke", () => {
     expect(productionSmokePaths).toContain("/workbench");
     expect(productionSmokePaths).toContain("/system/health");
     expect(productionSmokePaths).toContain("/audit/events");
+    expect(productionSmokePaths).toContain("/uat/scripts");
     expect(productionSmokePaths).toContain("/contracts/uat-smoke");
     expect(productionSmokePaths).toContain("/finance/settlements/uat-smoke");
   });

@@ -8,6 +8,7 @@ export const productionSmokePaths = [
   "/guide",
   "/system/health",
   "/audit/events",
+  "/uat/scripts",
   "/contracts/uat-smoke",
   "/finance/settlements/uat-smoke",
   "/media/manager-workbench",

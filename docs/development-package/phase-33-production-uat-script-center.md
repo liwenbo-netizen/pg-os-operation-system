@@ -99,3 +99,30 @@ Result:
 - Summary shows total, passed, failed, blocked, pending, and completion rate. PASS.
 - UAT route is limited to sign-off/support roles. PASS.
 - `npm run validate:phase33` passes. PASS.
+
+## Production Sign-Off
+
+Recorded at: 2026-07-02 22:08:09 UTC+8.
+
+Production URL:
+
+```text
+https://pg-os-operation-system.vercel.app/
+```
+
+Executed:
+
+```text
+npm run validate:phase18d
+npm run validate:phase33
+npm run lint
+npm run build
+npm run smoke:production -- --url https://pg-os-operation-system.vercel.app/
+```
+
+Result:
+
+- Production smoke gate now covers `/uat/scripts`. PASS.
+- Production deep link `/uat/scripts` returned HTTP 200 with React root. PASS.
+- Production bundle contains `UAT Script Center`, `Actual result`, and `/uat/scripts` markers. PASS.
+- Phase 33 production deployment is ready for manual UAT checklist usage. PASS.
