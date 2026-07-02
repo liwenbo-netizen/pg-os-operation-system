@@ -10,6 +10,7 @@ import {
 import type { AppRoute } from "../../routes/routes";
 import type { BusinessUser } from "../../types/domain";
 import type { WorkflowSnapshot } from "../../repositories/workflowRepository";
+import { formatUtcPlus8DateTime } from "../../lib/time";
 
 type AuditEventConsolePageProps = {
   route: AppRoute;
@@ -127,7 +128,8 @@ export function AuditEventConsolePage({ route, snapshot, user }: AuditEventConso
           <div>
             <p className="text-sm font-semibold text-slate-900">Event stream</p>
             <p className="mt-1 text-xs text-slate-500">
-              Page {eventPage.page + 1} / {eventPage.pageSize} rows per page / loaded {eventPage.loadedAt}
+              Page {eventPage.page + 1} / {eventPage.pageSize} rows per page / loaded{" "}
+              {formatUtcPlus8DateTime(eventPage.loadedAt)}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -205,7 +207,7 @@ export function AuditEventConsolePage({ route, snapshot, user }: AuditEventConso
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-slate-500">{event.createdAt}</p>
+                  <p className="text-xs text-slate-500">{formatUtcPlus8DateTime(event.createdAt)}</p>
                 </div>
               ))}
               {events.length === 0 ? (

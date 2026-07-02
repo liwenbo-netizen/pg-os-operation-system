@@ -15,6 +15,7 @@ import {
   type HealthCheckStatus,
   type SystemHealthEventCoverage
 } from "../../services/observabilityService";
+import { formatUtcPlus8DateTime } from "../../lib/time";
 
 type StatusProps = {
   status: HealthCheckStatus;
@@ -225,7 +226,7 @@ export function SystemHealthPage({
           <Activity className="size-5 text-blue-600" aria-hidden="true" />
           <h2 className="mt-3 text-sm font-semibold text-slate-900">Warnings</h2>
           <p className="mt-2 text-sm text-slate-600">{warningItems.length} active warning(s)</p>
-          <p className="mt-1 text-xs text-slate-500">Loaded at {repositoryHealth.loadedAt}</p>
+          <p className="mt-1 text-xs text-slate-500">Loaded at {formatUtcPlus8DateTime(repositoryHealth.loadedAt)}</p>
         </div>
       </div>
 

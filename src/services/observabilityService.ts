@@ -1,4 +1,5 @@
 import type { RoleCode } from "../constants/roles";
+import { formatUtcPlus8DateTime } from "../lib/time";
 import type { WorkflowRepositoryHealth, WorkflowSnapshot } from "../repositories/workflowRepository";
 import type { AuditEvent, BusinessUser, ModuleBusinessEvent } from "../types/domain";
 
@@ -89,7 +90,7 @@ function buildEventHealthCheck(input: SystemHealthInput): SystemHealthCheck {
     id: "events",
     label: "Audit and business events",
     status: coverage.warningCount > 0 ? "warning" : totalEvents > 0 ? "ok" : "warning",
-    detail: `${eventSourceLabel(coverage.source)}: ${coverage.auditCount} audit event(s), ${coverage.businessCount} business event(s) in latest ${coverage.sampleSize} event(s). Loaded at ${coverage.loadedAt}.`
+    detail: `${eventSourceLabel(coverage.source)}: ${coverage.auditCount} audit event(s), ${coverage.businessCount} business event(s) in latest ${coverage.sampleSize} event(s). Loaded at ${formatUtcPlus8DateTime(coverage.loadedAt)}.`
   };
 }
 
@@ -115,7 +116,7 @@ export function buildSystemHealthChecks(input: SystemHealthInput): SystemHealthC
       id: "repository",
       label: "Workflow repository",
       status: repositoryStatus,
-      detail: `${input.repositoryHealth.source} / ${input.repositoryHealth.loadedAt}`
+      detail: `${input.repositoryHealth.source} / ${formatUtcPlus8DateTime(input.repositoryHealth.loadedAt)}`
     },
     {
       id: "warnings",

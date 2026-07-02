@@ -69,7 +69,7 @@ describe("observabilityService", () => {
     const eventCheck = checks.find((check) => check.id === "events");
     expect(eventCheck).toMatchObject({
       status: "ok",
-      detail: "Supabase live: 1 audit event(s), 2 business event(s) in latest 3 event(s). Loaded at 2026-07-01T03:00:00.000Z."
+      detail: "Supabase live: 1 audit event(s), 2 business event(s) in latest 3 event(s). Loaded at 2026-07-01 11:00:00 UTC+8."
     });
   });
 

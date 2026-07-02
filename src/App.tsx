@@ -31,6 +31,7 @@ import {
 } from "./repositories/authSessionRepository";
 import { createAuditLogRepository, type AuditLogWriteInput } from "./repositories/auditLogRepository";
 import type { AuditEvent, BusinessUser } from "./types/domain";
+import { formatUtcPlus8DateTime } from "./lib/time";
 
 export function App() {
   const [activeRole, setActiveRole] = useState<RoleCode>("ceo");
@@ -89,7 +90,7 @@ export function App() {
 
     return {
       label,
-      detail: `${repositoryHealth.source} / ${repositoryHealth.loadedAt}`,
+      detail: `${repositoryHealth.source} / ${formatUtcPlus8DateTime(repositoryHealth.loadedAt)}`,
       warningCount
     };
   }, [repositoryHealth]);
