@@ -10,6 +10,7 @@ import { RoutePlaceholderPage } from "./pages/RoutePlaceholderPage";
 import { SalesExperiencePage } from "./pages/sales/SalesExperiencePage";
 import { AuditEventConsolePage } from "./pages/audit/AuditEventConsolePage";
 import { SystemHealthPage } from "./pages/system/SystemHealthPage";
+import { UatScriptCenterPage } from "./pages/uat/UatScriptCenterPage";
 import { WorkbenchOperationsPage } from "./pages/workbench/WorkbenchOperationsPage";
 import { roleCodes, roleDefinitions, type RoleCode } from "./constants/roles";
 import { getDefaultRouteForRole, routeDefinitions } from "./routes/routes";
@@ -498,6 +499,8 @@ export function App() {
         />
       ) : activeRoute.path === "/audit/events" ? (
         <AuditEventConsolePage route={activeRoute} snapshot={workflowSnapshot} user={activeUser} />
+      ) : activeRoute.path === "/uat/scripts" ? (
+        <UatScriptCenterPage route={activeRoute} user={activeUser} />
       ) : activeRoute.path === "/workbench" || activeRoute.path === "/ceo/dashboard" ? (
         <WorkbenchOperationsPage
           route={activeRoute}

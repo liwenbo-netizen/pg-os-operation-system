@@ -261,6 +261,20 @@ export const routeDefinitions: AppRoute[] = [
     sections: ["Event stream", "Module filter", "Object trace", "Allowed and blocked actions"]
   },
   {
+    path: "/uat/scripts",
+    title: "UAT Script Center",
+    module: "Observability",
+    pageType: "UAT Checklist",
+    priority: "P0",
+    allowedRoles: ["ceo", "operations_director", "system_admin", "audit_viewer"],
+    service: "UatScriptService",
+    guard: "canViewRoute",
+    uat: "UAT-016",
+    primaryAction: "Record UAT result",
+    summarySignals: ["Role scripts", "Passed steps", "Failed steps", "Blocked steps"],
+    sections: ["Role checklist", "Expected results", "Actual results", "Pass fail record", "Evidence notes"]
+  },
+  {
     path: "/admin",
     title: "Admin Shell",
     module: "Admin",

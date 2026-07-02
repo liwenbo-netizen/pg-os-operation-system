@@ -37,4 +37,17 @@ describe("canViewRoute", () => {
       reason_code: "ROLE_ROUTE_FORBIDDEN"
     });
   });
+
+  it("keeps UAT scripts limited to production sign-off roles", () => {
+    expect(canViewRoute("operations_director", "/uat/scripts")).toMatchObject({
+      allowed: true
+    });
+    expect(canViewRoute("system_admin", "/uat/scripts")).toMatchObject({
+      allowed: true
+    });
+    expect(canViewRoute("media_manager", "/uat/scripts")).toMatchObject({
+      allowed: false,
+      reason_code: "ROLE_ROUTE_FORBIDDEN"
+    });
+  });
 });
