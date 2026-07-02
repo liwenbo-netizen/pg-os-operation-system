@@ -1,6 +1,6 @@
 # Phase 30 Report - Audit Logs Business RLS Policy
 
-Status: PASS. PG OS now has a dedicated Supabase RLS policy for Phase 28/29 business audit rows.
+Status: PASS. PG OS now has a dedicated Supabase RLS policy for Phase 28/29 business audit rows, and the policy has been applied and live-probed in Supabase.
 
 ## Objective
 
@@ -65,6 +65,32 @@ npm run validate:phase29
 npm run validate:uat:local
 ```
 
+## Live SQL Execution And Probe
+
+Operator confirmed the migration SQL was executed in the Supabase SQL Editor on 2026-07-02.
+
+Post-SQL live validation:
+
+```text
+npm run validate:uat:live
+```
+
+Result:
+
+- Supabase UAT anon-session RLS gate passed.
+- Supabase live workflow write smoke gate passed.
+- Probe rows were cleaned up.
+
+Dedicated Phase 30 audit probe:
+
+- Signed in with a `media_manager` anon session.
+- Inserted an `audit_logs` row for `publisher.create`.
+- Verified `object_type = publisher`.
+- Verified `after_data.businessAuditCoverage = phase28_core_business_action`.
+- Read the row back with service role for verification.
+- Deleted the probe row after readback.
+- Trace: `02fc3e63-c74f-4421-b912-cbfb3e30d8ce`.
+
 ## Production UAT
 
 After SQL execution:
@@ -93,3 +119,6 @@ Phase 30 is accepted when:
 - `audit_viewer` remains excluded from writes. PASS.
 - Supabase migration order documents the new migration. PASS.
 - `npm run validate:phase30` passes. PASS.
+- Operator executed the migration SQL in Supabase. PASS.
+- `npm run validate:uat:live` passes after SQL execution. PASS.
+- Dedicated anon-session `audit_logs` write probe passes and cleans up its row. PASS.

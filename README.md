@@ -4,7 +4,7 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
-Phase 30 completed audit log business RLS policy:
+Phase 30 completed and live-validated audit log business RLS policy:
 
 - Added Supabase migration `202607020001_audit_logs_business_write_policy.sql`
 - `audit_logs_insert_business` allows authenticated users to write their own Phase 28/29 business audit rows
@@ -12,6 +12,9 @@ Phase 30 completed audit log business RLS policy:
 - Policy requires `after_data.businessAuditCoverage = phase28_core_business_action`
 - `audit_viewer` remains excluded from audit writes
 - `npm run validate:phase30` validates the SQL policy, mirror file, migration order, and report
+- Operator executed the migration SQL in Supabase on 2026-07-02
+- `npm run validate:uat:live` passed after SQL execution
+- A dedicated `media_manager` anon-session `audit_logs` probe inserted, verified, and deleted a `publisher.create` row
 
 Earlier completed phases:
 
