@@ -4,6 +4,17 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 30 completed audit log business RLS policy:
+
+- Added Supabase migration `202607020001_audit_logs_business_write_policy.sql`
+- `audit_logs_insert_business` allows authenticated users to write their own Phase 28/29 business audit rows
+- `audit_logs_update_own_business` supports later upserts that reuse the same audit event id
+- Policy requires `after_data.businessAuditCoverage = phase28_core_business_action`
+- `audit_viewer` remains excluded from audit writes
+- `npm run validate:phase30` validates the SQL policy, mirror file, migration order, and report
+
+Earlier completed phases:
+
 Phase 29 completed direct business audit writes:
 
 - Media, Sales, Finance, and Contract button actions now emit direct audit callbacks
@@ -11,8 +22,6 @@ Phase 29 completed direct business audit writes:
 - Direct writes reuse `event.id` and `buildBusinessAuditAfterData` so `/audit/events` can show business audit rows independently of bulk workflow save warnings
 - `npm run validate:phase29` validates the direct write wiring
 - `npm run validate:uat:local` now includes the Phase 29 direct audit gate
-
-Earlier completed phases:
 
 Phase 28 completed business audit write coverage:
 
@@ -295,6 +304,7 @@ npm run validate:phase26
 npm run validate:phase27
 npm run validate:phase28
 npm run validate:phase29
+npm run validate:phase30
 npm run validate:uat:local
 ```
 
@@ -387,6 +397,10 @@ Business audit write coverage:
 Direct business audit writes:
 
 [Phase 29 Direct Business Audit Writes Report](docs/development-package/phase-29-direct-business-audit-writes.md)
+
+Audit log business RLS policy:
+
+[Phase 30 Audit Logs Business RLS Policy Report](docs/development-package/phase-30-audit-logs-business-rls-policy.md)
 
 ## Development Rules
 
