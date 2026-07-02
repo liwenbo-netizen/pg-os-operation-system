@@ -25,7 +25,7 @@ const tableWriteRoles: Partial<Record<RlsTable, RoleCode[]>> = {
   publishers: ["media_director", "media_manager", "integration_manager", "operations_director"],
   publisher_contacts: ["media_director", "media_manager", "integration_manager", "operations_director"],
   publisher_ad_slots: ["media_director", "media_manager", "integration_manager", "operations_director"],
-  integration_projects: ["integration_manager", "media_director", "operations_director"],
+  integration_projects: ["integration_manager", "media_manager", "media_director", "operations_director"],
   commercial_tests: ["adops_manager", "media_director", "operations_director", "data_analyst"],
   advertisers: ["sales_director", "sales_manager", "operations_director", "customer_success_manager"],
   opportunities: ["sales_director", "sales_manager", "operations_director", "customer_success_manager"],

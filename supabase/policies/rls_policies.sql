@@ -173,7 +173,7 @@ create policy publisher_supply_transparency_write_media on public.publisher_supp
 drop policy if exists integration_projects_read_business on public.integration_projects;
 create policy integration_projects_read_business on public.integration_projects for select using (auth.uid() is not null);
 drop policy if exists integration_projects_write_integration on public.integration_projects;
-create policy integration_projects_write_integration on public.integration_projects for all using (public.has_any_role(array['integration_manager','media_director','operations_director'])) with check (public.has_any_role(array['integration_manager','media_director','operations_director']));
+create policy integration_projects_write_integration on public.integration_projects for all using (public.has_any_role(array['integration_manager','media_manager','media_director','operations_director'])) with check (public.has_any_role(array['integration_manager','media_manager','media_director','operations_director']));
 drop policy if exists commercial_tests_read_business on public.commercial_tests;
 create policy commercial_tests_read_business on public.commercial_tests for select using (auth.uid() is not null);
 drop policy if exists commercial_tests_write_ops_media on public.commercial_tests;

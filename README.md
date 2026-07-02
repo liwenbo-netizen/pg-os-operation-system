@@ -9,7 +9,9 @@ Phase 31 completed Workflow Snapshot Dirty Save / RLS Warning Cleanup:
 - Supabase workflow repository now keeps a loaded snapshot baseline
 - `saveSnapshot` upserts only rows that are new or changed versus that baseline
 - Unrelated tables are no longer upserted for a single-module workflow action
-- Old `audit_logs` and `module_business_events` rows are not re-upserted after a successful save
+- Loaded-baseline snapshot saves skip bulk `audit_logs` writes because Phase 29 direct audit writes are the production audit path
+- Old `module_business_events` rows are not re-upserted after a successful save
+- Added `202607020002_media_manager_integration_project_policy.sql` so `media_manager` can create the initial integration project during publisher onboarding
 - `npm run validate:phase31` validates the dirty save implementation, tests, UAT gate wiring, and report
 - `npm run validate:uat:local` now includes the Phase 31 dirty save gate
 

@@ -10,6 +10,7 @@ This folder contains PG OS Phase 2 database artifacts.
 4. `migrations/202606290005_contracts_write_policy.sql`
 5. `migrations/202606290006_opportunity_stage_domain_alignment.sql`
 6. `migrations/202607020001_audit_logs_business_write_policy.sql`
-7. `seed/202606290003_uat_seed.sql`
+7. `migrations/202607020002_media_manager_integration_project_policy.sql`
+8. `seed/202606290003_uat_seed.sql`
 
 The RLS policy file is mirrored in `policies/rls_policies.sql` for review.

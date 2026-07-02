@@ -34,6 +34,9 @@ export function validateWorkflowDirtySave(root) {
     "src/repositories/supabaseWorkflowRepository.ts",
     "src/repositories/workflowRepository.test.ts",
     "scripts/validate-uat.mjs",
+    "supabase/migrations/202607020002_media_manager_integration_project_policy.sql",
+    "supabase/policies/rls_policies.sql",
+    "supabase/README.md",
     "docs/development-package/phase-31-workflow-dirty-save-rls-warning-cleanup.md"
   ];
 
@@ -50,6 +53,9 @@ export function validateWorkflowDirtySave(root) {
   const repository = readText(root, "src/repositories/supabaseWorkflowRepository.ts");
   const repositoryTests = readText(root, "src/repositories/workflowRepository.test.ts");
   const uatGate = readText(root, "scripts/validate-uat.mjs");
+  const integrationPolicy = readText(root, "supabase/migrations/202607020002_media_manager_integration_project_policy.sql");
+  const policyMirror = readText(root, "supabase/policies/rls_policies.sql");
+  const supabaseReadme = readText(root, "supabase/README.md");
   const report = readText(root, "docs/development-package/phase-31-workflow-dirty-save-rls-warning-cleanup.md");
 
   for (const expected of [
@@ -58,6 +64,7 @@ export function validateWorkflowDirtySave(root) {
     "filterDirtyRows",
     "rowFingerprint",
     "cloneWorkflowSnapshot",
+    'table.table !== "audit_logs"',
     "this.lastSavedSnapshot = cloneWorkflowSnapshot(snapshot)"
   ]) {
     if (!repository.includes(expected)) {
@@ -67,8 +74,9 @@ export function validateWorkflowDirtySave(root) {
 
   for (const expected of [
     "dirty saves only changed rows after a loaded Supabase baseline",
-    "dirty saves only new audit and business event rows after a successful baseline save",
+    "dirty saves new business event rows without bulk audit log rewrites after a successful baseline save",
     "fakeSupabase.writes.advertisers).toBeUndefined",
+    'call.table === "audit_logs")).toBe(false)',
     "module_business_events"
   ]) {
     if (!repositoryTests.includes(expected)) {
@@ -80,11 +88,22 @@ export function validateWorkflowDirtySave(root) {
     failures.push("validate:uat:local must include the Phase 31 dirty save gate.");
   }
 
+  for (const source of [integrationPolicy, policyMirror]) {
+    if (!source.includes("integration_projects_write_integration") || !source.includes("'media_manager'")) {
+      failures.push("Integration project RLS policy must allow media_manager onboarding writes.");
+    }
+  }
+
+  if (!supabaseReadme.includes("202607020002_media_manager_integration_project_policy.sql")) {
+    failures.push("supabase/README.md must list the Phase 31B integration project policy migration.");
+  }
+
   for (const expected of [
     "Phase 31",
     "Workflow Snapshot Dirty Save",
     "RLS Warning Cleanup",
     "npm run validate:phase31",
+    "202607020002_media_manager_integration_project_policy.sql",
     "module_business_events",
     "audit_logs"
   ]) {

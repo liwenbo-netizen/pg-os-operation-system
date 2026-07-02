@@ -446,7 +446,7 @@ describe("workflow repositories", () => {
     expect(fakeSupabase.writes.advertisers).toBeUndefined();
   });
 
-  it("dirty saves only new audit and business event rows after a successful baseline save", async () => {
+  it("dirty saves new business event rows without bulk audit log rewrites after a successful baseline save", async () => {
     const fakeSupabase = new FakeSupabase();
     const repository = new SupabaseWorkflowRepository(fakeSupabase);
     const actorId = uuid(70);
@@ -521,15 +521,9 @@ describe("workflow repositories", () => {
       }
     });
 
-    const auditWrites = fakeSupabase.writeCalls.filter((call) => call.table === "audit_logs");
     const businessWrites = fakeSupabase.writeCalls.filter((call) => call.table === "module_business_events");
 
-    expect(auditWrites[auditWrites.length - 1]?.rows).toEqual([
-      expect.objectContaining({
-        id: secondAuditEventId,
-        action: "publisher.technical_live.submit"
-      })
-    ]);
+    expect(fakeSupabase.writeCalls.some((call) => call.table === "audit_logs")).toBe(false);
     expect(businessWrites[businessWrites.length - 1]?.rows).toEqual([
       expect.objectContaining({
         id: secondBusinessEventId,

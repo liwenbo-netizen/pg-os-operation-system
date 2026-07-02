@@ -584,10 +584,12 @@ function filterDirtyTableRows<T extends { table: string; rows: Row[] }>(tableRow
 
   const baselineByTable = new Map(baselineTableRows.map((table) => [table.table, table.rows]));
 
-  return tableRows.map((table) => ({
-    ...table,
-    rows: filterDirtyRows(table.rows, baselineByTable.get(table.table) ?? [])
-  }));
+  return tableRows
+    .filter((table) => table.table !== "audit_logs")
+    .map((table) => ({
+      ...table,
+      rows: filterDirtyRows(table.rows, baselineByTable.get(table.table) ?? [])
+    }));
 }
 
 function prepareRows(table: string, rows: Row[], requiredUuidFields: string[], skippedWrites: RepositorySkippedWrite[]) {
