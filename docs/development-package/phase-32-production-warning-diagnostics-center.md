@@ -65,6 +65,34 @@ Expected:
 - Config validation confirms the header panel, service, UTC+8 formatting, and report markers exist.
 - TypeScript and production build pass.
 
+## Production Deployment Sign-off
+
+Sign-off time: 2026-07-02 16:49:09 UTC+8.
+
+Production URL:
+
+```text
+https://pg-os-operation-system.vercel.app/
+```
+
+Production smoke:
+
+```text
+npm run smoke:production -- --url https://pg-os-operation-system.vercel.app/
+```
+
+Result: PASS for `/`, `/workbench`, `/guide`, `/system/health`, `/audit/events`, `/contracts/uat-smoke`, `/finance/settlements/uat-smoke`, `/media/manager-workbench`, and `/sales/manager-workbench`.
+
+Production bundle marker check:
+
+```text
+index-rgivAAFf.js
+Supabase diagnostics: found
+Suggested fix: found
+```
+
+Result: PASS. Vercel production is serving the Phase 32 diagnostics panel bundle.
+
 ## Acceptance Criteria
 
 - Supabase repository warning status is clickable. PASS.
@@ -72,3 +100,5 @@ Expected:
 - Warning timestamps are displayed in UTC+8. PASS.
 - RLS warning suggestions are actionable for Supabase policy fixes. PASS.
 - `npm run validate:phase32` passes. PASS.
+- Production smoke passes after Vercel deployment. PASS.
+- Production bundle contains the diagnostics panel markers. PASS.
