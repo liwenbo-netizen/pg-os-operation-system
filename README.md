@@ -4,6 +4,17 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
+Phase 31 completed Workflow Snapshot Dirty Save / RLS Warning Cleanup:
+
+- Supabase workflow repository now keeps a loaded snapshot baseline
+- `saveSnapshot` upserts only rows that are new or changed versus that baseline
+- Unrelated tables are no longer upserted for a single-module workflow action
+- Old `audit_logs` and `module_business_events` rows are not re-upserted after a successful save
+- `npm run validate:phase31` validates the dirty save implementation, tests, UAT gate wiring, and report
+- `npm run validate:uat:local` now includes the Phase 31 dirty save gate
+
+Earlier completed phases:
+
 Phase 30 completed and live-validated audit log business RLS policy:
 
 - Added Supabase migration `202607020001_audit_logs_business_write_policy.sql`
@@ -15,8 +26,6 @@ Phase 30 completed and live-validated audit log business RLS policy:
 - Operator executed the migration SQL in Supabase on 2026-07-02
 - `npm run validate:uat:live` passed after SQL execution
 - A dedicated `media_manager` anon-session `audit_logs` probe inserted, verified, and deleted a `publisher.create` row
-
-Earlier completed phases:
 
 Phase 29 completed direct business audit writes:
 
@@ -308,6 +317,7 @@ npm run validate:phase27
 npm run validate:phase28
 npm run validate:phase29
 npm run validate:phase30
+npm run validate:phase31
 npm run validate:uat:local
 ```
 
@@ -404,6 +414,10 @@ Direct business audit writes:
 Audit log business RLS policy:
 
 [Phase 30 Audit Logs Business RLS Policy Report](docs/development-package/phase-30-audit-logs-business-rls-policy.md)
+
+Workflow dirty save / RLS warning cleanup:
+
+[Phase 31 Workflow Dirty Save / RLS Warning Cleanup Report](docs/development-package/phase-31-workflow-dirty-save-rls-warning-cleanup.md)
 
 ## Development Rules
 

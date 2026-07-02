@@ -7,6 +7,7 @@ type Row = Record<string, unknown>;
 
 class FakeSupabase implements SupabaseLike {
   readonly writes: Record<string, Row[]> = {};
+  readonly writeCalls: Array<{ table: string; rows: Row[] }> = [];
 
   constructor(
     private readonly tables: Record<string, Row[]> = {},
@@ -24,6 +25,7 @@ class FakeSupabase implements SupabaseLike {
       },
       upsert: async (rows: Row[]) => {
         this.writes[table] = rows;
+        this.writeCalls.push({ table, rows });
         return { data: rows, error: null };
       }
     };
@@ -383,6 +385,155 @@ describe("workflow repositories", () => {
       expect.objectContaining({
         id: businessEventId,
         owner_user_id: actorId
+      })
+    ]);
+  });
+
+  it("dirty saves only changed rows after a loaded Supabase baseline", async () => {
+    const existingPublisherId = uuid(60);
+    const newPublisherId = uuid(61);
+    const advertiserId = uuid(62);
+    const fakeSupabase = new FakeSupabase({
+      publishers: [
+        {
+          id: existingPublisherId,
+          name: "Existing Publisher",
+          region: "CN",
+          media_type: "App",
+          integration_type: "SDK",
+          technical_live_status: "draft",
+          commercial_test_status: "not_started",
+          sales_scale_status: "not_allowed",
+          risk_level: "medium"
+        }
+      ],
+      advertisers: [
+        {
+          id: advertiserId,
+          name: "Existing Advertiser",
+          industry: "Retail",
+          region: "CN",
+          status: "active"
+        }
+      ]
+    });
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const { snapshot } = await repository.loadSnapshot();
+
+    snapshot.mediaState.publishers = [
+      ...snapshot.mediaState.publishers,
+      {
+        ...snapshot.mediaState.publishers[0],
+        id: newPublisherId,
+        name: "New Dirty Publisher"
+      }
+    ];
+
+    const result = await repository.saveSnapshot(snapshot, {
+      actor: {
+        id: uuid(63),
+        activeRole: "media_manager"
+      }
+    });
+
+    expect(result.savedTables).toEqual(["publishers"]);
+    expect(fakeSupabase.writes.publishers).toEqual([
+      expect.objectContaining({
+        id: newPublisherId,
+        name: "New Dirty Publisher"
+      })
+    ]);
+    expect(fakeSupabase.writes.advertisers).toBeUndefined();
+  });
+
+  it("dirty saves only new audit and business event rows after a successful baseline save", async () => {
+    const fakeSupabase = new FakeSupabase();
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const actorId = uuid(70);
+    const publisherId = uuid(71);
+    const firstAuditEventId = uuid(72);
+    const secondAuditEventId = uuid(73);
+    const firstBusinessEventId = uuid(74);
+    const secondBusinessEventId = uuid(75);
+    const { snapshot } = await repository.loadSnapshot();
+
+    snapshot.mediaState.auditEvents = [
+      {
+        id: firstAuditEventId,
+        actorUserId: "mock-media-manager",
+        action: "publisher.create",
+        objectType: "publisher",
+        objectId: publisherId,
+        allowed: true,
+        reasonCode: "PUBLISHER_CREATED",
+        createdAt: "2026-07-01T00:00:00.000Z"
+      }
+    ];
+    snapshot.mediaState.businessEvents = [
+      {
+        id: firstBusinessEventId,
+        eventCode: "publisher.created",
+        objectType: "publisher",
+        objectId: publisherId,
+        ownerRole: "media_manager",
+        createdAt: "2026-07-01T00:00:00.000Z",
+        payload: {}
+      }
+    ];
+
+    await repository.saveSnapshot(snapshot, {
+      actor: {
+        id: actorId,
+        activeRole: "media_manager"
+      }
+    });
+
+    snapshot.mediaState.auditEvents = [
+      {
+        id: secondAuditEventId,
+        actorUserId: "mock-media-manager",
+        action: "publisher.technical_live.submit",
+        objectType: "publisher",
+        objectId: publisherId,
+        allowed: true,
+        reasonCode: "TECHNICAL_LIVE_PASSED",
+        createdAt: "2026-07-01T00:01:00.000Z"
+      },
+      ...snapshot.mediaState.auditEvents
+    ];
+    snapshot.mediaState.businessEvents = [
+      {
+        id: secondBusinessEventId,
+        eventCode: "publisher.technical_live_passed",
+        objectType: "publisher",
+        objectId: publisherId,
+        ownerRole: "media_manager",
+        createdAt: "2026-07-01T00:01:00.000Z",
+        payload: {}
+      },
+      ...snapshot.mediaState.businessEvents
+    ];
+
+    await repository.saveSnapshot(snapshot, {
+      actor: {
+        id: actorId,
+        activeRole: "media_manager"
+      }
+    });
+
+    const auditWrites = fakeSupabase.writeCalls.filter((call) => call.table === "audit_logs");
+    const businessWrites = fakeSupabase.writeCalls.filter((call) => call.table === "module_business_events");
+
+    expect(auditWrites[auditWrites.length - 1]?.rows).toEqual([
+      expect.objectContaining({
+        id: secondAuditEventId,
+        action: "publisher.technical_live.submit"
+      })
+    ]);
+    expect(businessWrites[businessWrites.length - 1]?.rows).toEqual([
+      expect.objectContaining({
+        id: secondBusinessEventId,
+        event_code: "publisher.technical_live_passed"
       })
     ]);
   });

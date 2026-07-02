@@ -51,6 +51,12 @@ export const uatValidationSteps = [
     live: false
   },
   {
+    id: "workflow-dirty-save",
+    label: "Workflow snapshot dirty save",
+    script: "validate:phase31",
+    live: false
+  },
+  {
     id: "uat-rls",
     label: "Supabase UAT anon-session RLS gate",
     script: "verify:uat-rls",

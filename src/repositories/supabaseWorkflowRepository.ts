@@ -550,6 +550,46 @@ function toWorkItemStatus(status: WorkbenchTask["status"]) {
   return status;
 }
 
+function normalizeComparableValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(normalizeComparableValue);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Row)
+        .filter(([, objectValue]) => objectValue !== undefined)
+        .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+        .map(([objectKey, objectValue]) => [objectKey, normalizeComparableValue(objectValue)])
+    );
+  }
+
+  return value;
+}
+
+function rowFingerprint(row: Row) {
+  return JSON.stringify(normalizeComparableValue(row));
+}
+
+function filterDirtyRows(rows: Row[], baselineRows: Row[]) {
+  const baselineById = new Map(baselineRows.map((row) => [String(row.id), rowFingerprint(row)]));
+
+  return rows.filter((row) => baselineById.get(String(row.id)) !== rowFingerprint(row));
+}
+
+function filterDirtyTableRows<T extends { table: string; rows: Row[] }>(tableRows: T[], baselineTableRows?: T[]) {
+  if (!baselineTableRows) {
+    return tableRows;
+  }
+
+  const baselineByTable = new Map(baselineTableRows.map((table) => [table.table, table.rows]));
+
+  return tableRows.map((table) => ({
+    ...table,
+    rows: filterDirtyRows(table.rows, baselineByTable.get(table.table) ?? [])
+  }));
+}
+
 function prepareRows(table: string, rows: Row[], requiredUuidFields: string[], skippedWrites: RepositorySkippedWrite[]) {
   return rows.flatMap((row) => {
     const id = row.id;
@@ -600,8 +640,13 @@ function collectBusinessEvents(snapshot: WorkflowSnapshot) {
   ];
 }
 
+function cloneWorkflowSnapshot(snapshot: WorkflowSnapshot): WorkflowSnapshot {
+  return JSON.parse(JSON.stringify(snapshot)) as WorkflowSnapshot;
+}
+
 export class SupabaseWorkflowRepository implements WorkflowRepository {
   readonly mode = "supabase" as const;
+  private lastSavedSnapshot: WorkflowSnapshot | null = null;
 
   constructor(private readonly client: SupabaseLike) {}
 
@@ -693,6 +738,8 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
       }
     };
 
+    this.lastSavedSnapshot = cloneWorkflowSnapshot(snapshot);
+
     return {
       snapshot,
       health: {
@@ -710,7 +757,7 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
     const savedTables: string[] = [];
     const actorUserId = actorUserIdFromContext(context);
 
-    const tableRows: Array<{ table: string; rows: Row[]; uuidFields: string[] }> = [
+    const buildTableRows = (snapshot: WorkflowSnapshot): Array<{ table: string; rows: Row[]; uuidFields: string[] }> => [
       {
         table: "publishers",
         rows: snapshot.mediaState.publishers.map(toPublisherRow),
@@ -1062,6 +1109,10 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
         uuidFields: ["object_id"]
       }
     ];
+    const tableRows = filterDirtyTableRows(
+      buildTableRows(snapshot),
+      this.lastSavedSnapshot ? buildTableRows(this.lastSavedSnapshot) : undefined
+    );
 
     for (const table of tableRows) {
       const rows = prepareRows(table.table, table.rows, table.uuidFields, skippedWrites).map((row) =>
@@ -1082,6 +1133,10 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
       } catch (error) {
         warnings.push(`${table.table}: ${error instanceof Error ? error.message : "upsert failed"}`);
       }
+    }
+
+    if (warnings.length === 0) {
+      this.lastSavedSnapshot = cloneWorkflowSnapshot(snapshot);
     }
 
     return {
