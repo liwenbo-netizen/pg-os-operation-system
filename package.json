@@ -45,6 +45,7 @@
     "validate:phase29": "vitest run scripts/validate-direct-business-audit-writes.test.mjs && node scripts/validate-direct-business-audit-writes.mjs --config-only",
     "validate:phase30": "vitest run scripts/validate-audit-log-business-rls-policy.test.mjs && node scripts/validate-audit-log-business-rls-policy.mjs --config-only",
     "validate:phase31": "vitest run src/repositories/workflowRepository.test.ts scripts/validate-workflow-dirty-save.test.mjs && node scripts/validate-workflow-dirty-save.mjs --config-only",
+    "validate:phase32": "vitest run src/services/warningDiagnosticsService.test.ts && node scripts/validate-production-warning-diagnostics.mjs --config-only",
     "smoke:production": "node scripts/validate-production-deployment-smoke.mjs",
     "smoke:production:auth": "node scripts/validate-production-auth-readiness.mjs",
     "smoke:production:manual-login": "node scripts/validate-production-manual-login-uat.mjs",

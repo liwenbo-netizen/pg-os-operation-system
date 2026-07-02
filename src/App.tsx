@@ -21,6 +21,7 @@ import { createInitialSalesWorkflowState } from "./services/salesWorkflowService
 import { createInitialGuideWorkflowState } from "./services/sopService";
 import { createInitialWorkbenchWorkflowState } from "./services/workbenchService";
 import { buildBusinessAuditAfterData } from "./services/businessAuditCoverage";
+import { buildWarningDiagnostics } from "./services/warningDiagnosticsService";
 import { createWorkflowRepository } from "./repositories/workflowRepositoryFactory";
 import type { WorkflowRepositoryHealth, WorkflowSnapshot } from "./repositories/workflowRepository";
 import {
@@ -77,6 +78,15 @@ export function App() {
     }),
     [activeUser, authError, authMode, authWarnings.length]
   );
+  const repositoryDiagnostics = useMemo(
+    () =>
+      buildWarningDiagnostics({
+        activeRole,
+        repositoryHealth,
+        user: activeUser
+      }),
+    [activeRole, activeUser, repositoryHealth]
+  );
   const repositoryStatus = useMemo(() => {
     const warningCount = repositoryHealth.warnings.length + (repositoryHealth.skippedWrites?.length ?? 0);
     const label =
@@ -91,9 +101,10 @@ export function App() {
     return {
       label,
       detail: `${repositoryHealth.source} / ${formatUtcPlus8DateTime(repositoryHealth.loadedAt)}`,
-      warningCount
+      warningCount,
+      diagnostics: repositoryDiagnostics
     };
-  }, [repositoryHealth]);
+  }, [repositoryHealth, repositoryDiagnostics]);
   const workflowSnapshot = useMemo<WorkflowSnapshot>(
     () => ({
       mediaState: mediaWorkflowState,
