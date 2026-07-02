@@ -57,6 +57,12 @@ export const uatValidationSteps = [
     live: false
   },
   {
+    id: "uat-script-persistence",
+    label: "Production UAT script Supabase persistence",
+    script: "validate:phase34",
+    live: false
+  },
+  {
     id: "uat-rls",
     label: "Supabase UAT anon-session RLS gate",
     script: "verify:uat-rls",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  mergeUatScriptResults,
   productionUatScripts,
   summarizeScriptResults,
   summarizeUatResults,
@@ -62,5 +63,38 @@ describe("uatScriptService", () => {
       failed: 0,
       blocked: 0
     });
+  });
+
+  it("merges local and remote results by the newest updated timestamp", () => {
+    const merged = mergeUatScriptResults(
+      {
+        "ceo-login": {
+          status: "passed",
+          actualResult: "local newer",
+          updatedAt: "2026-07-02T02:00:00.000Z"
+        },
+        "ceo-health": {
+          status: "blocked",
+          actualResult: "local only",
+          updatedAt: "2026-07-02T01:00:00.000Z"
+        }
+      },
+      {
+        "ceo-login": {
+          status: "failed",
+          actualResult: "remote older",
+          updatedAt: "2026-07-02T01:30:00.000Z"
+        },
+        "ceo-audit": {
+          status: "passed",
+          actualResult: "remote only",
+          updatedAt: "2026-07-02T01:45:00.000Z"
+        }
+      }
+    );
+
+    expect(merged["ceo-login"]).toMatchObject({ status: "passed", actualResult: "local newer" });
+    expect(merged["ceo-health"]).toMatchObject({ status: "blocked", actualResult: "local only" });
+    expect(merged["ceo-audit"]).toMatchObject({ status: "passed", actualResult: "remote only" });
   });
 });

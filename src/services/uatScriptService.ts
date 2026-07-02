@@ -266,6 +266,28 @@ export function summarizeScriptResults(script: UatScript, results: UatScriptResu
   return summarizeUatResults([script], results);
 }
 
+function resultTimestamp(result: UatStepResult | undefined) {
+  if (!result?.updatedAt) {
+    return 0;
+  }
+
+  const parsed = Date.parse(result.updatedAt);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function mergeUatScriptResults(localResults: UatScriptResults, remoteResults: UatScriptResults): UatScriptResults {
+  const merged: UatScriptResults = { ...localResults };
+
+  for (const [stepId, remoteResult] of Object.entries(remoteResults)) {
+    const localResult = merged[stepId];
+    if (!localResult || resultTimestamp(remoteResult) >= resultTimestamp(localResult)) {
+      merged[stepId] = remoteResult;
+    }
+  }
+
+  return merged;
+}
+
 export function updateUatStepResult(
   results: UatScriptResults,
   stepId: string,

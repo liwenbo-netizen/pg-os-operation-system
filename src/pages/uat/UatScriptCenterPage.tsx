@@ -1,10 +1,13 @@
 import { ClipboardCheck, Clock3, RotateCcw, ShieldCheck, XCircle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SummaryCard } from "../../components/SummaryCard";
 import { StatusBadge } from "../../components/StatusBadge";
 import { roleDefinitions } from "../../constants/roles";
+import type { AuthSessionMode } from "../../repositories/authSessionRepository";
+import { createUatScriptResultRepository, type UatScriptResultSource } from "../../repositories/uatScriptResultRepository";
 import type { AppRoute } from "../../routes/routes";
 import {
+  mergeUatScriptResults,
   productionUatScripts,
   summarizeScriptResults,
   summarizeUatResults,
@@ -18,6 +21,7 @@ import { formatUtcPlus8DateTime } from "../../lib/time";
 import { cn } from "../../lib/cn";
 
 type UatScriptCenterPageProps = {
+  authMode: AuthSessionMode;
   route: AppRoute;
   user: BusinessUser;
 };
@@ -29,6 +33,26 @@ const statusTone: Record<UatStepStatus, "neutral" | "success" | "warning" | "dan
   passed: "success",
   failed: "danger",
   blocked: "warning"
+};
+
+type SyncState = {
+  source: UatScriptResultSource | "loading";
+  syncedAt?: string;
+  warnings: string[];
+};
+
+const syncTone: Record<SyncState["source"], "neutral" | "success" | "warning" | "info"> = {
+  loading: "info",
+  local: "neutral",
+  supabase: "success",
+  "supabase-warning": "warning"
+};
+
+const syncLabel: Record<SyncState["source"], string> = {
+  loading: "Loading",
+  local: "Local only",
+  supabase: "Supabase synced",
+  "supabase-warning": "Supabase warning"
 };
 
 function loadStoredResults(): UatScriptResults {
@@ -76,14 +100,111 @@ function latestUpdatedAt(script: UatScript, results: UatScriptResults) {
   return timestamps[0];
 }
 
-export function UatScriptCenterPage({ route, user }: UatScriptCenterPageProps) {
+export function UatScriptCenterPage({ authMode, route, user }: UatScriptCenterPageProps) {
   const [results, setResults] = useState<UatScriptResults>(() => loadStoredResults());
+  const [syncState, setSyncState] = useState<SyncState>(() => ({
+    source: authMode === "supabase" ? "loading" : "local",
+    warnings: []
+  }));
+  const [uatResultRepository] = useState(() => createUatScriptResultRepository());
   const [selectedScriptId, setSelectedScriptId] = useState(productionUatScripts[0]?.id ?? "");
+  const skipRemoteSaveRef = useRef(true);
   const selectedScript =
     productionUatScripts.find((script) => script.id === selectedScriptId) ?? productionUatScripts[0];
   const overallSummary = useMemo(() => summarizeUatResults(productionUatScripts, results), [results]);
   const selectedSummary = useMemo(() => summarizeScriptResults(selectedScript, results), [results, selectedScript]);
   const lastUpdatedAt = latestUpdatedAt(selectedScript, results);
+
+  useEffect(() => {
+    if (authMode !== "supabase") {
+      skipRemoteSaveRef.current = true;
+      setSyncState({
+        source: "local",
+        warnings: []
+      });
+      return undefined;
+    }
+
+    let cancelled = false;
+    skipRemoteSaveRef.current = true;
+    setSyncState({
+      source: "loading",
+      warnings: []
+    });
+
+    uatResultRepository
+      .loadResults()
+      .then((remote) => {
+        if (cancelled) {
+          return;
+        }
+
+        skipRemoteSaveRef.current = true;
+        setResults((current) => {
+          const merged = mergeUatScriptResults(current, remote.results);
+          saveStoredResults(merged);
+          return merged;
+        });
+        setSyncState({
+          source: remote.warnings.length > 0 ? "supabase-warning" : remote.source,
+          syncedAt: remote.loadedAt,
+          warnings: remote.warnings
+        });
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        setSyncState({
+          source: "supabase-warning",
+          syncedAt: new Date().toISOString(),
+          warnings: [error instanceof Error ? error.message : "UAT result load failed."]
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authMode, uatResultRepository, user.id]);
+
+  useEffect(() => {
+    saveStoredResults(results);
+
+    if (authMode !== "supabase") {
+      return undefined;
+    }
+
+    if (skipRemoteSaveRef.current) {
+      skipRemoteSaveRef.current = false;
+      return undefined;
+    }
+
+    const saveHandle = window.setTimeout(() => {
+      uatResultRepository
+        .saveResults({
+          productionUrl: window.location.origin,
+          results,
+          user
+        })
+        .then((remote) => {
+          setSyncState({
+            source: remote.warnings.length > 0 ? "supabase-warning" : remote.source,
+            syncedAt: remote.savedAt,
+            warnings: remote.warnings
+          });
+        })
+        .catch((error) => {
+          setSyncState({
+            source: "supabase-warning",
+            syncedAt: new Date().toISOString(),
+            warnings: [error instanceof Error ? error.message : "UAT result save failed."]
+          });
+        });
+    }, 700);
+
+    return () => window.clearTimeout(saveHandle);
+  }, [authMode, results, uatResultRepository, user]);
 
   function patchStep(stepId: string, patch: Partial<{ status: UatStepStatus; actualResult: string }>) {
     setResults((current) => {
@@ -128,7 +249,12 @@ export function UatScriptCenterPage({ route, user }: UatScriptCenterPageProps) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-slate-900">Role scripts</h2>
-                <p className="mt-1 text-xs text-slate-500">Stored locally in this browser.</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <StatusBadge tone={syncTone[syncState.source]}>{syncLabel[syncState.source]}</StatusBadge>
+                  {syncState.syncedAt ? (
+                    <span className="text-xs text-slate-500">{formatUtcPlus8DateTime(syncState.syncedAt)}</span>
+                  ) : null}
+                </div>
               </div>
               <button
                 className="inline-flex h-9 items-center gap-2 rounded border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
@@ -139,6 +265,15 @@ export function UatScriptCenterPage({ route, user }: UatScriptCenterPageProps) {
                 Reset
               </button>
             </div>
+            {syncState.warnings.length > 0 ? (
+              <div className="mt-3 space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                {syncState.warnings.map((warning) => (
+                  <p key={warning} className="text-xs leading-5 text-amber-800">
+                    {warning}
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           {productionUatScripts.map((script) => {

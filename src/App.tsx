@@ -500,7 +500,7 @@ export function App() {
       ) : activeRoute.path === "/audit/events" ? (
         <AuditEventConsolePage route={activeRoute} snapshot={workflowSnapshot} user={activeUser} />
       ) : activeRoute.path === "/uat/scripts" ? (
-        <UatScriptCenterPage route={activeRoute} user={activeUser} />
+        <UatScriptCenterPage authMode={authMode} route={activeRoute} user={activeUser} />
       ) : activeRoute.path === "/workbench" || activeRoute.path === "/ceo/dashboard" ? (
         <WorkbenchOperationsPage
           route={activeRoute}
