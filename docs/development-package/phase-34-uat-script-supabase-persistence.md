@@ -89,3 +89,34 @@ After execution, sign in to production with CEO or another `/uat/scripts` sign-o
 - Supabase warnings are visible in the page instead of failing silently. PASS.
 - Migration creates `uat_script_runs` and `uat_script_step_results` with RLS. PASS.
 - `npm run validate:phase34` passes. PASS.
+
+## Production Sign-Off
+
+Recorded at: 2026-07-02 22:44:57 UTC+8.
+
+Production URL:
+
+```text
+https://pg-os-operation-system.vercel.app/
+```
+
+Database migration executed:
+
+```text
+supabase/migrations/202607020003_uat_script_results.sql
+```
+
+Executed:
+
+```text
+npm run validate:phase34
+npm run smoke:production -- --url https://pg-os-operation-system.vercel.app/
+```
+
+Production verification:
+
+- Vercel production bundle contains `uat_script_runs`, `uat_script_step_results`, `/uat/scripts`, and sync status markers. PASS.
+- Supabase REST probe returned HTTP 200 for `uat_script_runs`. PASS.
+- Supabase REST probe returned HTTP 200 for `uat_script_step_results`. PASS.
+- Production smoke confirms `/uat/scripts` returns HTTP 200 with React root. PASS.
+- Phase 34 is ready for CEO/manual UAT step marking and remote result persistence. PASS.
