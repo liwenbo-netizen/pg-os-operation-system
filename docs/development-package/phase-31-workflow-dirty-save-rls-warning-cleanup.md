@@ -4,6 +4,8 @@ Status: PASS. PG OS now dirty-saves Supabase workflow snapshots instead of upser
 
 Update after production UAT: PASS. The operator found two remaining warnings after `media_manager` clicked `New publisher`: `integration_projects` and `audit_logs`.
 
+Update after Phase 31B production retest: PASS. The SQL migration is applied, live RLS probe passed, and production smoke remains green.
+
 ## Objective
 
 Reduce noisy Supabase repository warnings caused by broad snapshot saves. Before this phase, a single Media action could trigger upserts for unrelated Sales, Finance, Contract, Guide, Workbench, `audit_logs`, and `module_business_events` rows.
@@ -90,6 +92,36 @@ Expected:
 - `integration_projects` should no longer warn for `media_manager` publisher onboarding.
 - `audit_logs` should no longer warn from the snapshot save path.
 
+## Phase 31B Production Retest Sign-off
+
+Retest time: 2026-07-02 15:00:01 UTC+8.
+
+Live RLS probe:
+
+```text
+traceId: phase31b-1782975530915-177a1bf2
+media_manager publisher write: allowed
+media_manager integration_projects write: allowed
+actor field match: true
+cleanup: completed
+```
+
+Production smoke:
+
+```text
+npm run smoke:production -- --url https://pg-os-operation-system.vercel.app/
+```
+
+Result: PASS for `/`, `/workbench`, `/guide`, `/system/health`, `/audit/events`, `/contracts/uat-smoke`, `/finance/settlements/uat-smoke`, `/media/manager-workbench`, and `/sales/manager-workbench`.
+
+Regression gate:
+
+```text
+npm run validate:phase31
+```
+
+Result: PASS, 2 test files and 11 tests passed.
+
 ## Acceptance Criteria
 
 Phase 31 is accepted when:
@@ -101,3 +133,5 @@ Phase 31 is accepted when:
 - Business events are dirty-saved row by row. PASS.
 - Media Manager integration project RLS migration exists. PASS.
 - `npm run validate:phase31` passes. PASS.
+- Phase 31B live RLS production retest passes for `media_manager` publisher onboarding. PASS.
+- Production smoke remains green after SQL and Vercel deployment. PASS.
