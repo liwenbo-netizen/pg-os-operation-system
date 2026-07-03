@@ -1,6 +1,6 @@
 # Phase 38 Report - User-Assisted Live-Write UAT / RLS & Audit Proof
 
-Status: PASS for the Media Manager production live-write path and CEO audit proof. Sales Manager production live-write produced valid advertiser/proposal/audit proof and exposed one business-context defect in opportunity creation.
+Status: PASS for the Media Manager production live-write path, the Sales Manager fixed production rerun, and CEO audit proof. The original Sales opportunity advertiser context defect was reproduced, fixed, redeployed, and verified through live Supabase audit events.
 
 Recorded at: 2026-07-03 14:36:56 +08:00.
 
@@ -32,6 +32,7 @@ The operator confirmed the following browser actions before Codex executed them:
 - `Create opportunity`
 - `Create Proposal`
 - `Validate media`
+- Sales follow-up rerun: `New advertiser`, `Create opportunity`, `Create Proposal`
 
 ## Media Manager Live Write
 
@@ -159,12 +160,13 @@ Previously sensitive Media tables covered by this run:
 Sales write/audit coverage touched:
 
 - `advertisers`
+- `opportunities`
 - `proposals`
 - proposal publisher guard evaluation
 - `audit_logs`
 - `module_business_events`
 
-The CEO audit stream proved both audit-log style allowed events and business-event style domain events are readable from production for Media and Sales.
+The CEO audit stream proved both audit-log style allowed events and business-event style domain events are readable from production for Media and Sales. The follow-up Sales rerun also proved the complete advertiser -> opportunity -> proposal chain.
 
 ## Acceptance Criteria
 
@@ -177,20 +179,22 @@ The CEO audit stream proved both audit-log style allowed events and business-eve
 - Media write events are visible in `/audit/events`. PASS.
 - Real Supabase Sales Manager session can create an advertiser. PASS.
 - Sales Manager advertiser creation writes audit/business events. PASS.
-- Sales Manager opportunity creation reveals missing advertiser context binding. FAIL - recorded defect.
+- Sales Manager opportunity creation originally revealed missing advertiser context binding. FAIL - historical defect reproduced and recorded.
+- Sales Manager opportunity creation after fix creates a live opportunity from the active advertiser context. PASS.
 - Sales Manager can create a proposal from the existing opportunity path. PASS.
+- Sales Manager follow-up proposal creation stays on the newly created opportunity chain. PASS.
 - Sales Manager media validation guard records blocked selection without RLS warning. PASS.
 - Sales write and guard events are visible in `/audit/events`. PASS.
+- Sales follow-up advertiser/opportunity/proposal audit chain is visible in `/audit/events`. PASS.
 - Audit timestamps display as `UTC+8`. PASS.
 - No password was typed or retained by Codex. PASS.
 
 ## Next Recommended Scope
 
-Continue Phase 38 with the remaining live-write UAT roles and the Sales defect fix:
+Continue Phase 38 with the remaining live-write UAT roles:
 
 - Finance Manager: reconciliation, confirmation guard, invoice/payment progression.
 - Legal Manager: finance review, legal approval, signing/archive guard.
-- Sales Manager follow-up: fix the `Create opportunity` advertiser context binding and rerun that step.
 
 After those role runs, record a consolidated production UAT result in `/uat/scripts` and review it through `/uat/history`.
 
@@ -219,7 +223,7 @@ Result:
 PASS
 ```
 
-Production follow-up required after deployment:
+Production follow-up checklist executed after deployment:
 
 - Log in as `sales_manager@poly-gamma.com`.
 - Execute `New advertiser`.
@@ -228,3 +232,70 @@ Production follow-up required after deployment:
 - Execute `Create Proposal`.
 - Confirm the proposal is created from the new opportunity chain.
 - Log in as CEO and confirm `opportunity.create` / `opportunity.created` appear in `/audit/events`.
+
+## Sales Follow-Up Production Rerun
+
+Recorded at: 2026-07-04 02:04:06 +08:00.
+
+Session:
+
+```text
+Account: sales_manager@poly-gamma.com
+Active role: Sales Manager
+Auth mode: Supabase auth
+Initial repository state: Supabase synced
+```
+
+Executed actions after the deployed fix:
+
+| Action | Browser feedback | Result |
+| --- | --- | --- |
+| New advertiser | `ADVERTISER_CREATED` | PASS |
+| Create opportunity | `OPPORTUNITY_CREATED` | PASS |
+| Create Proposal | `PROPOSAL_CREATED` | PASS |
+
+Observed production data:
+
+```text
+Advertisers: 13 -> 14
+Opportunities: 1 -> 2
+Proposals: 1 -> 2
+Created opportunity: Daily Yoga Retention Push
+Created proposal: Daily Yoga Retention Push Proposal
+Repository state after writes: Supabase synced
+Supabase warning count: 0
+```
+
+Fix verification result:
+
+```text
+The previous NOT_FOUND / Advertiser was not found failure did not recur.
+Create opportunity used the active advertiser context and created a live opportunity record.
+Create Proposal stayed on the newly created opportunity chain.
+```
+
+## CEO Sales Follow-Up Audit Proof
+
+Session:
+
+```text
+Account: ceo@poly-gamma.com
+Active role: CEO
+Audit route: /audit/events
+Audit source: Supabase live
+Loaded at: 2026-07-04 02:04:06 UTC+8
+Supabase warning count: 0
+```
+
+Verified Sales rerun audit and business events:
+
+| Event | Module | Object | Status | Created |
+| --- | --- | --- | --- | --- |
+| `advertiser.create` | Sales | advertiser `4cf4cc16-33ad-418a-8a16-bb68e9659990` | allowed | 2026-07-04 02:01:50 UTC+8 |
+| `advertiser.created` | Sales | advertiser `4cf4cc16-33ad-418a-8a16-bb68e9659990` | business | 2026-07-04 02:01:50 UTC+8 |
+| `opportunity.create` | Sales | opportunity `d59c6cb2-bee1-4ec3-a2fb-36dbc0365ec6` | allowed | 2026-07-04 02:01:53 UTC+8 |
+| `opportunity.created` | Sales | opportunity `d59c6cb2-bee1-4ec3-a2fb-36dbc0365ec6` | business | 2026-07-04 02:01:53 UTC+8 |
+| `proposal.create` | Sales | proposal `6346e337-b847-4a18-8e69-de0624ad5360` | allowed | 2026-07-04 02:01:57 UTC+8 |
+| `proposal.created` | Sales | proposal `6346e337-b847-4a18-8e69-de0624ad5360` | business | 2026-07-04 02:01:57 UTC+8 |
+
+The Sales rerun now has the full advertiser -> opportunity -> proposal audit chain. This closes the previously recorded Sales opportunity context defect for Phase 38.
