@@ -50,4 +50,17 @@ describe("canViewRoute", () => {
       reason_code: "ROLE_ROUTE_FORBIDDEN"
     });
   });
+
+  it("keeps UAT history limited to production sign-off roles", () => {
+    expect(canViewRoute("ceo", "/uat/history")).toMatchObject({
+      allowed: true
+    });
+    expect(canViewRoute("audit_viewer", "/uat/history")).toMatchObject({
+      allowed: true
+    });
+    expect(canViewRoute("sales_manager", "/uat/history")).toMatchObject({
+      allowed: false,
+      reason_code: "ROLE_ROUTE_FORBIDDEN"
+    });
+  });
 });

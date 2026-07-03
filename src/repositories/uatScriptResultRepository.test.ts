@@ -6,6 +6,8 @@ type Row = Record<string, unknown>;
 
 class FakeQuery implements PromiseLike<{ data: Row[] | null; error: { message?: string } | null }> {
   private filters: Array<{ column: string; value: unknown }> = [];
+  private orders: Array<{ column: string; ascending: boolean }> = [];
+  private rangeBounds: { from: number; to: number } | null = null;
   private selectedColumns = "*";
   private upsertRows: Row[] | null = null;
   private onConflict = "id";
@@ -22,6 +24,16 @@ class FakeQuery implements PromiseLike<{ data: Row[] | null; error: { message?: 
 
   eq(column: string, value: unknown) {
     this.filters.push({ column, value });
+    return this;
+  }
+
+  order(column: string, options?: { ascending?: boolean }) {
+    this.orders.push({ column, ascending: options?.ascending ?? true });
+    return this;
+  }
+
+  range(from: number, to: number) {
+    this.rangeBounds = { from, to };
     return this;
   }
 
@@ -56,9 +68,19 @@ class FakeQuery implements PromiseLike<{ data: Row[] | null; error: { message?: 
       return { data: this.projectRows(savedRows), error: null };
     }
 
-    const rows = (this.fake.tables[this.table] ?? []).filter((row) =>
+    let rows = (this.fake.tables[this.table] ?? []).filter((row) =>
       this.filters.every((filter) => row[filter.column] === filter.value)
     );
+    for (const order of [...this.orders].reverse()) {
+      rows = [...rows].sort((left, right) => {
+        const leftValue = String(left[order.column] ?? "");
+        const rightValue = String(right[order.column] ?? "");
+        return order.ascending ? leftValue.localeCompare(rightValue) : rightValue.localeCompare(leftValue);
+      });
+    }
+    if (this.rangeBounds) {
+      rows = rows.slice(this.rangeBounds.from, this.rangeBounds.to + 1);
+    }
 
     return { data: this.projectRows(rows), error: null };
   }
@@ -192,6 +214,82 @@ describe("uatScriptResultRepository", () => {
         })
       ])
     );
+  });
+
+  it("loads Supabase UAT run history with the selected run step details", async () => {
+    const fakeSupabase = new FakeSupabase({
+      uat_script_runs: [
+        {
+          id: "run-older",
+          run_key: "production-2026-07-01",
+          environment: "production",
+          status: "completed",
+          summary: { total: 2, passed: 2, failed: 0, blocked: 0, pending: 0, completionRate: 100 },
+          created_at: "2026-07-01T00:00:00.000Z",
+          updated_at: "2026-07-01T00:10:00.000Z"
+        },
+        {
+          id: "run-newer",
+          run_key: "production-2026-07-02",
+          environment: "production",
+          production_url: "https://pg-os-operation-system.vercel.app",
+          status: "failed",
+          summary: { total: 2, passed: 1, failed: 1, blocked: 0, pending: 0, completionRate: 100 },
+          created_at: "2026-07-02T00:00:00.000Z",
+          updated_at: "2026-07-02T00:10:00.000Z"
+        }
+      ],
+      uat_script_step_results: [
+        {
+          id: "step-older",
+          run_id: "run-older",
+          script_id: "ceo-observability-signoff",
+          script_title: "CEO production observability sign-off",
+          role_code: "ceo",
+          step_id: "ceo-login",
+          step_action: "Sign in",
+          expected_result: "Workspace opens",
+          status: "passed",
+          actual_result: "Older run",
+          actor_role: "ceo",
+          updated_at: "2026-07-01T00:05:00.000Z"
+        },
+        {
+          id: "step-newer",
+          run_id: "run-newer",
+          script_id: "ceo-observability-signoff",
+          script_title: "CEO production observability sign-off",
+          role_code: "ceo",
+          step_id: "ceo-health",
+          step_action: "Open System Health",
+          expected_result: "Health loads",
+          status: "failed",
+          actual_result: "Warning mismatch",
+          actor_role: "ceo",
+          updated_at: "2026-07-02T00:05:00.000Z"
+        }
+      ]
+    });
+    const repository = createUatScriptResultRepository(fakeSupabase, true);
+
+    const result = await repository.loadHistory({ limit: 2 });
+
+    expect(result.source).toBe("supabase");
+    expect(result.runs.map((run) => run.id)).toEqual(["run-newer", "run-older"]);
+    expect(result.selectedRun).toMatchObject({
+      id: "run-newer",
+      runKey: "production-2026-07-02",
+      status: "failed",
+      summary: expect.objectContaining({ passed: 1, failed: 1 })
+    });
+    expect(result.steps).toEqual([
+      expect.objectContaining({
+        runId: "run-newer",
+        stepId: "ceo-health",
+        status: "failed",
+        actualResult: "Warning mismatch"
+      })
+    ]);
   });
 
   it("returns warnings instead of throwing when persistence is not configured or blocked", async () => {

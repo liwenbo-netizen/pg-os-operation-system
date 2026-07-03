@@ -63,6 +63,12 @@ export const uatValidationSteps = [
     live: false
   },
   {
+    id: "uat-result-history",
+    label: "Production UAT result history and export",
+    script: "validate:phase35",
+    live: false
+  },
+  {
     id: "uat-rls",
     label: "Supabase UAT anon-session RLS gate",
     script: "verify:uat-rls",

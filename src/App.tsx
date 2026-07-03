@@ -10,6 +10,7 @@ import { RoutePlaceholderPage } from "./pages/RoutePlaceholderPage";
 import { SalesExperiencePage } from "./pages/sales/SalesExperiencePage";
 import { AuditEventConsolePage } from "./pages/audit/AuditEventConsolePage";
 import { SystemHealthPage } from "./pages/system/SystemHealthPage";
+import { UatResultHistoryPage } from "./pages/uat/UatResultHistoryPage";
 import { UatScriptCenterPage } from "./pages/uat/UatScriptCenterPage";
 import { WorkbenchOperationsPage } from "./pages/workbench/WorkbenchOperationsPage";
 import { roleCodes, roleDefinitions, type RoleCode } from "./constants/roles";
@@ -501,6 +502,8 @@ export function App() {
         <AuditEventConsolePage route={activeRoute} snapshot={workflowSnapshot} user={activeUser} />
       ) : activeRoute.path === "/uat/scripts" ? (
         <UatScriptCenterPage authMode={authMode} route={activeRoute} user={activeUser} />
+      ) : activeRoute.path === "/uat/history" ? (
+        <UatResultHistoryPage route={activeRoute} user={activeUser} />
       ) : activeRoute.path === "/workbench" || activeRoute.path === "/ceo/dashboard" ? (
         <WorkbenchOperationsPage
           route={activeRoute}

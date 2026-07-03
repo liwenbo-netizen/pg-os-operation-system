@@ -275,6 +275,20 @@ export const routeDefinitions: AppRoute[] = [
     sections: ["Role checklist", "Expected results", "Actual results", "Pass fail record", "Evidence notes"]
   },
   {
+    path: "/uat/history",
+    title: "UAT Result History",
+    module: "Observability",
+    pageType: "UAT Archive",
+    priority: "P0",
+    allowedRoles: ["ceo", "operations_director", "system_admin", "audit_viewer"],
+    service: "UatScriptService",
+    guard: "canViewRoute",
+    uat: "UAT-017",
+    primaryAction: "Export UAT record",
+    summarySignals: ["UAT runs", "Passed steps", "Failed steps", "Export records"],
+    sections: ["Run history", "Step evidence", "Role filter", "Status filter", "CSV JSON export"]
+  },
+  {
     path: "/admin",
     title: "Admin Shell",
     module: "Admin",

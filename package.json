@@ -48,6 +48,7 @@
     "validate:phase32": "vitest run src/services/warningDiagnosticsService.test.ts && node scripts/validate-production-warning-diagnostics.mjs --config-only",
     "validate:phase33": "vitest run src/services/uatScriptService.test.ts src/routes/routeGuards.test.ts && node scripts/validate-production-uat-script-center.mjs --config-only",
     "validate:phase34": "vitest run src/services/uatScriptService.test.ts src/repositories/uatScriptResultRepository.test.ts && node scripts/validate-uat-script-supabase-persistence.mjs --config-only",
+    "validate:phase35": "vitest run src/repositories/uatScriptResultRepository.test.ts src/services/uatHistoryExportService.test.ts src/routes/routeGuards.test.ts scripts/validate-production-deployment-smoke.test.mjs && node scripts/validate-uat-result-history-export.mjs --config-only",
     "smoke:production": "node scripts/validate-production-deployment-smoke.mjs",
     "smoke:production:auth": "node scripts/validate-production-auth-readiness.mjs",
     "smoke:production:manual-login": "node scripts/validate-production-manual-login-uat.mjs",
