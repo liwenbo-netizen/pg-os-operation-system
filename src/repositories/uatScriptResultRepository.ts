@@ -289,8 +289,14 @@ function toStepRows(input: {
         actor_role: input.user.activeRole,
         updated_by: input.actorUserId,
         metadata: {
+          auditEvents: script.auditEvents,
+          businessActions: script.businessActions,
+          businessDomain: script.businessDomain,
+          dataQualityCheck: step.dataQualityCheck,
+          dataQualityChecks: script.dataQualityChecks,
           evidence: script.evidence,
           scope: script.scope,
+          stepBusinessAction: step.businessAction,
           targetRoute: script.targetRoute
         },
         updated_at: result.updatedAt ?? input.timestamp

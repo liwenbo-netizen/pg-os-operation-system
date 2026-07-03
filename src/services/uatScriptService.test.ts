@@ -20,12 +20,20 @@ describe("uatScriptService", () => {
         }),
         expect.objectContaining({
           id: "media-publisher-onboarding",
+          businessDomain: "Media",
           roleCode: "media_manager",
-          targetRoute: "/media/publishers/:id"
+          targetRoute: "/media/manager-workbench"
         })
       ])
     );
     expect(productionUatScripts.every((script) => script.steps.length > 0)).toBe(true);
+    expect(productionUatScripts.every((script) => script.auditEvents.length > 0)).toBe(true);
+    expect(productionUatScripts.every((script) => script.dataQualityChecks.length > 0)).toBe(true);
+    expect(
+      productionUatScripts
+        .filter((script) => ["Media", "Sales", "Finance", "Contract"].includes(script.businessDomain))
+        .every((script) => script.businessActions.length >= 3)
+    ).toBe(true);
   });
 
   it("summarizes cross-role UAT progress", () => {

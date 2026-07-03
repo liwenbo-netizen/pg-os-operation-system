@@ -1,4 +1,4 @@
-import { ClipboardCheck, Clock3, RotateCcw, ShieldCheck, XCircle } from "lucide-react";
+import { ClipboardCheck, Clock3, Layers3, RotateCcw, ShieldCheck, XCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SummaryCard } from "../../components/SummaryCard";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -19,6 +19,7 @@ import {
 import type { BusinessUser } from "../../types/domain";
 import { formatUtcPlus8DateTime } from "../../lib/time";
 import { cn } from "../../lib/cn";
+import { buildBusinessUatCoverage } from "../../services/businessUatCoverageService";
 
 type UatScriptCenterPageProps = {
   authMode: AuthSessionMode;
@@ -113,6 +114,7 @@ export function UatScriptCenterPage({ authMode, route, user }: UatScriptCenterPa
     productionUatScripts.find((script) => script.id === selectedScriptId) ?? productionUatScripts[0];
   const overallSummary = useMemo(() => summarizeUatResults(productionUatScripts, results), [results]);
   const selectedSummary = useMemo(() => summarizeScriptResults(selectedScript, results), [results, selectedScript]);
+  const businessCoverage = useMemo(() => buildBusinessUatCoverage(productionUatScripts), []);
   const lastUpdatedAt = latestUpdatedAt(selectedScript, results);
 
   useEffect(() => {
@@ -243,6 +245,45 @@ export function UatScriptCenterPage({ authMode, route, user }: UatScriptCenterPa
         <SummaryCard label="Complete" value={`${overallSummary.completionRate}%`} tone={overallSummary.pending ? "warning" : "success"} />
       </div>
 
+      <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-950">
+              <Layers3 className="size-4 text-blue-600" aria-hidden="true" />
+              Business mainline coverage
+            </div>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Media, Sales, Finance, and Contract UAT scripts must include real button actions, audit markers, and data quality checks.
+            </p>
+          </div>
+          <StatusBadge tone={businessCoverage.warnings.length > 0 ? "warning" : "success"}>
+            {`${businessCoverage.coveredDomains}/${businessCoverage.totalDomains} domains`}
+          </StatusBadge>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {businessCoverage.domains.map((domain) => (
+            <div key={domain.domain} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-900">{domain.domain}</p>
+                <StatusBadge tone={domain.scriptCount > 0 ? "success" : "danger"}>{`${domain.stepCount} steps`}</StatusBadge>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                {domain.routes.length} route(s), {domain.auditEvents.length} audit marker(s), {domain.dataQualityChecks.length} data check(s)
+              </p>
+            </div>
+          ))}
+        </div>
+        {businessCoverage.warnings.length > 0 ? (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            {businessCoverage.warnings.map((warning) => (
+              <p key={warning} className="text-xs leading-5 text-amber-800">
+                {warning}
+              </p>
+            ))}
+          </div>
+        ) : null}
+      </article>
+
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
         <aside className="space-y-3">
           <div className="rounded-lg border border-slate-200 bg-white p-4">
@@ -361,6 +402,44 @@ export function UatScriptCenterPage({ authMode, route, user }: UatScriptCenterPa
                 ))}
               </div>
             </div>
+
+            {selectedScript.businessActions.length > 0 ? (
+              <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-950">Business actions and audit markers</p>
+                <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                  {selectedScript.businessActions.map((action) => (
+                    <div key={`${action.domain}-${action.action}`} className="rounded-lg border border-slate-200 bg-white p-3">
+                      <p className="text-sm font-semibold text-slate-900">{action.action}</p>
+                      <p className="mt-1 break-words text-xs text-slate-500">{action.route}</p>
+                      <p className="mt-2 break-words text-xs font-semibold text-blue-700">{action.expectedAuditEvent}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-950">Data quality checks</p>
+                <div className="mt-3 space-y-2">
+                  {selectedScript.dataQualityChecks.map((check) => (
+                    <p key={check} className="rounded border border-slate-200 bg-white px-3 py-2 text-xs leading-5 text-slate-700">
+                      {check}
+                    </p>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-semibold text-slate-950">Audit event markers</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {selectedScript.auditEvents.map((eventCode) => (
+                    <StatusBadge key={eventCode} tone="info">
+                      {eventCode}
+                    </StatusBadge>
+                  ))}
+                </div>
+              </div>
+            </div>
           </article>
 
           <div className="space-y-3">
@@ -385,6 +464,20 @@ export function UatScriptCenterPage({ authMode, route, user }: UatScriptCenterPa
                       </div>
                       <h3 className="mt-3 text-sm font-semibold text-slate-950">{step.action}</h3>
                       <p className="mt-2 text-sm leading-6 text-slate-600">{step.expectedResult}</p>
+                      {step.businessAction || step.dataQualityCheck ? (
+                        <div className="mt-3 space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                          {step.businessAction ? (
+                            <p className="text-xs leading-5 text-slate-600">
+                              <span className="font-semibold text-slate-900">Business action:</span> {step.businessAction}
+                            </p>
+                          ) : null}
+                          {step.dataQualityCheck ? (
+                            <p className="text-xs leading-5 text-slate-600">
+                              <span className="font-semibold text-slate-900">Data quality:</span> {step.dataQualityCheck}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <StepStatusButton label="Pass" status="passed" currentStatus={result.status} onClick={() => patchStep(step.id, { status: "passed" })} />

@@ -210,7 +210,19 @@ describe("uatScriptResultRepository", () => {
           step_id: "ceo-login",
           status: "passed",
           actor_user_id: user.id,
-          updated_by: user.id
+          updated_by: user.id,
+          metadata: expect.objectContaining({
+            businessDomain: "Platform",
+            auditEvents: expect.arrayContaining(["auth.sign_in"])
+          })
+        }),
+        expect.objectContaining({
+          step_id: "media-new-publisher",
+          metadata: expect.objectContaining({
+            businessDomain: "Media",
+            stepBusinessAction: "New publisher",
+            dataQualityCheck: expect.stringContaining("Publisher row")
+          })
         })
       ])
     );
