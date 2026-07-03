@@ -88,3 +88,36 @@ Expected:
 - Page exports visible evidence as CSV and JSON. PASS.
 - Production smoke includes `/uat/history`. PASS.
 - `npm run validate:phase35` passes. PASS.
+
+## Production Sign-Off
+
+Recorded at: 2026-07-03 09:11:43 +08:00.
+
+Production URL:
+
+```text
+https://pg-os-operation-system.vercel.app/
+```
+
+Git commit:
+
+```text
+d60c6ea feat: add UAT result history export
+```
+
+Validation evidence:
+
+```text
+npm run validate:phase35
+npm run validate:phase34
+npm run validate:phase18d
+npm run lint
+npm run build
+npm run smoke:production -- --url https://pg-os-operation-system.vercel.app/
+```
+
+Production verification:
+
+- Vercel production bundle contains `/uat/history`, UAT Result History / Step evidence markers, and CSV / JSON export markers. PASS.
+- Production smoke confirms `/uat/history` returns HTTP 200 with React root. PASS.
+- Phase 35 is ready for CEO, System Admin, Operations Director, and Audit Viewer review of UAT result history exports. PASS.
