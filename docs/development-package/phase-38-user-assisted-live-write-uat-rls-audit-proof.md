@@ -1,6 +1,6 @@
 # Phase 38 Report - User-Assisted Live-Write UAT / RLS & Audit Proof
 
-Status: PASS for the Media Manager production live-write path, the Sales Manager fixed production rerun, and CEO audit proof. The original Sales opportunity advertiser context defect was reproduced, fixed, redeployed, and verified through live Supabase audit events.
+Status: PASS for the Media Manager production live-write path, the Sales Manager fixed production rerun, the Finance Manager settlement live-write path, and CEO audit proof. The original Sales opportunity advertiser context defect was reproduced, fixed, redeployed, and verified through live Supabase audit events.
 
 Recorded at: 2026-07-03 14:36:56 +08:00.
 
@@ -33,6 +33,7 @@ The operator confirmed the following browser actions before Codex executed them:
 - `Create Proposal`
 - `Validate media`
 - Sales follow-up rerun: `New advertiser`, `Create opportunity`, `Create Proposal`
+- Finance rerun: `Complete reconciliation`, `Confirm settlement`, `Issue invoice`, `Mark paid`
 
 ## Media Manager Live Write
 
@@ -148,7 +149,7 @@ No `opportunity.create` or `opportunity.created` event was found for this run, m
 
 ## RLS / Warning Result
 
-No active Supabase repository warnings were observed after the Media or Sales write sequences.
+No active Supabase repository warnings were observed after the Media, Sales, or Finance write sequences.
 
 Previously sensitive Media tables covered by this run:
 
@@ -166,7 +167,15 @@ Sales write/audit coverage touched:
 - `audit_logs`
 - `module_business_events`
 
-The CEO audit stream proved both audit-log style allowed events and business-event style domain events are readable from production for Media and Sales. The follow-up Sales rerun also proved the complete advertiser -> opportunity -> proposal chain.
+Finance write/audit coverage touched:
+
+- `settlements`
+- settlement lifecycle audit events
+- settlement lifecycle business events
+- `audit_logs`
+- `module_business_events`
+
+The CEO audit stream proved both audit-log style allowed events and business-event style domain events are readable from production for Media, Sales, and Finance. The follow-up Sales rerun proved the complete advertiser -> opportunity -> proposal chain, and the Finance rerun proved the complete reconciliation -> confirmation -> invoice -> payment chain.
 
 ## Acceptance Criteria
 
@@ -186,6 +195,11 @@ The CEO audit stream proved both audit-log style allowed events and business-eve
 - Sales Manager media validation guard records blocked selection without RLS warning. PASS.
 - Sales write and guard events are visible in `/audit/events`. PASS.
 - Sales follow-up advertiser/opportunity/proposal audit chain is visible in `/audit/events`. PASS.
+- Real Supabase Finance Manager session can complete settlement reconciliation. PASS.
+- Finance Manager can confirm a reconciled, unblocked settlement. PASS.
+- Finance Manager can issue invoice after confirmation. PASS.
+- Finance Manager can mark settlement paid after invoice issuance. PASS.
+- Finance settlement lifecycle events are visible in `/audit/events`. PASS.
 - Audit timestamps display as `UTC+8`. PASS.
 - No password was typed or retained by Codex. PASS.
 
@@ -193,7 +207,6 @@ The CEO audit stream proved both audit-log style allowed events and business-eve
 
 Continue Phase 38 with the remaining live-write UAT roles:
 
-- Finance Manager: reconciliation, confirmation guard, invoice/payment progression.
 - Legal Manager: finance review, legal approval, signing/archive guard.
 
 After those role runs, record a consolidated production UAT result in `/uat/scripts` and review it through `/uat/history`.
@@ -299,3 +312,67 @@ Verified Sales rerun audit and business events:
 | `proposal.created` | Sales | proposal `6346e337-b847-4a18-8e69-de0624ad5360` | business | 2026-07-04 02:01:57 UTC+8 |
 
 The Sales rerun now has the full advertiser -> opportunity -> proposal audit chain. This closes the previously recorded Sales opportunity context defect for Phase 38.
+
+## Finance Manager Live Write
+
+Recorded at: 2026-07-04 02:22:06 +08:00.
+
+Session:
+
+```text
+Account: finance_manager@poly-gamma.com
+Active role: Finance Manager
+Auth mode: Supabase auth
+Initial repository state: Supabase synced
+```
+
+Executed actions:
+
+| Action | Browser feedback | Result |
+| --- | --- | --- |
+| Complete reconciliation | `SETTLEMENT_RECONCILED` | PASS |
+| Confirm settlement | `SETTLEMENT_CONFIRM_ALLOWED` | PASS |
+| Issue invoice | `SETTLEMENT_INVOICED` | PASS |
+| Mark paid | `SETTLEMENT_PAID` | PASS |
+
+Observed production data:
+
+```text
+Settlement: bb10e49b-6fa1-4747-b10b-52b06de6f2fe
+Status flow: reconciling -> pending_review -> confirmed -> invoiced -> paid
+Payable: CNY 125,000 -> CNY 124,880
+Adjustment: CNY -120
+Invoice no: INV-BB10E49B-6FA1-4747-B10B-52B06DE6F2FE
+Invoice issued: yes
+Paid: yes
+Repository state after writes: Supabase synced
+Supabase warning count: 0
+```
+
+## CEO Finance Audit Proof
+
+Session:
+
+```text
+Account: ceo@poly-gamma.com
+Active role: CEO
+Audit route: /audit/events
+Audit source: Supabase live
+Loaded at: 2026-07-04 02:22:06 UTC+8
+Supabase warning count: 0
+```
+
+Verified Finance audit and business events:
+
+| Event | Module | Object | Status | Created |
+| --- | --- | --- | --- | --- |
+| `settlement.reconcile` | Finance | settlement `bb10e49b-6fa1-4747-b10b-52b06de6f2fe` | allowed | 2026-07-04 02:20:35 UTC+8 |
+| `settlement.reconciled` | Finance | settlement `bb10e49b-6fa1-4747-b10b-52b06de6f2fe` | business | 2026-07-04 02:20:35 UTC+8 |
+| `settlement.confirm` | Finance | settlement `bb10e49b-6fa1-4747-b10b-52b06de6f2fe` | allowed | 2026-07-04 02:20:39 UTC+8 |
+| `settlement.confirmed` | Finance | settlement `bb10e49b-6fa1-4747-b10b-52b06de6f2fe` | business | 2026-07-04 02:20:39 UTC+8 |
+| `settlement.invoice.issue` | Finance | settlement `bb10e49b-6fa1-4747-b10b-52b06de6f2fe` | allowed | 2026-07-04 02:20:42 UTC+8 |
+| `settlement.invoiced` | Finance | settlement `bb10e49b-6fa1-4747-b10b-52b06de6f2fe` | business | 2026-07-04 02:20:42 UTC+8 |
+| `settlement.payment.mark_paid` | Finance | settlement `bb10e49b-6fa1-4747-b10b-52b06de6f2fe` | allowed | 2026-07-04 02:20:45 UTC+8 |
+| `settlement.paid` | Finance | settlement `bb10e49b-6fa1-4747-b10b-52b06de6f2fe` | business | 2026-07-04 02:20:45 UTC+8 |
+
+The Finance run has the full settlement lifecycle audit chain and no active Supabase warning diagnostics. This closes the Phase 38 Finance Manager live-write UAT proof.
