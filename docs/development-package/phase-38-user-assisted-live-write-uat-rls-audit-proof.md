@@ -193,3 +193,38 @@ Continue Phase 38 with the remaining live-write UAT roles and the Sales defect f
 - Sales Manager follow-up: fix the `Create opportunity` advertiser context binding and rerun that step.
 
 After those role runs, record a consolidated production UAT result in `/uat/scripts` and review it through `/uat/history`.
+
+## Sales Follow-Up Fix
+
+Recorded at: 2026-07-03 15:26:47 +08:00.
+
+The `Create opportunity` advertiser context binding defect was fixed in code:
+
+- `src/pages/sales/SalesExperiencePage.tsx` no longer hardcodes `advertiser-daily-yoga`.
+- `src/pages/sales/salesExperiencePageModel.ts` resolves the advertiser id from the current Sales state.
+- Successful opportunity creation now selects the newly created opportunity so the next `Create Proposal` action stays on the same business chain.
+- `npm run validate:phase5` now includes the page model regression test.
+
+Local validation:
+
+```text
+npm run validate:phase5
+npm run lint
+npm run build
+```
+
+Result:
+
+```text
+PASS
+```
+
+Production follow-up required after deployment:
+
+- Log in as `sales_manager@poly-gamma.com`.
+- Execute `New advertiser`.
+- Execute `Create opportunity`.
+- Confirm `OPPORTUNITY_CREATED`.
+- Execute `Create Proposal`.
+- Confirm the proposal is created from the new opportunity chain.
+- Log in as CEO and confirm `opportunity.create` / `opportunity.created` appear in `/audit/events`.

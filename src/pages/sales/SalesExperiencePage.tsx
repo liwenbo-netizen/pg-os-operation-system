@@ -7,6 +7,7 @@ import type { AppRoute } from "../../routes/routes";
 import { salesWorkflowService } from "../../services/salesWorkflowService";
 import type { AuditEvent, BusinessUser, EntityId, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
+import { resolveCreateOpportunityAdvertiserId } from "./salesExperiencePageModel";
 
 type SalesExperiencePageProps = {
   route: AppRoute;
@@ -152,14 +153,19 @@ export function SalesExperiencePage({
             state={state}
             selectedOpportunityId={selectedOpportunity.id}
             onCreateOpportunity={() =>
-              runAction("Create opportunity", () =>
-                salesWorkflowService.createOpportunity(state, user, {
-                  advertiserId: "advertiser-daily-yoga",
+              runAction("Create opportunity", () => {
+                const result = salesWorkflowService.createOpportunity(state, user, {
+                  advertiserId: resolveCreateOpportunityAdvertiserId(state) ?? "",
                   name: "Daily Yoga Retention Push",
                   expectedBudget: 16000,
                   painPoints: ["Need quality App supply", "Avoid blocked readiness"]
-                })
-              )
+                });
+                const opportunityId = result.guard.allowed ? result.state.opportunities[0]?.id : undefined;
+                if (opportunityId) {
+                  setSelectedOpportunityId(opportunityId);
+                }
+                return result;
+              })
             }
             onCreateProposal={() =>
               runAction("Create proposal", () => {

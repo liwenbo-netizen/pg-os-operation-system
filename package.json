@@ -18,7 +18,7 @@
     "validate:phase2": "node scripts/validate-phase2.mjs",
     "validate:phase3": "vitest run src/routes/routeGuards.test.ts src/services/guardService.test.ts",
     "validate:phase4": "vitest run src/services/mediaWorkflowService.test.ts",
-    "validate:phase5": "vitest run src/services/salesWorkflowService.test.ts",
+    "validate:phase5": "vitest run src/services/salesWorkflowService.test.ts src/pages/sales/salesExperiencePageModel.test.ts",
     "validate:phase6": "vitest run src/services/diagnosticWorkflowService.test.ts",
     "validate:phase7": "vitest run src/services/financeSettlementService.test.ts",
     "validate:phase8": "vitest run src/services/contractService.test.ts",
