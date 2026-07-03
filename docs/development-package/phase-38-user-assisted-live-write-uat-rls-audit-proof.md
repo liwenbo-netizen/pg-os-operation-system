@@ -1,6 +1,6 @@
 # Phase 38 Report - User-Assisted Live-Write UAT / RLS & Audit Proof
 
-Status: PASS for the Media Manager production live-write path, the Sales Manager fixed production rerun, the Finance Manager settlement live-write path, and CEO audit proof. The original Sales opportunity advertiser context defect was reproduced, fixed, redeployed, and verified through live Supabase audit events.
+Status: PASS for the Media Manager production live-write path, the Sales Manager fixed production rerun, the Finance Manager settlement live-write path, the Legal / Contract live-write path, and CEO audit proof. The original Sales opportunity advertiser context defect was reproduced, fixed, redeployed, and verified through live Supabase audit events.
 
 Recorded at: 2026-07-03 14:36:56 +08:00.
 
@@ -34,6 +34,7 @@ The operator confirmed the following browser actions before Codex executed them:
 - `Validate media`
 - Sales follow-up rerun: `New advertiser`, `Create opportunity`, `Create Proposal`
 - Finance rerun: `Complete reconciliation`, `Confirm settlement`, `Issue invoice`, `Mark paid`
+- Contract rerun: `Request finance review`, `Approve finance terms`, `Approve legal review`, `Mark signed`, `Archive`
 
 ## Media Manager Live Write
 
@@ -200,16 +201,21 @@ The CEO audit stream proved both audit-log style allowed events and business-eve
 - Finance Manager can issue invoice after confirmation. PASS.
 - Finance Manager can mark settlement paid after invoice issuance. PASS.
 - Finance settlement lifecycle events are visible in `/audit/events`. PASS.
+- Contract Workspace shows the deterministic UAT contract set after bootstrap. PASS.
+- Legal Manager can request finance review for CON-001. PASS.
+- Finance Manager can approve finance terms for CON-001. PASS.
+- Legal Manager can approve legal review, mark signed, and archive CON-001. PASS.
+- Contract lifecycle events are visible in `/audit/events`. PASS.
 - Audit timestamps display as `UTC+8`. PASS.
 - No password was typed or retained by Codex. PASS.
 
 ## Next Recommended Scope
 
-Continue Phase 38 with the remaining live-write UAT roles:
+Record a consolidated production UAT result in `/uat/scripts` and review it through `/uat/history`.
 
-- Legal Manager: finance review, legal approval, signing/archive guard.
+Follow-up backlog:
 
-After those role runs, record a consolidated production UAT result in `/uat/scripts` and review it through `/uat/history`.
+- Role Workbench `Start selected task` for derived contract tasks returned `NOT_FOUND` during exploratory validation. Contract Workspace itself passed the full live-write chain.
 
 ## Sales Follow-Up Fix
 
@@ -376,3 +382,92 @@ Verified Finance audit and business events:
 | `settlement.paid` | Finance | settlement `bb10e49b-6fa1-4747-b10b-52b06de6f2fe` | business | 2026-07-04 02:20:45 UTC+8 |
 
 The Finance run has the full settlement lifecycle audit chain and no active Supabase warning diagnostics. This closes the Phase 38 Finance Manager live-write UAT proof.
+
+## Contract UAT Bootstrap
+
+Recorded at: 2026-07-04 07:20:00 +08:00.
+
+Production Contract Workspace initially had no available contract rows for the Legal Manager UAT run. The deterministic Phase 38 contract seed was added and manually applied in Supabase:
+
+```text
+supabase/migrations/202607040001_contract_uat_seed.sql
+```
+
+Seeded contracts:
+
+| Contract | Initial status | Counterparty | Purpose |
+| --- | --- | --- | --- |
+| `CON-001` | `legal_review` | 233 | Mainline Legal -> Finance -> Legal -> Signed -> Archive UAT |
+| `CON-002` | `finance_review` | Daily Yoga | Finance-review ownership visibility check |
+| `CON-003` | `redline` | 233 | Redline state visibility check |
+| `CON-004` | `signed` | LOFTER | Archive-ready signed state visibility check |
+
+Contract Workspace verified all four records after the seed. Legal Manager Role Workbench did not list CON-002 because `finance_review` contracts are assigned to `finance_manager`; this is expected role ownership behavior.
+
+## Legal / Contract Live Write
+
+Recorded at: 2026-07-04 07:37:00 +08:00.
+
+Session:
+
+```text
+Account: legal_manager@poly-gamma.com
+Active role: Legal Manager
+Auth mode: Supabase auth
+Workspace route: /contracts/uat-smoke
+Initial repository state: Supabase synced
+```
+
+Executed actions:
+
+| Action | Browser feedback | Result |
+| --- | --- | --- |
+| Request finance review | `CONTRACT_FINANCE_REVIEW_REQUESTED` | PASS |
+| Approve finance terms | `CONTRACT_FINANCE_TERMS_APPROVED` | PASS |
+| Approve legal review | `CONTRACT_LEGAL_REVIEW_APPROVED` | PASS |
+| Mark signed | `CONTRACT_SIGNED` | PASS |
+| Archive | `CONTRACT_ARCHIVED` | PASS |
+
+Observed production data:
+
+```text
+Contract: CON-001
+Contract id: 11111111-1111-4111-8111-111111111001
+Status flow: legal_review -> finance_review -> legal_review -> signed -> archived
+Counterparty: 233
+Finance notes after approval: Payment terms verified from workspace.
+Final state: Contract is archived.
+Repository state after writes: Supabase synced
+Supabase warning count: 0
+Browser console warnings/errors: 0
+```
+
+## CEO Contract Audit Proof
+
+Session:
+
+```text
+Account: ceo@poly-gamma.com
+Active role: CEO
+Audit route: /audit/events
+Audit source: Supabase live
+Loaded at: 2026-07-04 07:43:40 UTC+8
+Supabase warning count: 0
+```
+
+Verified Contract audit and business events:
+
+| Event | Module | Object | Status | Created |
+| --- | --- | --- | --- | --- |
+| `contract.finance_review.request` | Contracts | contract `11111111-1111-4111-8111-111111111001` | allowed | 2026-07-04 07:27:04 UTC+8 |
+| `contract.finance_review_requested` | Contracts | contract `11111111-1111-4111-8111-111111111001` | business | 2026-07-04 07:27:04 UTC+8 |
+| `contract.finance_terms.approve` | Contracts | contract `11111111-1111-4111-8111-111111111001` | allowed | 2026-07-04 07:30:35 UTC+8 |
+| `contract.finance_terms_approved` | Contracts | contract `11111111-1111-4111-8111-111111111001` | business | 2026-07-04 07:30:35 UTC+8 |
+| `contract.legal_review.approve` | Contracts | contract `11111111-1111-4111-8111-111111111001` | allowed | 2026-07-04 07:36:49 UTC+8 |
+| `contract.legal_review_approved` | Contracts | contract `11111111-1111-4111-8111-111111111001` | business | 2026-07-04 07:36:49 UTC+8 |
+| `contract.sign` | Contracts | contract `11111111-1111-4111-8111-111111111001` | allowed | 2026-07-04 07:36:54 UTC+8 |
+| `contract.signed` | Contracts | contract `11111111-1111-4111-8111-111111111001` | business | 2026-07-04 07:36:54 UTC+8 |
+| `contract.archive` | Contracts | contract `11111111-1111-4111-8111-111111111001` | allowed | 2026-07-04 07:37:00 UTC+8 |
+| `contract.archived` | Contracts | contract `11111111-1111-4111-8111-111111111001` | business | 2026-07-04 07:37:00 UTC+8 |
+
+The Contract run has the full finance-review -> legal-approval -> signing -> archive audit chain and no active Supabase warning diagnostics. This closes the Phase 38 Legal / Contract live-write UAT proof.
