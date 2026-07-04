@@ -33,12 +33,13 @@ import {
   type SupabasePasswordSignInInput
 } from "./repositories/authSessionRepository";
 import { createAuditLogRepository, type AuditLogWriteInput } from "./repositories/auditLogRepository";
-import type { AuditEvent, BusinessUser } from "./types/domain";
+import type { AuditEvent, BusinessUser, EntityId, WorkbenchTask } from "./types/domain";
 import { formatUtcPlus8DateTime } from "./lib/time";
 
 export function App() {
   const [activeRole, setActiveRole] = useState<RoleCode>("ceo");
   const [activePath, setActivePath] = useState(getDefaultRouteForRole("ceo"));
+  const [activeObjectId, setActiveObjectId] = useState<EntityId | undefined>();
   const [activeUser, setActiveUser] = useState<BusinessUser | null>(null);
   const [authMode, setAuthMode] = useState<AuthSessionMode>("mock");
   const [authLoading, setAuthLoading] = useState(false);
@@ -256,6 +257,7 @@ export function App() {
       setAuthError(undefined);
       setActiveRole(result.user.activeRole);
       setActivePath(getDefaultRouteForRole(result.user.activeRole));
+      setActiveObjectId(undefined);
       return;
     }
 
@@ -372,6 +374,7 @@ export function App() {
     }
 
     setActiveRole(nextRole);
+    setActiveObjectId(undefined);
     setActiveUser((currentUser) =>
       currentUser
         ? {
@@ -384,7 +387,7 @@ export function App() {
     setActivePath(getDefaultRouteForRole(nextRole));
   }
 
-  function handleRouteChange(nextPath: string) {
+  function handleRouteChange(nextPath: string, objectId?: EntityId) {
     const guardResult = canViewRoute(activeRole, nextPath);
     const route = routeDefinitions.find((definition) => definition.path === nextPath);
 
@@ -405,6 +408,8 @@ export function App() {
       return;
     }
 
+    setActiveObjectId(objectId);
+
     if (activeUser) {
       void recordAuditLogForUser(activeUser, {
         action: "route.visit",
@@ -421,6 +426,10 @@ export function App() {
     }
 
     setActivePath(nextPath);
+  }
+
+  function handleOpenWorkbenchTask(task: WorkbenchTask) {
+    handleRouteChange(task.related_route, task.source_object_id);
   }
 
   function handleWorkflowAuditEvent(event: AuditEvent) {
@@ -516,6 +525,7 @@ export function App() {
           contractState={contractWorkflowState}
           guideState={guideWorkflowState}
           onStateChange={setWorkbenchWorkflowState}
+          onOpenTask={handleOpenWorkbenchTask}
         />
       ) : activeRoute.path.startsWith("/media/") ? (
         <MediaExperiencePage
@@ -557,6 +567,7 @@ export function App() {
           state={financeWorkflowState}
           mediaState={mediaWorkflowState}
           salesState={salesWorkflowState}
+          selectedSettlementId={activeObjectId}
           onStateChange={setFinanceWorkflowState}
           onAuditEvent={handleWorkflowAuditEvent}
         />
@@ -569,6 +580,7 @@ export function App() {
           mediaState={mediaWorkflowState}
           salesState={salesWorkflowState}
           financeState={financeWorkflowState}
+          selectedContractId={activeObjectId}
           onStateChange={setContractWorkflowState}
           onAuditEvent={handleWorkflowAuditEvent}
         />

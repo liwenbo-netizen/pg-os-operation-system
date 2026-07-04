@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { FileSignature, Gavel, Landmark, PenLine, ShieldAlert } from "lucide-react";
 import { StatusBadge } from "../../components/StatusBadge";
 import { SummaryCard } from "../../components/SummaryCard";
@@ -24,6 +24,7 @@ type ContractWorkspacePageProps = {
   mediaState: MediaWorkflowState;
   salesState: SalesWorkflowState;
   financeState: FinanceWorkflowState;
+  selectedContractId?: EntityId;
   onStateChange: (state: ContractWorkflowState) => void;
   onAuditEvent: (event: AuditEvent) => void;
 };
@@ -62,13 +63,14 @@ export function ContractWorkspacePage({
   mediaState,
   salesState,
   financeState,
+  selectedContractId,
   onStateChange,
   onAuditEvent
 }: ContractWorkspacePageProps) {
-  const [selectedContractId, setSelectedContractId] = useState<EntityId>("contract-233-framework");
+  const [activeContractId, setActiveContractId] = useState<EntityId>(selectedContractId ?? "contract-233-framework");
   const [message, setMessage] = useState<ActionMessage | null>(null);
   const summary = contractService.getSummary(state);
-  const selectedContract = state.contracts.find((contract) => contract.id === selectedContractId) ?? state.contracts[0];
+  const selectedContract = state.contracts.find((contract) => contract.id === activeContractId) ?? state.contracts[0];
   const snapshot = useMemo(
     () =>
       contractService.getContractSnapshot(
@@ -80,6 +82,12 @@ export function ContractWorkspacePage({
       ),
     [financeState, mediaState, salesState, selectedContract?.id, state]
   );
+
+  useEffect(() => {
+    if (selectedContractId) {
+      setActiveContractId(selectedContractId);
+    }
+  }, [selectedContractId]);
 
   function runAction(title: string, action: () => ReturnType<typeof contractService.approveLegalReview>) {
     const result = action();
@@ -139,7 +147,7 @@ export function ContractWorkspacePage({
       {message ? <GuardNotice message={message} /> : null}
 
       <div className="grid gap-6 xl:grid-cols-[280px_1fr_320px]">
-        <ContractQueue contracts={state.contracts} selectedContractId={selectedContract.id} onSelect={setSelectedContractId} />
+        <ContractQueue contracts={state.contracts} selectedContractId={selectedContract.id} onSelect={setActiveContractId} />
 
         <main className="space-y-4">
           <Panel title="Contract summary" icon={<FileSignature className="size-5 text-blue-600" aria-hidden="true" />}>

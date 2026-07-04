@@ -28,6 +28,7 @@ type WorkbenchOperationsPageProps = {
   contractState: ContractWorkflowState;
   guideState: GuideWorkflowState;
   onStateChange: (state: WorkbenchWorkflowState) => void;
+  onOpenTask: (task: WorkbenchTask) => void;
 };
 
 type ActionMessage = {
@@ -65,7 +66,8 @@ export function WorkbenchOperationsPage({
   financeState,
   contractState,
   guideState,
-  onStateChange
+  onStateChange,
+  onOpenTask
 }: WorkbenchOperationsPageProps) {
   const [selectedTaskId, setSelectedTaskId] = useState<string>("task-proposal-approval");
   const [message, setMessage] = useState<ActionMessage | null>(null);
@@ -93,6 +95,16 @@ export function WorkbenchOperationsPage({
     setMessage({ title, guard: result.guard });
   }
 
+  function startTask(task: WorkbenchTask) {
+    const result = workbenchService.startTask(state, user, task.id, snapshot.tasks);
+    onStateChange(result.state);
+    setMessage({ title: "Start task", guard: result.guard });
+
+    if (result.guard.allowed) {
+      onOpenTask(task);
+    }
+  }
+
   return (
     <section className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
@@ -112,7 +124,7 @@ export function WorkbenchOperationsPage({
           <button
             className="inline-flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
             type="button"
-            onClick={() => runAction("Start task", () => workbenchService.startTask(state, user, selectedTask.id))}
+            onClick={() => startTask(selectedTask)}
           >
             <Play className="size-4" aria-hidden="true" />
             Start selected task
@@ -149,7 +161,7 @@ export function WorkbenchOperationsPage({
                   <button
                     className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700"
                     type="button"
-                    onClick={() => runAction("Start task", () => workbenchService.startTask(state, user, selectedTask.id))}
+                    onClick={() => startTask(selectedTask)}
                   >
                     <Play className="size-4" aria-hidden="true" />
                     Start
@@ -158,7 +170,7 @@ export function WorkbenchOperationsPage({
                     className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700"
                     type="button"
                     onClick={() =>
-                      runAction("Complete task", () => workbenchService.completeTask(state, user, selectedTask.id))
+                      runAction("Complete task", () => workbenchService.completeTask(state, user, selectedTask.id, snapshot.tasks))
                     }
                   >
                     <CheckCircle2 className="size-4" aria-hidden="true" />

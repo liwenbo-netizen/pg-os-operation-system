@@ -37,6 +37,16 @@ type SnapshotContext = OperationsContext & {
   workbenchState: WorkbenchWorkflowState;
 };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value);
+}
+
+function createDerivedTaskId(prefix: string, sourceObjectId: EntityId) {
+  return isUuid(sourceObjectId) ? sourceObjectId : `derived-${prefix}-${sourceObjectId}`;
+}
+
 function createAllowed(message: string, reasonCode: string): GuardResult {
   return {
     allowed: true,
@@ -131,6 +141,32 @@ function updateTask(
   };
 }
 
+function resolveTaskForAction(
+  state: WorkbenchWorkflowState,
+  taskId: EntityId,
+  availableTasks: WorkbenchTask[] = state.tasks
+): { state: WorkbenchWorkflowState; task?: WorkbenchTask } {
+  const persistedTask = state.tasks.find((candidate) => candidate.id === taskId);
+
+  if (persistedTask) {
+    return { state, task: persistedTask };
+  }
+
+  const derivedTask = availableTasks.find((candidate) => candidate.id === taskId);
+
+  if (!derivedTask) {
+    return { state };
+  }
+
+  return {
+    state: {
+      ...state,
+      tasks: [derivedTask, ...state.tasks]
+    },
+    task: derivedTask
+  };
+}
+
 function updateOkr(
   state: WorkbenchWorkflowState,
   okrId: EntityId,
@@ -167,7 +203,7 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
   const diagnosticTasks = context.mediaState.diagnosticCases
     .filter((diagnosticCase) => !["closed", "rejected"].includes(diagnosticCase.status))
     .map<WorkbenchTask>((diagnosticCase) => ({
-      id: `derived-diagnostic-${diagnosticCase.id}`,
+      id: createDerivedTaskId("diagnostic", diagnosticCase.id),
       title: `Resolve ${diagnosticCase.case_no} ${diagnosticCase.case_type.replace(/_/g, " ")}`,
       module: "Diagnostics",
       owner_role: diagnosticCase.owner_role ?? "data_analyst",
@@ -183,7 +219,7 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
   const proposalTasks = context.salesState.proposals
     .filter((proposal) => proposal.status === "internal_review")
     .map<WorkbenchTask>((proposal) => ({
-      id: `derived-proposal-${proposal.id}`,
+      id: createDerivedTaskId("proposal", proposal.id),
       title: `Approve proposal: ${proposal.name}`,
       module: "Sales",
       owner_role: "sales_director",
@@ -198,7 +234,7 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
   const campaignTasks = context.salesState.campaigns
     .filter((campaign) => ["launch_check", "pending_approval"].includes(campaign.status))
     .map<WorkbenchTask>((campaign) => ({
-      id: `derived-campaign-${campaign.id}`,
+      id: createDerivedTaskId("campaign", campaign.id),
       title: `Prepare launch: ${campaign.name}`,
       module: "Campaigns",
       owner_role: campaign.status === "pending_approval" ? "operations_director" : "adops_manager",
@@ -214,7 +250,7 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
   const settlementTasks = context.financeState.settlements
     .filter((settlement) => ["reconciling", "pending_review", "exception_review"].includes(settlement.status))
     .map<WorkbenchTask>((settlement) => ({
-      id: `derived-settlement-${settlement.id}`,
+      id: createDerivedTaskId("settlement", settlement.id),
       title: `Process settlement: ${settlement.id}`,
       module: "Finance",
       owner_role: "finance_manager",
@@ -230,7 +266,7 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
   const contractTasks = context.contractState.contracts
     .filter((contract) => ["requested", "legal_review", "finance_review", "redline", "signed"].includes(contract.status))
     .map<WorkbenchTask>((contract) => ({
-      id: `derived-contract-${contract.id}`,
+      id: createDerivedTaskId("contract", contract.id),
       title: `Handle contract: ${contract.contract_no}`,
       module: "Contracts",
       owner_role: contract.status === "finance_review" ? "finance_manager" : "legal_manager",
@@ -246,7 +282,7 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
   const sopTasks = context.guideState.sopCards
     .filter((sopCard) => sopCard.status === "draft")
     .map<WorkbenchTask>((sopCard) => ({
-      id: `derived-sop-${sopCard.id}`,
+      id: createDerivedTaskId("sop", sopCard.id),
       title: `Publish SOP: ${sopCard.title}`,
       module: "Guide",
       owner_role: "product_owner",
@@ -308,8 +344,14 @@ export class WorkbenchService {
     };
   }
 
-  startTask(state: WorkbenchWorkflowState, user: BusinessUser, taskId: EntityId): WorkbenchResult {
-    const task = state.tasks.find((candidate) => candidate.id === taskId);
+  startTask(
+    state: WorkbenchWorkflowState,
+    user: BusinessUser,
+    taskId: EntityId,
+    availableTasks: WorkbenchTask[] = state.tasks
+  ): WorkbenchResult {
+    const resolved = resolveTaskForAction(state, taskId, availableTasks);
+    const task = resolved.task;
 
     if (!task) {
       const guard = createBlocked("Workbench task was not found.", "NOT_FOUND");
@@ -318,16 +360,16 @@ export class WorkbenchService {
 
     if (!canOwnTask(user, task.owner_role)) {
       const guard = createBlocked("Current role cannot start this task.", "WORKBENCH_TASK_FORBIDDEN", task.owner_role);
-      return { state: appendEvents(state, user, "workbench.task.start", taskId, guard), guard };
+      return { state: appendEvents(resolved.state, user, "workbench.task.start", taskId, guard), guard };
     }
 
     if (task.status === "done") {
       const guard = createBlocked("Completed tasks cannot be restarted.", "WORKBENCH_TASK_DONE");
-      return { state: appendEvents(state, user, "workbench.task.start", taskId, guard), guard };
+      return { state: appendEvents(resolved.state, user, "workbench.task.start", taskId, guard), guard };
     }
 
     const nextState = appendTaskActivity(
-      updateTask(state, taskId, {
+      updateTask(resolved.state, taskId, {
         status: "in_progress"
       }),
       taskId,
@@ -346,8 +388,14 @@ export class WorkbenchService {
     };
   }
 
-  completeTask(state: WorkbenchWorkflowState, user: BusinessUser, taskId: EntityId): WorkbenchResult {
-    const task = state.tasks.find((candidate) => candidate.id === taskId);
+  completeTask(
+    state: WorkbenchWorkflowState,
+    user: BusinessUser,
+    taskId: EntityId,
+    availableTasks: WorkbenchTask[] = state.tasks
+  ): WorkbenchResult {
+    const resolved = resolveTaskForAction(state, taskId, availableTasks);
+    const task = resolved.task;
 
     if (!task) {
       const guard = createBlocked("Workbench task was not found.", "NOT_FOUND");
@@ -356,16 +404,16 @@ export class WorkbenchService {
 
     if (!canOwnTask(user, task.owner_role)) {
       const guard = createBlocked("Current role cannot complete this task.", "WORKBENCH_TASK_FORBIDDEN", task.owner_role);
-      return { state: appendEvents(state, user, "workbench.task.complete", taskId, guard), guard };
+      return { state: appendEvents(resolved.state, user, "workbench.task.complete", taskId, guard), guard };
     }
 
     if (task.status === "blocked") {
       const guard = createBlocked("Blocked tasks cannot be completed before the blocker is resolved.", "WORKBENCH_TASK_BLOCKED", task.owner_role);
-      return { state: appendEvents(state, user, "workbench.task.complete", taskId, guard), guard };
+      return { state: appendEvents(resolved.state, user, "workbench.task.complete", taskId, guard), guard };
     }
 
     const nextState = appendTaskActivity(
-      updateTask(state, taskId, {
+      updateTask(resolved.state, taskId, {
         status: "done"
       }),
       taskId,

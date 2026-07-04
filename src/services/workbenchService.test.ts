@@ -60,6 +60,118 @@ describe("workbenchService phase 10", () => {
     expect(completeResult.state.businessEvents[0].eventCode).toBe("workbench.task_completed");
   });
 
+  it("starts derived finance tasks from the visible snapshot", () => {
+    const user = authService.createMockUser("finance_manager");
+    const snapshotContext = context();
+    const snapshot = workbenchService.getSnapshot(snapshotContext, user);
+    const derivedSettlementTask = snapshot.tasks.find(
+      (task) => task.id.startsWith("derived-settlement-") && task.status === "open"
+    );
+    const derivedContractTask = snapshot.tasks.find(
+      (task) => task.id.startsWith("derived-contract-") && task.module === "Contracts"
+    );
+
+    expect(derivedSettlementTask).toBeDefined();
+    expect(derivedContractTask).toBeDefined();
+
+    const settlementResult = workbenchService.startTask(
+      snapshotContext.workbenchState,
+      user,
+      derivedSettlementTask!.id,
+      snapshot.tasks
+    );
+    const contractResult = workbenchService.startTask(
+      snapshotContext.workbenchState,
+      user,
+      derivedContractTask!.id,
+      snapshot.tasks
+    );
+
+    expect(settlementResult.guard.reason_code).toBe("WORKBENCH_TASK_STARTED");
+    expect(contractResult.guard.reason_code).toBe("WORKBENCH_TASK_STARTED");
+    expect(settlementResult.state.tasks.find((task) => task.id === derivedSettlementTask!.id)?.status).toBe("in_progress");
+    expect(contractResult.state.tasks.find((task) => task.id === derivedContractTask!.id)?.status).toBe("in_progress");
+  });
+
+  it("starts derived legal contract tasks from the visible snapshot", () => {
+    const user = authService.createMockUser("legal_manager");
+    const snapshotContext = context();
+    const snapshot = workbenchService.getSnapshot(snapshotContext, user);
+    const derivedContractTask = snapshot.tasks.find(
+      (task) => task.id.startsWith("derived-contract-") && task.status === "open"
+    );
+
+    expect(derivedContractTask).toBeDefined();
+
+    const result = workbenchService.startTask(
+      snapshotContext.workbenchState,
+      user,
+      derivedContractTask!.id,
+      snapshot.tasks
+    );
+
+    expect(result.guard.reason_code).toBe("WORKBENCH_TASK_STARTED");
+    expect(result.state.tasks.find((task) => task.id === derivedContractTask!.id)?.status).toBe("in_progress");
+    expect(result.state.auditEvents[0]).toMatchObject({
+      action: "workbench.task.start",
+      objectId: derivedContractTask!.id,
+      allowed: true
+    });
+  });
+
+  it("completes derived sales tasks from the visible snapshot", () => {
+    const user = authService.createMockUser("sales_director");
+    const snapshotContext = context();
+    const snapshot = workbenchService.getSnapshot(snapshotContext, user);
+    const derivedSalesTask = snapshot.tasks.find((task) => task.id.startsWith("derived-proposal-"));
+
+    expect(derivedSalesTask).toBeDefined();
+
+    const result = workbenchService.completeTask(
+      snapshotContext.workbenchState,
+      user,
+      derivedSalesTask!.id,
+      snapshot.tasks
+    );
+
+    expect(result.guard.reason_code).toBe("WORKBENCH_TASK_COMPLETED");
+    expect(result.state.tasks.find((task) => task.id === derivedSalesTask!.id)?.status).toBe("done");
+  });
+
+  it("uses UUID source object ids as derived task ids for Supabase-backed work items", () => {
+    const user = authService.createMockUser("legal_manager");
+    const snapshotContext = context();
+    const contractId = "11111111-1111-4111-8111-111111111001";
+    snapshotContext.contractState = {
+      ...snapshotContext.contractState,
+      contracts: [
+        {
+          ...snapshotContext.contractState.contracts[0],
+          id: contractId,
+          contract_no: "CON-UAT",
+          status: "legal_review"
+        }
+      ]
+    };
+    const snapshot = workbenchService.getSnapshot(snapshotContext, user);
+    const derivedContractTask = snapshot.tasks.find((task) => task.source_object_id === contractId);
+
+    expect(derivedContractTask?.id).toBe(contractId);
+
+    const result = workbenchService.startTask(
+      snapshotContext.workbenchState,
+      user,
+      contractId,
+      snapshot.tasks
+    );
+
+    expect(result.guard.reason_code).toBe("WORKBENCH_TASK_STARTED");
+    expect(result.businessEvent).toMatchObject({
+      eventCode: "workbench.task_started",
+      objectId: contractId
+    });
+  });
+
   it("blocks unrelated roles from completing another role's task", () => {
     const user = authService.createMockUser("sales_manager");
     const state = createInitialWorkbenchWorkflowState();

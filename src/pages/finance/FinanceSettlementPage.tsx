@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { CheckCircle2, FileCheck2, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
 import { StatusBadge } from "../../components/StatusBadge";
 import { SummaryCard } from "../../components/SummaryCard";
@@ -15,6 +15,7 @@ type FinanceSettlementPageProps = {
   state: FinanceWorkflowState;
   mediaState: MediaWorkflowState;
   salesState: SalesWorkflowState;
+  selectedSettlementId?: EntityId;
   onStateChange: (state: FinanceWorkflowState) => void;
   onAuditEvent: (event: AuditEvent) => void;
 };
@@ -43,14 +44,15 @@ export function FinanceSettlementPage({
   state,
   mediaState,
   salesState,
+  selectedSettlementId,
   onStateChange,
   onAuditEvent
 }: FinanceSettlementPageProps) {
-  const [selectedSettlementId, setSelectedSettlementId] = useState<EntityId>("settlement-clean");
+  const [activeSettlementId, setActiveSettlementId] = useState<EntityId>(selectedSettlementId ?? "settlement-clean");
   const [message, setMessage] = useState<ActionMessage | null>(null);
   const summary = financeSettlementService.getSummary(state, mediaState);
   const selectedSettlement =
-    state.settlements.find((settlement) => settlement.id === selectedSettlementId) ?? state.settlements[0];
+    state.settlements.find((settlement) => settlement.id === activeSettlementId) ?? state.settlements[0];
   const snapshot = useMemo(
     () =>
       financeSettlementService.getSettlementSnapshot(
@@ -61,6 +63,12 @@ export function FinanceSettlementPage({
       ),
     [mediaState, salesState, selectedSettlement?.id, state]
   );
+
+  useEffect(() => {
+    if (selectedSettlementId) {
+      setActiveSettlementId(selectedSettlementId);
+    }
+  }, [selectedSettlementId]);
 
   function runAction(title: string, action: () => ReturnType<typeof financeSettlementService.confirmSettlement>) {
     const result = action();
@@ -123,7 +131,7 @@ export function FinanceSettlementPage({
         <SettlementQueue
           settlements={state.settlements}
           selectedSettlementId={selectedSettlement.id}
-          onSelect={setSelectedSettlementId}
+          onSelect={setActiveSettlementId}
         />
 
         <main className="space-y-4">
