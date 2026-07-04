@@ -1,6 +1,6 @@
 # Phase 39 Report - Workbench Task Execution Binding Fix
 
-Status: CODE COMPLETE / LOCAL VALIDATED. Production UAT is pending Vercel deployment.
+Status: PRODUCTION UAT PASSED.
 
 Recorded at: 2026-07-04 08:25:00 +08:00.
 
@@ -81,23 +81,60 @@ Workbench regression coverage added:
 - Sales Director can complete a derived proposal task.
 - UUID source object ids become UUID-compatible derived task ids for Supabase-backed work items.
 
-## Production UAT Plan
+## Production UAT Result
 
-After Vercel deploys the commit:
+Production site:
 
-1. Log in as `legal_manager`.
-2. Open Role Workbench.
-3. Select an open legal contract task.
-4. Click `Start selected task`.
-5. Expected: no `NOT_FOUND`; route opens Contract Workspace with the selected contract bound.
-6. Log in as `finance_manager`.
-7. Open Role Workbench.
-8. Select a finance-review contract or settlement task.
-9. Click `Start selected task`.
-10. Expected: no `NOT_FOUND`; target workspace opens with the selected object bound.
-11. Log in as CEO and open `/audit/events`.
-12. Verify `workbench.task.start` and `workbench.task_started` events are visible, alongside route visit events.
+```text
+https://pg-os-operation-system.vercel.app/
+```
+
+Result:
+
+```text
+PASS
+```
+
+Legal Manager live test:
+
+- Role: `legal_manager`
+- Source page: Role Workbench
+- Selected task: `Handle contract: CON-003`
+- Action: `Start selected task`
+- Result: Contract Workspace opened with `CON-003` selected.
+- Contract state: `redline`
+- Regression check: no `NOT_FOUND`
+- Repository state: `Supabase synced`
+- Warning state: no Supabase warning
+
+Finance Manager live test:
+
+- Role: `finance_manager`
+- Source page: Role Workbench
+- Selected task: `Handle contract: CON-002`
+- Action: `Start selected task`
+- Result: user-assisted production UAT confirmed Contract Workspace opened with `CON-002` selected.
+- Follow-up state check: task is `in_progress`
+- Regression check: no `NOT_FOUND`
+- Repository state: `Supabase synced`
+- Warning state: no Supabase warning
+
+CEO audit proof:
+
+- Audit page: `/audit/events`
+- Loaded at: `2026-07-04 13:33:03 UTC+8`
+- Legal event: `workbench.task_started`
+- Legal actor: `legal_manager`
+- Legal task id: `11111111-1111-4111-8111-111111111003`
+- Legal timestamp: `2026-07-04 12:59:06 UTC+8`
+- Finance event: `workbench.task_started`
+- Finance actor: `finance_manager`
+- Finance task id: `11111111-1111-4111-8111-111111111002`
+- Finance timestamp: `2026-07-04 13:07:25 UTC+8`
+- Supporting event type visible: `route.visit`
+- Regression check: audit stream has no `NOT_FOUND`
+- Repository state: `Supabase live`
 
 ## Follow-Up
 
-Once production UAT passes, record the live CEO audit proof in this report and continue with the consolidated UAT history sign-off.
+Phase 39 is closed. Continue with consolidated UAT result history sign-off or the next business-flow hardening phase.
