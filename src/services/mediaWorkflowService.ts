@@ -58,6 +58,12 @@ export function createInitialMediaWorkflowState(): MediaWorkflowState {
       checklist: { ...project.checklist }
     })),
     commercialTests: fixtureRepository.commercialTests.map((test) => ({ ...test })),
+    mediaEcosystemLeads: fixtureRepository.mediaEcosystemLeads.map((lead) => ({
+      ...lead,
+      score_breakdown: { ...lead.score_breakdown }
+    })),
+    mediaOutreachActivities: fixtureRepository.mediaOutreachActivities.map((activity) => ({ ...activity })),
+    trustedSupplyCandidates: fixtureRepository.trustedSupplyCandidates.map((candidate) => ({ ...candidate })),
     diagnosticCases: fixtureRepository.diagnosticCases.map((diagnosticCase) => ({ ...diagnosticCase })),
     diagnosticEvidence: fixtureRepository.diagnosticEvidence.map((evidence) => ({ ...evidence })),
     diagnosticActivities: fixtureRepository.diagnosticActivities.map((activity) => ({ ...activity })),

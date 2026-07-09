@@ -9,6 +9,21 @@ describe("canViewRoute", () => {
     });
   });
 
+  it("keeps China media ecosystem expansion inside media and executive roles", () => {
+    expect(canViewRoute("media_manager", "/media/china-ecosystem")).toMatchObject({
+      allowed: true,
+      reason_code: "ROUTE_ALLOWED"
+    });
+    expect(canViewRoute("ceo", "/media/china-ecosystem")).toMatchObject({
+      allowed: true,
+      reason_code: "ROUTE_ALLOWED"
+    });
+    expect(canViewRoute("sales_manager", "/media/china-ecosystem")).toMatchObject({
+      allowed: false,
+      reason_code: "ROLE_ROUTE_FORBIDDEN"
+    });
+  });
+
   it("does not give system admin business approval routes by default", () => {
     expect(canViewRoute("system_admin", "/media/director-command-center")).toMatchObject({
       allowed: false,

@@ -10,6 +10,11 @@ describe("businessAuditCoverage", () => {
     expect(CORE_BUSINESS_AUDIT_ACTIONS).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ action: "publisher.create", module: "Media", criticality: "P0" }),
+        expect.objectContaining({
+          action: "china_media_ecosystem.trusted_candidate.create",
+          module: "Media",
+          criticality: "P0"
+        }),
         expect.objectContaining({ action: "proposal.approve", module: "Sales", criticality: "P0" }),
         expect.objectContaining({ action: "campaign.launch.approve", module: "Campaigns", criticality: "P0" }),
         expect.objectContaining({ action: "settlement.confirm", module: "Finance", criticality: "P0" }),

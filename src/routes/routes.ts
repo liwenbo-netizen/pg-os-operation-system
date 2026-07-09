@@ -93,6 +93,27 @@ export const routeDefinitions: AppRoute[] = [
     sections: ["Publisher queue", "Blocked items", "Missing material checklist", "Technical handoffs", "Recent publisher updates"]
   },
   {
+    path: "/media/china-ecosystem",
+    title: "China Media Ecosystem Expansion",
+    module: "Media",
+    pageType: "Ecosystem Expansion",
+    priority: "P0",
+    allowedRoles: ["media_manager", "media_director", "operations_director", "ceo"],
+    service: "ChinaMediaEcosystemService",
+    guard: "canViewRoute",
+    uat: "UAT-MEDIA-ECOSYSTEM",
+    primaryAction: "Create trusted supply candidate",
+    summarySignals: ["Strategic tracks 5", "Priority leads 2", "Trusted candidates 0", "No anonymous backlog"],
+    sections: [
+      "China media ecosystem map",
+      "Track opportunity pool",
+      "Expansion pipeline",
+      "Priority scoring",
+      "Outreach and contact proof",
+      "Trusted supply candidate conversion"
+    ]
+  },
+  {
     path: "/media/publishers/:id",
     title: "Publisher 360",
     module: "Media",

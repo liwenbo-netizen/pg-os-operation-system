@@ -26,6 +26,8 @@ export type ObjectType =
   | "advertiser"
   | "opportunity"
   | "publisher"
+  | "media_ecosystem_lead"
+  | "trusted_supply_candidate"
   | "proposal"
   | "campaign"
   | "contract"
@@ -100,6 +102,95 @@ export type CommercialTest = {
   clear_rate: number;
   ivt_rate: number;
   result_summary?: string;
+};
+
+export type MediaEcosystemTrack =
+  | "VIDEO_LONG_FORM"
+  | "SHORT_VIDEO_LIVE"
+  | "NEWS_SEARCH_BROWSER"
+  | "SOCIAL_COMMUNITY"
+  | "ECOMMERCE_RETAIL_MEDIA"
+  | "LOCAL_LIFE_TRAVEL"
+  | "GAME_H5_IAA"
+  | "WELLNESS_FEMALE_HEALTH"
+  | "UTILITY_TOOLS"
+  | "CTV_OTT_OEM"
+  | "SMART_HARDWARE"
+  | "AUDIO_PODCAST"
+  | "CAMPUS_YOUTH"
+  | "OUTDOOR_DOOH"
+  | "AI_APP_CONTENT"
+  | "OTHER_VERTICAL";
+
+export type MediaExpansionStage =
+  | "ECOSYSTEM_MAPPED"
+  | "PRIORITY_SCREENED"
+  | "OUTREACH_READY"
+  | "CONTACTED"
+  | "MEETING_SCHEDULED"
+  | "BUSINESS_QUALIFIED"
+  | "TECH_FEASIBILITY_CHECK"
+  | "TRUSTED_SUPPLY_CANDIDATE"
+  | "ONBOARDING_PROJECT_CREATED"
+  | "REJECTED"
+  | "ON_HOLD";
+
+export type IntegrationFeasibility = "unknown" | "feasible" | "needs_work" | "impossible";
+
+export type MediaEcosystemPriorityScore = {
+  strategic_value: number;
+  user_scale_growth: number;
+  ad_scenario_value: number;
+  programmatic_feasibility: number;
+  advertiser_demand_match: number;
+  commercial_negotiability: number;
+  risk_compliance_control: number;
+};
+
+export type MediaEcosystemLead = {
+  id: EntityId;
+  media_name: string;
+  company_name?: string;
+  track: MediaEcosystemTrack;
+  region: "CN" | "APAC" | "Global";
+  stage: MediaExpansionStage;
+  owner_role: RoleCode;
+  priority_score: number;
+  score_breakdown: MediaEcosystemPriorityScore;
+  user_scale_note: string;
+  ad_scenario_note: string;
+  advertiser_demand_note: string;
+  integration_feasibility: IntegrationFeasibility;
+  media_contact_confirmed: boolean;
+  business_interest_confirmed: boolean;
+  ad_inventory_identified: boolean;
+  risk_level: Severity;
+  next_action: string;
+  target_contact?: string;
+  last_touch_at?: string;
+  linked_publisher_id?: EntityId;
+};
+
+export type MediaOutreachActivity = {
+  id: EntityId;
+  lead_id: EntityId;
+  event: string;
+  actor_role: RoleCode;
+  created_at: string;
+  notes?: string;
+};
+
+export type TrustedSupplyCandidate = {
+  id: EntityId;
+  lead_id: EntityId;
+  media_name: string;
+  track: MediaEcosystemTrack;
+  priority_score: number;
+  status: "candidate" | "onboarding_project_created" | "rejected";
+  owner_role: RoleCode;
+  created_at: string;
+  evaluation_notes: string;
+  publisher_id?: EntityId;
 };
 
 export type Advertiser = {
@@ -354,6 +445,9 @@ export type MediaWorkflowState = {
   publisherContractTerms: PublisherContractTerm[];
   integrationProjects: IntegrationProject[];
   commercialTests: CommercialTest[];
+  mediaEcosystemLeads: MediaEcosystemLead[];
+  mediaOutreachActivities: MediaOutreachActivity[];
+  trustedSupplyCandidates: TrustedSupplyCandidate[];
   diagnosticCases: DiagnosticCase[];
   diagnosticEvidence: DiagnosticEvidence[];
   diagnosticActivities: DiagnosticActivity[];

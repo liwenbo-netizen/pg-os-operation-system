@@ -10,6 +10,8 @@ import type {
   DiagnosticCase,
   DiagnosticEvidence,
   IntegrationProject,
+  MediaEcosystemLead,
+  MediaOutreachActivity,
   Proposal,
   ProposalMediaSelection,
   Publisher,
@@ -22,6 +24,7 @@ import type {
   SopCard,
   Opportunity,
   OkrObjective,
+  TrustedSupplyCandidate,
   WorkbenchTask,
   WorkbenchTaskActivity
 } from "../types/domain";
@@ -196,6 +199,173 @@ export const fixtureCommercialTests: CommercialTest[] = [
     result_summary: "Monitoring fill rate before final conclusion."
   }
 ];
+
+export const fixtureMediaEcosystemLeads: MediaEcosystemLead[] = [
+  {
+    id: "ecosystem-lead-redbook",
+    media_name: "RedBook Lifestyle Community",
+    company_name: "Lifestyle Community Group",
+    track: "SOCIAL_COMMUNITY",
+    region: "CN",
+    stage: "BUSINESS_QUALIFIED",
+    owner_role: "media_manager",
+    priority_score: 84,
+    score_breakdown: {
+      strategic_value: 18,
+      user_scale_growth: 13,
+      ad_scenario_value: 13,
+      programmatic_feasibility: 12,
+      advertiser_demand_match: 14,
+      commercial_negotiability: 7,
+      risk_compliance_control: 7
+    },
+    user_scale_note: "High-intent lifestyle and wellness audience with strong content consumption depth.",
+    ad_scenario_note: "Native content, creator-led commerce, and app open-screen inventory are worth validating.",
+    advertiser_demand_note: "Wellness, female health, beauty, and retail advertisers have repeated demand signals.",
+    integration_feasibility: "needs_work",
+    media_contact_confirmed: true,
+    business_interest_confirmed: true,
+    ad_inventory_identified: true,
+    risk_level: "medium",
+    next_action: "Create trusted supply candidate and request technical feasibility review.",
+    target_contact: "Partnership BD lead",
+    last_touch_at: "2026-07-03T08:30:00.000Z"
+  },
+  {
+    id: "ecosystem-lead-smart-tv-oem",
+    media_name: "Smart TV OEM Alliance",
+    company_name: "APAC Connected Screen Group",
+    track: "CTV_OTT_OEM",
+    region: "APAC",
+    stage: "OUTREACH_READY",
+    owner_role: "media_director",
+    priority_score: 76,
+    score_breakdown: {
+      strategic_value: 18,
+      user_scale_growth: 11,
+      ad_scenario_value: 14,
+      programmatic_feasibility: 13,
+      advertiser_demand_match: 10,
+      commercial_negotiability: 5,
+      risk_compliance_control: 5
+    },
+    user_scale_note: "Regional CTV footprint can close premium screen supply gaps.",
+    ad_scenario_note: "CTV pre-roll and home-screen sponsorship require controlled PMP evaluation.",
+    advertiser_demand_note: "Travel, auto, and brand lift campaigns have recurring CTV requests.",
+    integration_feasibility: "feasible",
+    media_contact_confirmed: false,
+    business_interest_confirmed: false,
+    ad_inventory_identified: true,
+    risk_level: "medium",
+    next_action: "Confirm accountable business contact before moving into contacted stage.",
+    target_contact: "OEM supply partnership owner"
+  },
+  {
+    id: "ecosystem-lead-campus-game",
+    media_name: "Campus Mini Game Network",
+    company_name: "Youth H5 Studio",
+    track: "GAME_H5_IAA",
+    region: "CN",
+    stage: "PRIORITY_SCREENED",
+    owner_role: "media_manager",
+    priority_score: 68,
+    score_breakdown: {
+      strategic_value: 13,
+      user_scale_growth: 12,
+      ad_scenario_value: 10,
+      programmatic_feasibility: 11,
+      advertiser_demand_match: 9,
+      commercial_negotiability: 7,
+      risk_compliance_control: 6
+    },
+    user_scale_note: "Useful youth reach, but retention and traffic quality need proof.",
+    ad_scenario_note: "Rewarded video and interstitial inventory may fit game and utility advertisers.",
+    advertiser_demand_note: "Demand is seasonal and needs advertiser-side validation.",
+    integration_feasibility: "needs_work",
+    media_contact_confirmed: false,
+    business_interest_confirmed: false,
+    ad_inventory_identified: false,
+    risk_level: "medium",
+    next_action: "Collect inventory pack and confirm whether a primary BD contact exists."
+  },
+  {
+    id: "ecosystem-lead-generic-news",
+    media_name: "Generic News Portal Bundle",
+    company_name: "Unverified Aggregator",
+    track: "NEWS_SEARCH_BROWSER",
+    region: "CN",
+    stage: "ON_HOLD",
+    owner_role: "media_manager",
+    priority_score: 42,
+    score_breakdown: {
+      strategic_value: 7,
+      user_scale_growth: 8,
+      ad_scenario_value: 6,
+      programmatic_feasibility: 5,
+      advertiser_demand_match: 6,
+      commercial_negotiability: 5,
+      risk_compliance_control: 5
+    },
+    user_scale_note: "Traffic source is unclear and duplicated across resellers.",
+    ad_scenario_note: "Inventory cannot yet be separated from existing open-web supply.",
+    advertiser_demand_note: "No clear advertiser pull beyond generic reach.",
+    integration_feasibility: "unknown",
+    media_contact_confirmed: false,
+    business_interest_confirmed: false,
+    ad_inventory_identified: false,
+    risk_level: "high",
+    next_action: "Keep on hold until source ownership and direct contact are proven."
+  },
+  {
+    id: "ecosystem-lead-low-quality-app",
+    media_name: "Low Quality Utility App Cluster",
+    company_name: "Unknown App Studio",
+    track: "UTILITY_TOOLS",
+    region: "CN",
+    stage: "REJECTED",
+    owner_role: "media_director",
+    priority_score: 28,
+    score_breakdown: {
+      strategic_value: 4,
+      user_scale_growth: 5,
+      ad_scenario_value: 4,
+      programmatic_feasibility: 4,
+      advertiser_demand_match: 3,
+      commercial_negotiability: 4,
+      risk_compliance_control: 4
+    },
+    user_scale_note: "Traffic profile does not justify operational attention.",
+    ad_scenario_note: "Inventory resembles low-quality remnant app supply.",
+    advertiser_demand_note: "No strategic advertiser match.",
+    integration_feasibility: "impossible",
+    media_contact_confirmed: false,
+    business_interest_confirmed: false,
+    ad_inventory_identified: false,
+    risk_level: "critical",
+    next_action: "Rejected from ecosystem expansion backlog."
+  }
+];
+
+export const fixtureMediaOutreachActivities: MediaOutreachActivity[] = [
+  {
+    id: "outreach-redbook-qualified",
+    lead_id: "ecosystem-lead-redbook",
+    event: "Business interest and native inventory confirmed.",
+    actor_role: "media_manager",
+    created_at: "2026-07-03T08:30:00.000Z",
+    notes: "Partner is open to a controlled PMP readiness assessment."
+  },
+  {
+    id: "outreach-campus-screened",
+    lead_id: "ecosystem-lead-campus-game",
+    event: "Priority screening completed.",
+    actor_role: "media_manager",
+    created_at: "2026-07-02T10:15:00.000Z",
+    notes: "Needs contact ownership and inventory pack before outreach."
+  }
+];
+
+export const fixtureTrustedSupplyCandidates: TrustedSupplyCandidate[] = [];
 
 export const fixtureProposals: Proposal[] = [
   {
@@ -807,6 +977,19 @@ export const fixtureSopActivities: SopActivity[] = [
 
 export const fixtureWorkbenchTasks: WorkbenchTask[] = [
   {
+    id: "task-china-media-ecosystem-redbook",
+    title: "Convert qualified China ecosystem lead",
+    module: "Media",
+    owner_role: "media_manager",
+    related_route: "/media/china-ecosystem",
+    priority: "P0",
+    status: "open",
+    due_date: "2026-07-12",
+    next_action: "Create trusted supply candidate for RedBook Lifestyle Community and start onboarding readiness.",
+    source_object_type: "media_ecosystem_lead",
+    source_object_id: "ecosystem-lead-redbook"
+  },
+  {
     id: "task-scale-lofter-diagnostic",
     title: "Resolve LOFTER scale blocker",
     module: "Diagnostics",
@@ -950,6 +1133,9 @@ export const fixtureRepository = {
   publisherContractTerms: fixturePublisherContractTerms,
   integrationProjects: fixtureIntegrationProjects,
   commercialTests: fixtureCommercialTests,
+  mediaEcosystemLeads: fixtureMediaEcosystemLeads,
+  mediaOutreachActivities: fixtureMediaOutreachActivities,
+  trustedSupplyCandidates: fixtureTrustedSupplyCandidates,
   proposals: fixtureProposals,
   proposalMediaSelections: fixtureProposalMediaSelections,
   campaigns: fixtureCampaigns,
