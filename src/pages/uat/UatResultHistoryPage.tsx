@@ -1,4 +1,4 @@
-import { Download, RefreshCw, ScrollText } from "lucide-react";
+import { ClipboardCheck, Download, RefreshCw, ScrollText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SummaryCard } from "../../components/SummaryCard";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -11,7 +11,19 @@ import {
   type UatStepHistoryItem
 } from "../../repositories/uatScriptResultRepository";
 import type { AppRoute } from "../../routes/routes";
-import { createUatHistoryCsv, createUatHistoryFileName, createUatHistoryJson } from "../../services/uatHistoryExportService";
+import {
+  createUatAcceptanceLedgerCsv,
+  createUatAcceptanceLedgerFileName,
+  createUatAcceptanceLedgerJson,
+  createUatHistoryCsv,
+  createUatHistoryFileName,
+  createUatHistoryJson
+} from "../../services/uatHistoryExportService";
+import {
+  productionUatAcceptanceLedger,
+  summarizeAcceptanceLedger,
+  type UatAcceptanceStatus
+} from "../../services/uatAcceptanceLedgerService";
 import type { UatStepStatus } from "../../services/uatScriptService";
 import type { BusinessUser } from "../../types/domain";
 import { cn } from "../../lib/cn";
@@ -41,6 +53,12 @@ const runTone: Record<UatRunStatus, "neutral" | "success" | "warning" | "danger"
 
 const stepTone: Record<UatStepStatus, "neutral" | "success" | "warning" | "danger"> = {
   pending: "neutral",
+  passed: "success",
+  failed: "danger",
+  blocked: "warning"
+};
+
+const acceptanceTone: Record<UatAcceptanceStatus, "success" | "warning" | "danger"> = {
   passed: "success",
   failed: "danger",
   blocked: "warning"
@@ -140,6 +158,7 @@ export function UatResultHistoryPage({ route, user }: UatResultHistoryPageProps)
   const selectedRun = history.selectedRun;
   const summary = selectedRun?.summary;
   const canExport = Boolean(selectedRun && history.steps.length > 0);
+  const acceptanceSummary = useMemo(() => summarizeAcceptanceLedger(productionUatAcceptanceLedger), []);
 
   function exportCsv() {
     if (!selectedRun) {
@@ -161,6 +180,22 @@ export function UatResultHistoryPage({ route, user }: UatResultHistoryPageProps)
     downloadTextFile(
       createUatHistoryFileName(selectedRun, "json"),
       createUatHistoryJson(selectedRun, filteredSteps),
+      "application/json;charset=utf-8"
+    );
+  }
+
+  function exportLedgerCsv() {
+    downloadTextFile(
+      createUatAcceptanceLedgerFileName(productionUatAcceptanceLedger, "csv"),
+      createUatAcceptanceLedgerCsv(productionUatAcceptanceLedger),
+      "text/csv;charset=utf-8"
+    );
+  }
+
+  function exportLedgerJson() {
+    downloadTextFile(
+      createUatAcceptanceLedgerFileName(productionUatAcceptanceLedger, "json"),
+      createUatAcceptanceLedgerJson(productionUatAcceptanceLedger),
       "application/json;charset=utf-8"
     );
   }
@@ -194,6 +229,123 @@ export function UatResultHistoryPage({ route, user }: UatResultHistoryPageProps)
           ))}
         </div>
       ) : null}
+
+      <section className="rounded-lg border border-slate-200 bg-white shadow-card">
+        <div className="flex flex-col gap-4 border-b border-slate-200 p-5 xl:flex-row xl:items-start xl:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <ClipboardCheck className="size-5 text-blue-600" aria-hidden="true" />
+              <StatusBadge tone="success">Phase 37-39</StatusBadge>
+            </div>
+            <h2 className="mt-3 text-xl font-semibold tracking-normal text-slate-950">Formal sign-off ledger</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+              Consolidated production UAT acceptance records for deployment readiness, live-write proof, RLS/audit proof, and workbench task
+              execution binding.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="inline-flex h-10 items-center gap-2 rounded border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              type="button"
+              onClick={exportLedgerCsv}
+            >
+              <Download className="size-4" aria-hidden="true" />
+              Ledger CSV
+            </button>
+            <button
+              className="inline-flex h-10 items-center gap-2 rounded border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              type="button"
+              onClick={exportLedgerJson}
+            >
+              <Download className="size-4" aria-hidden="true" />
+              Ledger JSON
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-0 border-b border-slate-200 md:grid-cols-2 xl:grid-cols-5">
+          <div className="border-b border-slate-200 p-4 md:border-r xl:border-b-0">
+            <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Sign-off records</p>
+            <p className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{acceptanceSummary.total}</p>
+          </div>
+          <div className="border-b border-slate-200 p-4 md:border-r xl:border-b-0">
+            <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Passed</p>
+            <p className="mt-2 text-2xl font-semibold tracking-normal text-emerald-800">{acceptanceSummary.passed}</p>
+          </div>
+          <div className="border-b border-slate-200 p-4 md:border-r xl:border-b-0">
+            <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Phases</p>
+            <p className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{acceptanceSummary.phaseCount}</p>
+          </div>
+          <div className="border-b border-slate-200 p-4 md:border-r xl:border-b-0">
+            <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Domains</p>
+            <p className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{acceptanceSummary.businessDomainCount}</p>
+          </div>
+          <div className="p-4">
+            <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Audit proof</p>
+            <p className="mt-2 text-2xl font-semibold tracking-normal text-blue-800">{acceptanceSummary.auditProofCount}</p>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+            <thead className="bg-slate-50 text-xs uppercase tracking-normal text-slate-500">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Phase</th>
+                <th className="px-4 py-3 font-semibold">Scope</th>
+                <th className="px-4 py-3 font-semibold">Roles</th>
+                <th className="px-4 py-3 font-semibold">Evidence</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+                <th className="px-4 py-3 font-semibold">Audit markers</th>
+                <th className="px-4 py-3 font-semibold">Recorded</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white">
+              {productionUatAcceptanceLedger.map((item) => (
+                <tr key={item.id}>
+                  <td className="px-4 py-4 align-top">
+                    <p className="font-semibold text-slate-950">{item.phase}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{item.sourceDocument}</p>
+                  </td>
+                  <td className="max-w-sm px-4 py-4 align-top">
+                    <p className="font-semibold text-slate-950">{item.title}</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">{item.proofPoints[0]}</p>
+                    <p className="mt-2 text-xs font-semibold text-slate-600">{item.businessDomains.join(" / ")}</p>
+                  </td>
+                  <td className="px-4 py-4 align-top text-slate-700">
+                    <div className="flex max-w-xs flex-wrap gap-1">
+                      {item.roles.map((role) => (
+                        <span key={role} className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs">
+                          {roleDefinitions[role].name}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 align-top text-slate-700">
+                    <div className="flex max-w-xs flex-wrap gap-1">
+                      {item.evidenceKinds.map((evidenceKind) => (
+                        <span key={evidenceKind} className="rounded border border-blue-100 bg-blue-50 px-2 py-1 text-xs text-blue-700">
+                          {evidenceKind}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 align-top">
+                    <StatusBadge tone={acceptanceTone[item.status]}>{item.status}</StatusBadge>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">{item.followUp}</p>
+                  </td>
+                  <td className="max-w-xs px-4 py-4 align-top text-slate-700">
+                    <p className="text-xs leading-5">{item.auditMarkers.slice(0, 4).join(", ")}</p>
+                    {item.auditMarkers.length > 4 ? (
+                      <p className="mt-1 text-xs text-slate-500">+{item.auditMarkers.length - 4} more</p>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-4 align-top text-slate-500">{formatUtcPlus8DateTime(item.recordedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <SummaryCard label="Runs" value={String(history.runs.length)} tone="neutral" />

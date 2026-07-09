@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { UatRunHistoryItem, UatStepHistoryItem } from "../repositories/uatScriptResultRepository";
-import { createUatHistoryCsv, createUatHistoryFileName, createUatHistoryJson } from "./uatHistoryExportService";
+import { productionUatAcceptanceLedger } from "./uatAcceptanceLedgerService";
+import {
+  createUatAcceptanceLedgerCsv,
+  createUatAcceptanceLedgerFileName,
+  createUatAcceptanceLedgerJson,
+  createUatHistoryCsv,
+  createUatHistoryFileName,
+  createUatHistoryJson
+} from "./uatHistoryExportService";
 
 const run: UatRunHistoryItem = {
   id: "run-1",
@@ -56,5 +64,20 @@ describe("uatHistoryExportService", () => {
     });
     expect(createUatHistoryFileName(run, "csv")).toBe("pgos-production-manual-uat-current-2026-07-02.csv");
     expect(createUatHistoryFileName(run, "json")).toBe("pgos-production-manual-uat-current-2026-07-02.json");
+  });
+
+  it("exports the formal acceptance ledger as CSV and JSON", () => {
+    const csv = createUatAcceptanceLedgerCsv(productionUatAcceptanceLedger);
+    const json = createUatAcceptanceLedgerJson(productionUatAcceptanceLedger);
+
+    expect(csv).toContain('"phase","title","business_domains"');
+    expect(csv).toContain('"Phase 39"');
+    expect(csv).toContain('"workbench.task_started; route.visit"');
+    expect(JSON.parse(json)).toMatchObject({
+      ledger: expect.arrayContaining([expect.objectContaining({ phase: "Phase 37" }), expect.objectContaining({ phase: "Phase 39" })])
+    });
+    expect(createUatAcceptanceLedgerFileName(productionUatAcceptanceLedger, "csv")).toBe(
+      "pgos-production-uat-acceptance-ledger-2026-07-04.csv"
+    );
   });
 });

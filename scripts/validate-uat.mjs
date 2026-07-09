@@ -69,6 +69,12 @@ export const uatValidationSteps = [
     live: false
   },
   {
+    id: "uat-acceptance-ledger",
+    label: "Production UAT formal acceptance ledger",
+    script: "validate:phase40",
+    live: false
+  },
+  {
     id: "uat-rls",
     label: "Supabase UAT anon-session RLS gate",
     script: "verify:uat-rls",
