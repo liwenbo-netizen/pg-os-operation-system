@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, CheckCircle2, Map, Plus, Send, ShieldAlert, Target, TestTube2, Wrench } from "lucide-react";
+import { ArrowRight, CheckCircle2, Map, Plus, Search, Send, ShieldAlert, Target, TestTube2, Wrench } from "lucide-react";
 import { StatusBadge } from "../../components/StatusBadge";
 import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
@@ -11,6 +11,7 @@ import type {
   BusinessUser,
   EntityId,
   MediaEcosystemLead,
+  MediaEcosystemTrack,
   MediaExpansionStage,
   MediaWorkflowState,
   Publisher,
@@ -82,6 +83,48 @@ function toneForExpansionStage(stage: MediaExpansionStage) {
   }
 
   return "neutral" as const;
+}
+
+const ecosystemStageOptions: Array<"ALL" | MediaExpansionStage> = [
+  "ALL",
+  "ECOSYSTEM_MAPPED",
+  "PRIORITY_SCREENED",
+  "OUTREACH_READY",
+  "CONTACTED",
+  "MEETING_SCHEDULED",
+  "BUSINESS_QUALIFIED",
+  "TECH_FEASIBILITY_CHECK",
+  "TRUSTED_SUPPLY_CANDIDATE",
+  "ONBOARDING_PROJECT_CREATED",
+  "ON_HOLD",
+  "REJECTED"
+];
+
+const ecosystemPriorityOptions = [
+  { value: "ALL", label: "All scores" },
+  { value: "HIGH", label: "70+" },
+  { value: "WATCH", label: "1-69" },
+  { value: "UNSCORED", label: "Unscored" }
+] as const;
+
+type EcosystemPriorityFilter = (typeof ecosystemPriorityOptions)[number]["value"];
+
+const ecosystemListPageSize = 24;
+
+function matchesEcosystemPriority(lead: MediaEcosystemLead, filter: EcosystemPriorityFilter) {
+  if (filter === "HIGH") {
+    return lead.priority_score >= 70;
+  }
+
+  if (filter === "WATCH") {
+    return lead.priority_score > 0 && lead.priority_score < 70;
+  }
+
+  if (filter === "UNSCORED") {
+    return lead.priority_score === 0;
+  }
+
+  return true;
 }
 
 export function MediaExperiencePage({
@@ -333,9 +376,40 @@ function ChinaMediaEcosystemWorkspace({
   onRunAction: (title: string, action: () => MediaActionResult) => void;
 }) {
   const [selectedLeadId, setSelectedLeadId] = useState<EntityId>(state.mediaEcosystemLeads[0]?.id ?? "");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [trackFilter, setTrackFilter] = useState<"ALL" | MediaEcosystemTrack>("ALL");
+  const [stageFilter, setStageFilter] = useState<"ALL" | MediaExpansionStage>("ALL");
+  const [priorityFilter, setPriorityFilter] = useState<EcosystemPriorityFilter>("ALL");
+  const [visibleLeadCount, setVisibleLeadCount] = useState(ecosystemListPageSize);
   const trackOpportunities = chinaMediaEcosystemService.getTrackOpportunities(state);
   const pipeline = chinaMediaEcosystemService.getPipeline(state);
-  const selectedLead = state.mediaEcosystemLeads.find((lead) => lead.id === selectedLeadId) ?? state.mediaEcosystemLeads[0];
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredLeads = useMemo(
+    () =>
+      [...state.mediaEcosystemLeads]
+        .sort((left, right) => right.priority_score - left.priority_score || left.media_name.localeCompare(right.media_name))
+        .filter((lead) => {
+          const searchableText = [lead.media_name, lead.company_name, lead.next_action, mediaEcosystemTrackLabels[lead.track]]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          return (
+            (normalizedSearchQuery.length === 0 || searchableText.includes(normalizedSearchQuery)) &&
+            (trackFilter === "ALL" || lead.track === trackFilter) &&
+            (stageFilter === "ALL" || lead.stage === stageFilter) &&
+            matchesEcosystemPriority(lead, priorityFilter)
+          );
+        }),
+    [normalizedSearchQuery, priorityFilter, stageFilter, state.mediaEcosystemLeads, trackFilter]
+  );
+  const visibleLeads = filteredLeads.slice(0, visibleLeadCount);
+  const selectedLead =
+    visibleLeads.find((lead) => lead.id === selectedLeadId) ??
+    visibleLeads[0] ??
+    filteredLeads[0] ??
+    state.mediaEcosystemLeads.find((lead) => lead.id === selectedLeadId) ??
+    state.mediaEcosystemLeads[0];
   const selectedCandidate = selectedLead
     ? state.trustedSupplyCandidates.find((candidate) => candidate.lead_id === selectedLead.id)
     : undefined;
@@ -391,10 +465,74 @@ function ChinaMediaEcosystemWorkspace({
       <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
         <aside className="space-y-3">
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-card">
-            <p className="text-sm font-semibold text-slate-900">Opportunity pool</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">Every lead needs an owner, a score, a stage, and a next action.</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Opportunity pool</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  {filteredLeads.length} visible / {state.mediaEcosystemLeads.length} total
+                </p>
+              </div>
+              <StatusBadge tone={filteredLeads.length > 0 ? "info" : "warning"}>{String(visibleLeads.length)}</StatusBadge>
+            </div>
+            <label className="mt-4 flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600">
+              <Search className="size-4 text-slate-400" aria-hidden="true" />
+              <input
+                className="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                value={searchQuery}
+                placeholder="Search media"
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setVisibleLeadCount(ecosystemListPageSize);
+                }}
+              />
+            </label>
+            <div className="mt-3 grid gap-2">
+              <select
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                value={trackFilter}
+                onChange={(event) => {
+                  setTrackFilter(event.target.value as "ALL" | MediaEcosystemTrack);
+                  setVisibleLeadCount(ecosystemListPageSize);
+                }}
+              >
+                <option value="ALL">All tracks</option>
+                {Object.entries(mediaEcosystemTrackLabels).map(([track, label]) => (
+                  <option key={track} value={track}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                value={stageFilter}
+                onChange={(event) => {
+                  setStageFilter(event.target.value as "ALL" | MediaExpansionStage);
+                  setVisibleLeadCount(ecosystemListPageSize);
+                }}
+              >
+                {ecosystemStageOptions.map((stage) => (
+                  <option key={stage} value={stage}>
+                    {stage === "ALL" ? "All stages" : stage}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                value={priorityFilter}
+                onChange={(event) => {
+                  setPriorityFilter(event.target.value as EcosystemPriorityFilter);
+                  setVisibleLeadCount(ecosystemListPageSize);
+                }}
+              >
+                {ecosystemPriorityOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          {state.mediaEcosystemLeads.map((lead) => (
+          {visibleLeads.map((lead) => (
             <button
               key={lead.id}
               className={`w-full rounded-lg border p-4 text-left shadow-card transition ${
@@ -420,6 +558,20 @@ function ChinaMediaEcosystemWorkspace({
               </div>
             </button>
           ))}
+          {filteredLeads.length > visibleLeads.length ? (
+            <button
+              className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 shadow-card hover:bg-slate-50"
+              type="button"
+              onClick={() => setVisibleLeadCount((count) => count + ecosystemListPageSize)}
+            >
+              Show more
+            </button>
+          ) : null}
+          {filteredLeads.length === 0 ? (
+            <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-card">
+              No matching ecosystem opportunities.
+            </div>
+          ) : null}
         </aside>
 
         {selectedLead ? (

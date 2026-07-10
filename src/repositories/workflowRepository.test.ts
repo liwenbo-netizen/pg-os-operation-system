@@ -63,6 +63,9 @@ describe("workflow repositories", () => {
     const workItemId = uuid(13);
     const objectiveId = uuid(14);
     const keyResultId = uuid(15);
+    const ecosystemLeadId = uuid(16);
+    const outreachId = uuid(17);
+    const trustedCandidateId = uuid(18);
 
     const fakeSupabase = new FakeSupabase({
       publishers: [
@@ -81,12 +84,60 @@ describe("workflow repositories", () => {
       ],
       commercial_tests: [
         {
-          id: uuid(16),
+          id: uuid(19),
           publisher_id: publisherId,
           test_name: "DB test",
           status: "test_passed",
           target_budget: "1200",
           metrics: { spend: 1100, fill_rate: 0.61, clear_rate: 0.72, ivt_rate: 0.01 }
+        }
+      ],
+      media_ecosystem_opportunities: [
+        {
+          id: ecosystemLeadId,
+          media_name: "DB Ecosystem Media",
+          company_entity: "DB Media Group",
+          ecosystem_segment: "SHORT_VIDEO_LIVE",
+          ecosystem_status: "CONTACTED",
+          owner_role: "media_manager",
+          strategic_segment_score: 18,
+          user_scale_score: 14,
+          ad_context_score: 13,
+          integration_feasibility_score: 10,
+          advertiser_demand_score: 12,
+          commercial_feasibility_score: 8,
+          risk_control_score: 6,
+          priority_score: 81,
+          priority_score_reason: "Strong brand demand and short-video inventory fit.",
+          integration_feasibility: "needs_work",
+          media_contact_confirmed: true,
+          business_interest_confirmed: false,
+          ad_inventory_identified: true,
+          next_action: "Confirm business interest",
+          metadata: { region: "CN", risk_level: "medium", user_scale_note: "DAU confirmed by operator" }
+        }
+      ],
+      media_ecosystem_outreach_activities: [
+        {
+          id: outreachId,
+          opportunity_id: ecosystemLeadId,
+          event: "contacted",
+          actor_role: "media_manager",
+          activity_at: "2026-07-10T08:00:00.000Z",
+          notes: "Initial outreach recorded."
+        }
+      ],
+      trusted_supply_candidates: [
+        {
+          id: trustedCandidateId,
+          opportunity_id: ecosystemLeadId,
+          media_name: "DB Ecosystem Media",
+          track: "SHORT_VIDEO_LIVE",
+          priority_score: 81,
+          status: "candidate",
+          owner_role: "media_manager",
+          evaluation_notes: "Candidate entered network evaluation.",
+          created_at: "2026-07-10T08:10:00.000Z"
         }
       ],
       advertisers: [{ id: advertiserId, name: "DB Advertiser", industry: "Fitness", region: "CN", status: "active" }],
@@ -233,6 +284,24 @@ describe("workflow repositories", () => {
     expect(result.health).toMatchObject({ mode: "supabase", source: "supabase" });
     expect(result.snapshot.mediaState.publishers[0]).toMatchObject({ id: publisherId, name: "DB Publisher" });
     expect(result.snapshot.mediaState.commercialTests[0]).toMatchObject({ fill_rate: 0.61, spend: 1100 });
+    expect(result.snapshot.mediaState.mediaEcosystemLeads[0]).toMatchObject({
+      id: ecosystemLeadId,
+      media_name: "DB Ecosystem Media",
+      track: "SHORT_VIDEO_LIVE",
+      stage: "CONTACTED",
+      priority_score: 81,
+      media_contact_confirmed: true
+    });
+    expect(result.snapshot.mediaState.mediaOutreachActivities[0]).toMatchObject({
+      id: outreachId,
+      lead_id: ecosystemLeadId,
+      event: "contacted"
+    });
+    expect(result.snapshot.mediaState.trustedSupplyCandidates[0]).toMatchObject({
+      id: trustedCandidateId,
+      lead_id: ecosystemLeadId,
+      status: "candidate"
+    });
     expect(result.snapshot.salesState.proposals[0].selectedPublisherIds).toEqual([publisherId]);
     expect(result.snapshot.salesState.campaigns[0]).toMatchObject({ publisherIds: [publisherId], launchChecklistPassed: true });
     expect(result.snapshot.mediaState.diagnosticEvidence[0]).toMatchObject({ diagnostic_case_id: diagnosticCaseId, metric_name: "fill_rate" });
@@ -265,6 +334,8 @@ describe("workflow repositories", () => {
     const opportunityId = uuid(32);
     const proposalId = uuid(33);
     const selectionId = uuid(34);
+    const ecosystemLeadId = uuid(35);
+    const outreachId = uuid(36);
 
     snapshot.mediaState.publishers = [
       snapshot.mediaState.publishers[0],
@@ -303,13 +374,57 @@ describe("workflow repositories", () => {
         publisher_id: publisherId
       }
     ];
+    snapshot.mediaState.mediaEcosystemLeads = [
+      snapshot.mediaState.mediaEcosystemLeads[0],
+      {
+        ...snapshot.mediaState.mediaEcosystemLeads[0],
+        id: ecosystemLeadId,
+        media_name: "UUID Ecosystem Media",
+        stage: "PRIORITY_SCREENED",
+        priority_score: 75,
+        score_breakdown: {
+          strategic_value: 18,
+          user_scale_growth: 12,
+          ad_scenario_value: 12,
+          programmatic_feasibility: 11,
+          advertiser_demand_match: 12,
+          commercial_negotiability: 5,
+          risk_compliance_control: 5
+        }
+      }
+    ];
+    snapshot.mediaState.mediaOutreachActivities = [
+      {
+        ...snapshot.mediaState.mediaOutreachActivities[0],
+        id: outreachId,
+        lead_id: ecosystemLeadId,
+        event: "priority_screened"
+      }
+    ];
 
     const result = await repository.saveSnapshot(snapshot);
 
     expect(result.savedTables).toContain("publishers");
     expect(result.savedTables).toContain("proposals");
+    expect(result.savedTables).toContain("media_ecosystem_opportunities");
+    expect(result.savedTables).toContain("media_ecosystem_outreach_activities");
     expect(fakeSupabase.writes.publishers).toEqual([
       expect.objectContaining({ id: publisherId, name: "UUID Publisher" })
+    ]);
+    expect(fakeSupabase.writes.media_ecosystem_opportunities).toEqual([
+      expect.objectContaining({
+        id: ecosystemLeadId,
+        media_name: "UUID Ecosystem Media",
+        ecosystem_status: "PRIORITY_SCREENED",
+        priority_level: "B"
+      })
+    ]);
+    expect(fakeSupabase.writes.media_ecosystem_outreach_activities).toEqual([
+      expect.objectContaining({
+        id: outreachId,
+        opportunity_id: ecosystemLeadId,
+        event: "priority_screened"
+      })
     ]);
     expect(fakeSupabase.writes.proposals).toEqual([
       expect.objectContaining({

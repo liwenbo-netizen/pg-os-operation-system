@@ -10,6 +10,8 @@ import type {
   DiagnosticCase,
   DiagnosticEvidence,
   IntegrationProject,
+  MediaEcosystemLead,
+  MediaOutreachActivity,
   ModuleBusinessEvent,
   OkrObjective,
   Opportunity,
@@ -21,6 +23,7 @@ import type {
   PublisherContractTerm,
   Settlement,
   SopCard,
+  TrustedSupplyCandidate,
   WorkbenchTask
 } from "../types/domain";
 import {
@@ -68,6 +71,9 @@ const TABLES_TO_LOAD = [
   "publisher_contract_terms",
   "integration_projects",
   "commercial_tests",
+  "media_ecosystem_opportunities",
+  "media_ecosystem_outreach_activities",
+  "trusted_supply_candidates",
   "advertisers",
   "advertiser_contacts",
   "opportunities",
@@ -92,6 +98,8 @@ const AUDIT_FIELD_CONFIG: Record<string, AuditFieldConfig> = {
   publishers: { ownerUserId: true, createdBy: true, updatedBy: true },
   integration_projects: { ownerUserId: true },
   commercial_tests: { ownerUserId: true },
+  media_ecosystem_opportunities: { ownerUserId: true, createdBy: true, updatedBy: true },
+  media_ecosystem_outreach_activities: { actorUserId: true },
   advertisers: { ownerUserId: true, createdBy: true, updatedBy: true },
   opportunities: { ownerUserId: true, createdBy: true, updatedBy: true },
   proposals: { ownerUserId: true, createdBy: true, updatedBy: true },
@@ -265,6 +273,81 @@ function mapCommercialTest(row: Row): CommercialTest {
     clear_rate: numberValue(metrics.clear_rate),
     ivt_rate: numberValue(metrics.ivt_rate),
     result_summary: optionalString(row.result_summary)
+  };
+}
+
+function mapMediaEcosystemOpportunity(row: Row): MediaEcosystemLead {
+  const metadata = objectValue(row.metadata);
+  const sourceCategory = [optionalString(row.source_primary_segment_cn), optionalString(row.source_secondary_category_cn)]
+    .filter(Boolean)
+    .join(" / ");
+  const estimatedScale = [optionalNumber(row.estimated_dau) ? `DAU ${numberValue(row.estimated_dau)}` : undefined, optionalNumber(row.estimated_mau) ? `MAU ${numberValue(row.estimated_mau)}` : undefined]
+    .filter(Boolean)
+    .join(", ");
+  const region = stringValue(metadata.region, "CN");
+
+  return {
+    id: stringValue(row.id),
+    media_name: stringValue(row.media_name, "Unnamed media opportunity"),
+    company_name: optionalString(row.company_entity),
+    track: stringValue(row.ecosystem_segment, "OTHER_VERTICAL") as MediaEcosystemLead["track"],
+    region: (["CN", "APAC", "Global"].includes(region) ? region : "CN") as MediaEcosystemLead["region"],
+    stage: stringValue(row.ecosystem_status, "ECOSYSTEM_MAPPED") as MediaEcosystemLead["stage"],
+    owner_role: roleCode(row.owner_role, "media_manager"),
+    priority_score: numberValue(row.priority_score),
+    score_breakdown: {
+      strategic_value: numberValue(row.strategic_segment_score),
+      user_scale_growth: numberValue(row.user_scale_score),
+      ad_scenario_value: numberValue(row.ad_context_score),
+      programmatic_feasibility: numberValue(row.integration_feasibility_score),
+      advertiser_demand_match: numberValue(row.advertiser_demand_score),
+      commercial_negotiability: numberValue(row.commercial_feasibility_score),
+      risk_compliance_control: numberValue(row.risk_control_score)
+    },
+    user_scale_note: estimatedScale || sourceCategory || "Seed media scale requires verification.",
+    ad_scenario_note:
+      optionalString(row.primary_scene_initial) ??
+      optionalString(row.ad_formats_if_known) ??
+      "Ad scenario requires verification.",
+    advertiser_demand_note:
+      optionalString(row.priority_score_reason) ??
+      optionalString(row.notes) ??
+      "Advertiser demand requires validation.",
+    integration_feasibility: stringValue(row.integration_feasibility, "unknown") as MediaEcosystemLead["integration_feasibility"],
+    media_contact_confirmed: booleanValue(row.media_contact_confirmed),
+    business_interest_confirmed: booleanValue(row.business_interest_confirmed),
+    ad_inventory_identified: booleanValue(row.ad_inventory_identified),
+    risk_level: stringValue(metadata.risk_level, booleanValue(row.review_required) ? "high" : "medium") as MediaEcosystemLead["risk_level"],
+    next_action: stringValue(row.next_action, "Assign owner and complete seed verification."),
+    target_contact: dateOnly(row.target_contact_date),
+    last_touch_at: optionalString(row.last_contact_at),
+    linked_publisher_id: optionalString(row.linked_publisher_id)
+  };
+}
+
+function mapMediaOutreachActivity(row: Row): MediaOutreachActivity {
+  return {
+    id: stringValue(row.id),
+    lead_id: stringValue(row.opportunity_id),
+    event: stringValue(row.event, "outreach.updated"),
+    actor_role: roleCode(row.actor_role, "media_manager"),
+    created_at: stringValue(row.activity_at, stringValue(row.created_at, new Date().toISOString())),
+    notes: optionalString(row.notes)
+  };
+}
+
+function mapTrustedSupplyCandidate(row: Row): TrustedSupplyCandidate {
+  return {
+    id: stringValue(row.id),
+    lead_id: stringValue(row.opportunity_id),
+    media_name: stringValue(row.media_name, "Unnamed trusted supply candidate"),
+    track: stringValue(row.track, "OTHER_VERTICAL") as TrustedSupplyCandidate["track"],
+    priority_score: numberValue(row.priority_score),
+    status: stringValue(row.status, "candidate") as TrustedSupplyCandidate["status"],
+    owner_role: roleCode(row.owner_role, "media_manager"),
+    created_at: stringValue(row.created_at, new Date().toISOString()),
+    evaluation_notes: stringValue(row.evaluation_notes, "Entered trusted supply network evaluation."),
+    publisher_id: optionalString(row.publisher_id)
   };
 }
 
@@ -542,6 +625,67 @@ function toPublisherRow(publisher: Publisher): Row {
   };
 }
 
+function priorityLevelFromScore(score: number) {
+  if (score >= 85) {
+    return "A";
+  }
+
+  if (score >= 70) {
+    return "B";
+  }
+
+  if (score > 0) {
+    return "C";
+  }
+
+  return "UNSCORED";
+}
+
+function toMediaEcosystemOpportunityRow(lead: MediaEcosystemLead): Row {
+  return {
+    id: lead.id,
+    media_name: lead.media_name,
+    company_entity: lead.company_name,
+    ecosystem_segment: lead.track,
+    ecosystem_status: lead.stage,
+    owner_role: lead.owner_role,
+    next_action: lead.next_action,
+    target_contact_date: lead.target_contact,
+    last_contact_at: lead.last_touch_at,
+    strategic_segment_score: lead.score_breakdown.strategic_value,
+    user_scale_score: lead.score_breakdown.user_scale_growth,
+    ad_context_score: lead.score_breakdown.ad_scenario_value,
+    integration_feasibility_score: lead.score_breakdown.programmatic_feasibility,
+    advertiser_demand_score: lead.score_breakdown.advertiser_demand_match,
+    commercial_feasibility_score: lead.score_breakdown.commercial_negotiability,
+    risk_control_score: lead.score_breakdown.risk_compliance_control,
+    priority_level: priorityLevelFromScore(lead.priority_score),
+    priority_score_reason: lead.advertiser_demand_note,
+    integration_feasibility: lead.integration_feasibility,
+    media_contact_confirmed: lead.media_contact_confirmed,
+    business_interest_confirmed: lead.business_interest_confirmed,
+    ad_inventory_identified: lead.ad_inventory_identified,
+    linked_publisher_id: optionalUuid(lead.linked_publisher_id),
+    metadata: {
+      region: lead.region,
+      risk_level: lead.risk_level,
+      user_scale_note: lead.user_scale_note,
+      ad_scenario_note: lead.ad_scenario_note
+    }
+  };
+}
+
+function toMediaOutreachActivityRow(activity: MediaOutreachActivity): Row {
+  return {
+    id: activity.id,
+    opportunity_id: activity.lead_id,
+    event: activity.event,
+    actor_role: activity.actor_role,
+    activity_at: activity.created_at,
+    notes: activity.notes
+  };
+}
+
 function toCampaignPriority(priority: WorkbenchTask["priority"]) {
   return priority === "P0" ? "high" : priority === "P2" ? "low" : "medium";
 }
@@ -699,6 +843,21 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
         ),
         integrationProjects: rowsOrFallback(loadedRows.integration_projects, fallback.mediaState.integrationProjects, mapIntegrationProject),
         commercialTests: rowsOrFallback(loadedRows.commercial_tests, fallback.mediaState.commercialTests, mapCommercialTest),
+        mediaEcosystemLeads: rowsOrFallback(
+          loadedRows.media_ecosystem_opportunities,
+          fallback.mediaState.mediaEcosystemLeads,
+          mapMediaEcosystemOpportunity
+        ),
+        mediaOutreachActivities: rowsOrFallback(
+          loadedRows.media_ecosystem_outreach_activities,
+          fallback.mediaState.mediaOutreachActivities,
+          mapMediaOutreachActivity
+        ),
+        trustedSupplyCandidates: rowsOrFallback(
+          loadedRows.trusted_supply_candidates,
+          fallback.mediaState.trustedSupplyCandidates,
+          mapTrustedSupplyCandidate
+        ),
         diagnosticCases: rowsOrFallback(loadedRows.quality_diagnostic_cases, fallback.mediaState.diagnosticCases, mapDiagnosticCase),
         diagnosticEvidence: rowsOrFallback(loadedRows.quality_diagnostic_evidence, fallback.mediaState.diagnosticEvidence, mapDiagnosticEvidence)
       },
@@ -833,6 +992,16 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           }
         })),
         uuidFields: ["publisher_id"]
+      },
+      {
+        table: "media_ecosystem_opportunities",
+        rows: snapshot.mediaState.mediaEcosystemLeads.map(toMediaEcosystemOpportunityRow),
+        uuidFields: []
+      },
+      {
+        table: "media_ecosystem_outreach_activities",
+        rows: snapshot.mediaState.mediaOutreachActivities.map(toMediaOutreachActivityRow),
+        uuidFields: ["opportunity_id"]
       },
       {
         table: "advertisers",
