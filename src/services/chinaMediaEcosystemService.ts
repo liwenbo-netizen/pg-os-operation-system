@@ -117,6 +117,18 @@ function clampScore(value: number, max: number) {
   return Math.max(0, Math.min(max, Math.round(value)));
 }
 
+function normalizeScoreBreakdown(input: MediaEcosystemPriorityScore): MediaEcosystemPriorityScore {
+  return {
+    strategic_value: clampScore(input.strategic_value, priorityScoreCaps.strategic_value),
+    user_scale_growth: clampScore(input.user_scale_growth, priorityScoreCaps.user_scale_growth),
+    ad_scenario_value: clampScore(input.ad_scenario_value, priorityScoreCaps.ad_scenario_value),
+    programmatic_feasibility: clampScore(input.programmatic_feasibility, priorityScoreCaps.programmatic_feasibility),
+    advertiser_demand_match: clampScore(input.advertiser_demand_match, priorityScoreCaps.advertiser_demand_match),
+    commercial_negotiability: clampScore(input.commercial_negotiability, priorityScoreCaps.commercial_negotiability),
+    risk_compliance_control: clampScore(input.risk_compliance_control, priorityScoreCaps.risk_compliance_control)
+  };
+}
+
 function canManageEcosystem(user: BusinessUser) {
   return (
     rbacService.hasCapability(user, "publisher.manage") &&
@@ -205,6 +217,7 @@ export class ChinaMediaEcosystemService {
 
   evaluateTrustedSupplyEligibility(lead: MediaEcosystemLead): EligibilityResult {
     const blockers = [
+      lead.data_quality_level !== "SEED_ONLY" ? undefined : "seed_only_requires_manual_review",
       lead.priority_score >= 70 ? undefined : "priority_score_below_70",
       lead.media_contact_confirmed ? undefined : "media_contact_missing",
       lead.business_interest_confirmed ? undefined : "business_interest_missing",
@@ -215,6 +228,164 @@ export class ChinaMediaEcosystemService {
     return {
       eligible: blockers.length === 0,
       blockers
+    };
+  }
+
+  claimLeadOwner(state: MediaWorkflowState, user: BusinessUser, leadId: EntityId): WorkflowResult {
+    const lead = findLead(state, leadId);
+    if (!lead) {
+      const guard = blocked("Media ecosystem lead was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "china_media_ecosystem.owner.assign", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    if (!canManageEcosystem(user)) {
+      const guard = blocked("Current role cannot claim China media ecosystem leads.", "ECOSYSTEM_MANAGE_FORBIDDEN", "media_manager");
+      return { state: appendEvents(state, user, "china_media_ecosystem.owner.assign", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    const activity = createActivity(leadId, user, `Owner assigned to ${user.activeRole}.`, "Lead now has an accountable operator.");
+    const nextState = updateLead(
+      state,
+      leadId,
+      {
+        owner_role: user.activeRole,
+        owner_user_id: user.id,
+        next_action:
+          lead.data_quality_level === "SEED_ONLY"
+            ? "Complete manual review before priority scoring."
+            : "Apply priority score and decide outreach readiness.",
+        last_touch_at: activity.created_at
+      },
+      activity
+    );
+    const guard = allowed("Media ecosystem lead owner assigned.", "ECOSYSTEM_OWNER_ASSIGNED");
+    const businessEvent = createBusinessEvent("china_media_ecosystem.owner_assigned", "media_ecosystem_lead", leadId, user.activeRole, {
+      ownerRole: user.activeRole
+    });
+    const eventState = appendEvents(nextState, user, "china_media_ecosystem.owner.assign", "media_ecosystem_lead", leadId, guard, businessEvent);
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent
+    };
+  }
+
+  markManualReviewed(state: MediaWorkflowState, user: BusinessUser, leadId: EntityId): WorkflowResult {
+    const lead = findLead(state, leadId);
+    if (!lead) {
+      const guard = blocked("Media ecosystem lead was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "china_media_ecosystem.manual_review", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    if (!canManageEcosystem(user)) {
+      const guard = blocked("Current role cannot manually review China media ecosystem leads.", "ECOSYSTEM_MANAGE_FORBIDDEN", "media_manager");
+      return { state: appendEvents(state, user, "china_media_ecosystem.manual_review", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    if (lead.stage === "REJECTED") {
+      const guard = blocked("Rejected ecosystem leads cannot be manually reviewed without reopening.", "ECOSYSTEM_LEAD_REJECTED");
+      return { state: appendEvents(state, user, "china_media_ecosystem.manual_review", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    const activity = createActivity(leadId, user, "Seed opportunity manually reviewed.", "Seed-only row is now ready for accountable priority scoring.");
+    const nextState = updateLead(
+      state,
+      leadId,
+      {
+        owner_role: user.activeRole,
+        owner_user_id: user.id,
+        verification_status: "IN_REVIEW",
+        data_quality_level: "MANUAL_REVIEWED",
+        review_required: false,
+        next_action: "Apply priority score and decide whether this opportunity is outreach-ready.",
+        last_touch_at: activity.created_at
+      },
+      activity
+    );
+    const guard =
+      lead.data_quality_level === "SEED_ONLY"
+        ? allowed("Seed-only opportunity was manually reviewed.", "ECOSYSTEM_MANUAL_REVIEWED")
+        : warning("Opportunity was already reviewed; review state was refreshed.", "ECOSYSTEM_REVIEW_REFRESHED");
+    const businessEvent = createBusinessEvent("china_media_ecosystem.manual_reviewed", "media_ecosystem_lead", leadId, user.activeRole, {
+      fromDataQuality: lead.data_quality_level,
+      toDataQuality: "MANUAL_REVIEWED"
+    });
+    const eventState = appendEvents(nextState, user, "china_media_ecosystem.manual_review", "media_ecosystem_lead", leadId, guard, businessEvent);
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent
+    };
+  }
+
+  applyManualScore(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    leadId: EntityId,
+    scoreBreakdown: MediaEcosystemPriorityScore
+  ): WorkflowResult {
+    const lead = findLead(state, leadId);
+    if (!lead) {
+      const guard = blocked("Media ecosystem lead was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "china_media_ecosystem.score.apply", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    if (!canManageEcosystem(user)) {
+      const guard = blocked("Current role cannot score China media ecosystem leads.", "ECOSYSTEM_MANAGE_FORBIDDEN", "media_manager");
+      return { state: appendEvents(state, user, "china_media_ecosystem.score.apply", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    if (lead.data_quality_level === "SEED_ONLY") {
+      const guard = blocked("Manual review is required before scoring a seed-only ecosystem opportunity.", "SEED_REVIEW_REQUIRED");
+      return { state: appendEvents(state, user, "china_media_ecosystem.score.apply", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    const normalizedScore = normalizeScoreBreakdown(scoreBreakdown);
+    const priorityScore = this.calculatePriorityScore(normalizedScore);
+    const nextStage: MediaExpansionStage =
+      priorityScore >= 70 ? "OUTREACH_READY" : priorityScore > 0 ? "PRIORITY_SCREENED" : "ECOSYSTEM_MAPPED";
+    const activity = createActivity(
+      leadId,
+      user,
+      `Manual priority score applied: ${priorityScore}.`,
+      priorityScore >= 70 ? "Lead can move into accountable outreach." : "Lead remains below outreach threshold."
+    );
+    const nextState = updateLead(
+      state,
+      leadId,
+      {
+        owner_role: user.activeRole,
+        owner_user_id: user.id,
+        score_breakdown: normalizedScore,
+        priority_score: priorityScore,
+        stage: nextStage,
+        next_action:
+          priorityScore >= 70
+            ? "Confirm media contact, business interest, inventory, and feasibility."
+            : "Keep in opportunity pool until strategic value, demand, or feasibility improves.",
+        last_touch_at: activity.created_at
+      },
+      activity
+    );
+    const guard =
+      priorityScore >= 70
+        ? allowed("Manual score moved the lead into outreach readiness.", "ECOSYSTEM_SCORE_OUTREACH_READY")
+        : warning("Manual score keeps the lead in the opportunity pool.", "ECOSYSTEM_SCORE_WATCH");
+    const businessEvent = createBusinessEvent("china_media_ecosystem.score_applied", "media_ecosystem_lead", leadId, user.activeRole, {
+      priorityScore,
+      nextStage
+    });
+    const eventState = appendEvents(nextState, user, "china_media_ecosystem.score.apply", "media_ecosystem_lead", leadId, guard, businessEvent);
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent
     };
   }
 
@@ -295,6 +466,11 @@ export class ChinaMediaEcosystemService {
 
     if (!canManageEcosystem(user)) {
       const guard = blocked("Current role cannot score China media ecosystem leads.", "ECOSYSTEM_MANAGE_FORBIDDEN", "media_manager");
+      return { state: appendEvents(state, user, "china_media_ecosystem.priority_screen", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    if (lead.data_quality_level === "SEED_ONLY") {
+      const guard = blocked("Manual review is required before priority screening a seed-only ecosystem opportunity.", "SEED_REVIEW_REQUIRED");
       return { state: appendEvents(state, user, "china_media_ecosystem.priority_screen", "media_ecosystem_lead", leadId, guard), guard };
     }
 

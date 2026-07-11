@@ -136,6 +136,8 @@ export type MediaExpansionStage =
   | "ON_HOLD";
 
 export type IntegrationFeasibility = "unknown" | "feasible" | "needs_work" | "impossible";
+export type MediaEcosystemVerificationStatus = "UNVERIFIED" | "IN_REVIEW" | "VERIFIED" | "REJECTED";
+export type MediaEcosystemDataQualityLevel = "SEED_ONLY" | "MANUAL_REVIEWED" | "OPERATOR_CONFIRMED" | "SOURCE_VERIFIED";
 
 export type MediaEcosystemPriorityScore = {
   strategic_value: number;
@@ -154,7 +156,15 @@ export type MediaEcosystemLead = {
   track: MediaEcosystemTrack;
   region: "CN" | "APAC" | "Global";
   stage: MediaExpansionStage;
+  owner_user_id?: UserId;
   owner_role: RoleCode;
+  verification_status: MediaEcosystemVerificationStatus;
+  data_quality_level: MediaEcosystemDataQualityLevel;
+  review_required: boolean;
+  seed_confidence?: string;
+  source_name?: string;
+  source_version?: string;
+  source_page?: number;
   priority_score: number;
   score_breakdown: MediaEcosystemPriorityScore;
   user_scale_note: string;

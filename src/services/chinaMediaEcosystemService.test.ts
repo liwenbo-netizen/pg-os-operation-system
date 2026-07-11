@@ -49,6 +49,93 @@ describe("ChinaMediaEcosystemService", () => {
     expect(result.state.trustedSupplyCandidates).toHaveLength(0);
   });
 
+  it("requires seed-only opportunities to be manually reviewed before scoring progression", () => {
+    let state = createInitialMediaWorkflowState();
+    const leadId = "ecosystem-lead-seed-only";
+    state = {
+      ...state,
+      mediaEcosystemLeads: [
+        {
+          ...state.mediaEcosystemLeads[0],
+          id: leadId,
+          media_name: "Seed Only Media",
+          stage: "ECOSYSTEM_MAPPED",
+          verification_status: "UNVERIFIED",
+          data_quality_level: "SEED_ONLY",
+          review_required: true,
+          priority_score: 0,
+          score_breakdown: {
+            strategic_value: 0,
+            user_scale_growth: 0,
+            ad_scenario_value: 0,
+            programmatic_feasibility: 0,
+            advertiser_demand_match: 0,
+            commercial_negotiability: 0,
+            risk_compliance_control: 0
+          }
+        }
+      ],
+      mediaOutreachActivities: []
+    };
+
+    const blockedScore = chinaMediaEcosystemService.applyManualScore(state, user("media_manager"), leadId, {
+      strategic_value: 18,
+      user_scale_growth: 12,
+      ad_scenario_value: 12,
+      programmatic_feasibility: 11,
+      advertiser_demand_match: 12,
+      commercial_negotiability: 5,
+      risk_compliance_control: 5
+    });
+
+    expect(blockedScore.guard).toMatchObject({
+      allowed: false,
+      reason_code: "SEED_REVIEW_REQUIRED"
+    });
+
+    const claimed = chinaMediaEcosystemService.claimLeadOwner(state, user("media_manager"), leadId);
+    expect(claimed.guard).toMatchObject({
+      allowed: true,
+      reason_code: "ECOSYSTEM_OWNER_ASSIGNED"
+    });
+    state = claimed.state;
+
+    const reviewed = chinaMediaEcosystemService.markManualReviewed(state, user("media_manager"), leadId);
+    expect(reviewed.state.mediaEcosystemLeads[0]).toMatchObject({
+      verification_status: "IN_REVIEW",
+      data_quality_level: "MANUAL_REVIEWED",
+      review_required: false
+    });
+    state = reviewed.state;
+
+    const scored = chinaMediaEcosystemService.applyManualScore(state, user("media_manager"), leadId, {
+      strategic_value: 18,
+      user_scale_growth: 12,
+      ad_scenario_value: 12,
+      programmatic_feasibility: 11,
+      advertiser_demand_match: 12,
+      commercial_negotiability: 5,
+      risk_compliance_control: 5
+    });
+
+    expect(scored.guard).toMatchObject({
+      allowed: true,
+      reason_code: "ECOSYSTEM_SCORE_OUTREACH_READY"
+    });
+    expect(scored.state.mediaEcosystemLeads[0]).toMatchObject({
+      priority_score: 75,
+      stage: "OUTREACH_READY",
+      owner_role: "media_manager"
+    });
+    expect(scored.state.businessEvents.map((event) => event.eventCode)).toEqual(
+      expect.arrayContaining([
+        "china_media_ecosystem.owner_assigned",
+        "china_media_ecosystem.manual_reviewed",
+        "china_media_ecosystem.score_applied"
+      ])
+    );
+  });
+
   it("moves a qualified ecosystem lead into trusted candidate and onboarding project", () => {
     let state = createInitialMediaWorkflowState();
 

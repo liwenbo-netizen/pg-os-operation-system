@@ -209,6 +209,9 @@ export const fixtureMediaEcosystemLeads: MediaEcosystemLead[] = [
     region: "CN",
     stage: "BUSINESS_QUALIFIED",
     owner_role: "media_manager",
+    verification_status: "VERIFIED",
+    data_quality_level: "OPERATOR_CONFIRMED",
+    review_required: false,
     priority_score: 84,
     score_breakdown: {
       strategic_value: 18,
@@ -239,6 +242,9 @@ export const fixtureMediaEcosystemLeads: MediaEcosystemLead[] = [
     region: "APAC",
     stage: "OUTREACH_READY",
     owner_role: "media_director",
+    verification_status: "VERIFIED",
+    data_quality_level: "OPERATOR_CONFIRMED",
+    review_required: false,
     priority_score: 76,
     score_breakdown: {
       strategic_value: 18,
@@ -268,6 +274,9 @@ export const fixtureMediaEcosystemLeads: MediaEcosystemLead[] = [
     region: "CN",
     stage: "PRIORITY_SCREENED",
     owner_role: "media_manager",
+    verification_status: "IN_REVIEW",
+    data_quality_level: "MANUAL_REVIEWED",
+    review_required: true,
     priority_score: 68,
     score_breakdown: {
       strategic_value: 13,
@@ -296,6 +305,9 @@ export const fixtureMediaEcosystemLeads: MediaEcosystemLead[] = [
     region: "CN",
     stage: "ON_HOLD",
     owner_role: "media_manager",
+    verification_status: "IN_REVIEW",
+    data_quality_level: "MANUAL_REVIEWED",
+    review_required: true,
     priority_score: 42,
     score_breakdown: {
       strategic_value: 7,
@@ -324,6 +336,9 @@ export const fixtureMediaEcosystemLeads: MediaEcosystemLead[] = [
     region: "CN",
     stage: "REJECTED",
     owner_role: "media_director",
+    verification_status: "REJECTED",
+    data_quality_level: "MANUAL_REVIEWED",
+    review_required: false,
     priority_score: 28,
     score_breakdown: {
       strategic_value: 4,

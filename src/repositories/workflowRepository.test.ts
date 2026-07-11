@@ -100,6 +100,12 @@ describe("workflow repositories", () => {
           ecosystem_segment: "SHORT_VIDEO_LIVE",
           ecosystem_status: "CONTACTED",
           owner_role: "media_manager",
+          verification_status: "IN_REVIEW",
+          data_quality_level: "MANUAL_REVIEWED",
+          review_required: true,
+          seed_confidence: "PARSED_TEXT",
+          source_name: "China media seed",
+          source_version: "2024-7",
           strategic_segment_score: 18,
           user_scale_score: 14,
           ad_context_score: 13,
@@ -290,7 +296,10 @@ describe("workflow repositories", () => {
       track: "SHORT_VIDEO_LIVE",
       stage: "CONTACTED",
       priority_score: 81,
-      media_contact_confirmed: true
+      media_contact_confirmed: true,
+      verification_status: "IN_REVIEW",
+      data_quality_level: "MANUAL_REVIEWED",
+      review_required: true
     });
     expect(result.snapshot.mediaState.mediaOutreachActivities[0]).toMatchObject({
       id: outreachId,
@@ -381,6 +390,9 @@ describe("workflow repositories", () => {
         id: ecosystemLeadId,
         media_name: "UUID Ecosystem Media",
         stage: "PRIORITY_SCREENED",
+        verification_status: "IN_REVIEW",
+        data_quality_level: "MANUAL_REVIEWED",
+        review_required: false,
         priority_score: 75,
         score_breakdown: {
           strategic_value: 18,
@@ -416,7 +428,10 @@ describe("workflow repositories", () => {
         id: ecosystemLeadId,
         media_name: "UUID Ecosystem Media",
         ecosystem_status: "PRIORITY_SCREENED",
-        priority_level: "B"
+        priority_level: "B",
+        verification_status: "IN_REVIEW",
+        data_quality_level: "MANUAL_REVIEWED",
+        review_required: false
       })
     ]);
     expect(fakeSupabase.writes.media_ecosystem_outreach_activities).toEqual([

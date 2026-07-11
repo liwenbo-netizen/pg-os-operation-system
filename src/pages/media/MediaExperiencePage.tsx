@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { ArrowRight, CheckCircle2, Map, Plus, Search, Send, ShieldAlert, Target, TestTube2, Wrench } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, CheckCircle2, Map, Plus, Search, Send, ShieldAlert, Target, TestTube2, UserCheck, Wrench } from "lucide-react";
 import { StatusBadge } from "../../components/StatusBadge";
 import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
@@ -11,6 +11,7 @@ import type {
   BusinessUser,
   EntityId,
   MediaEcosystemLead,
+  MediaEcosystemPriorityScore,
   MediaEcosystemTrack,
   MediaExpansionStage,
   MediaWorkflowState,
@@ -552,6 +553,7 @@ function ChinaMediaEcosystemWorkspace({
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
                 <StatusBadge tone={toneForExpansionStage(lead.stage)}>{lead.stage}</StatusBadge>
+                <StatusBadge tone={lead.data_quality_level === "SEED_ONLY" ? "warning" : "success"}>{lead.data_quality_level}</StatusBadge>
                 <StatusBadge tone={lead.risk_level === "critical" || lead.risk_level === "high" ? "danger" : "neutral"}>
                   {lead.risk_level}
                 </StatusBadge>
@@ -586,6 +588,12 @@ function ChinaMediaEcosystemWorkspace({
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <StatusBadge tone={toneForExpansionStage(selectedLead.stage)}>{selectedLead.stage}</StatusBadge>
+                  <StatusBadge tone={selectedLead.data_quality_level === "SEED_ONLY" ? "warning" : "success"}>
+                    {selectedLead.data_quality_level}
+                  </StatusBadge>
+                  <StatusBadge tone={selectedLead.verification_status === "VERIFIED" ? "success" : "info"}>
+                    {selectedLead.verification_status}
+                  </StatusBadge>
                   <StatusBadge tone={selectedLead.priority_score >= 70 ? "success" : "warning"}>
                     {`score ${selectedLead.priority_score}`}
                   </StatusBadge>
@@ -605,6 +613,30 @@ function ChinaMediaEcosystemWorkspace({
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2">
+                <button
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  type="button"
+                  onClick={() =>
+                    onRunAction("Claim ecosystem lead", () =>
+                      chinaMediaEcosystemService.claimLeadOwner(state, user, selectedLead.id)
+                    )
+                  }
+                >
+                  <UserCheck className="size-4" aria-hidden="true" />
+                  Claim owner
+                </button>
+                <button
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  type="button"
+                  onClick={() =>
+                    onRunAction("Mark seed reviewed", () =>
+                      chinaMediaEcosystemService.markManualReviewed(state, user, selectedLead.id)
+                    )
+                  }
+                >
+                  <CheckCircle2 className="size-4" aria-hidden="true" />
+                  Mark reviewed
+                </button>
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   type="button"
@@ -674,7 +706,17 @@ function ChinaMediaEcosystemWorkspace({
             </article>
 
             <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-              <ScoreBreakdownPanel lead={selectedLead} />
+              <div className="space-y-4">
+                <SeedReviewPanel lead={selectedLead} />
+                <ScoreBreakdownPanel
+                  lead={selectedLead}
+                  onApplyScore={(scoreBreakdown) =>
+                    onRunAction("Apply manual score", () =>
+                      chinaMediaEcosystemService.applyManualScore(state, user, selectedLead.id, scoreBreakdown)
+                    )
+                  }
+                />
+              </div>
               <EligibilityPanel lead={selectedLead} candidate={selectedCandidate} blockers={eligibility?.blockers ?? []} />
             </div>
 
@@ -725,30 +767,88 @@ function SignalCheck({ label, checked }: { label: string; checked: boolean }) {
   );
 }
 
-function ScoreBreakdownPanel({ lead }: { lead: MediaEcosystemLead }) {
+function SeedReviewPanel({ lead }: { lead: MediaEcosystemLead }) {
+  return (
+    <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
+      <div className="flex items-start justify-between gap-4">
+        <h2 className="text-base font-semibold text-slate-950">Review operations</h2>
+        <StatusBadge tone={lead.data_quality_level === "SEED_ONLY" ? "warning" : "success"}>{lead.data_quality_level}</StatusBadge>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <Metric label="Verification" value={lead.verification_status} />
+        <Metric label="Review required" value={lead.review_required ? "yes" : "no"} />
+        <Metric label="Owner role" value={lead.owner_role} />
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <Metric label="Seed confidence" value={lead.seed_confidence ?? "-"} />
+        <Metric label="Source" value={lead.source_name ?? "-"} />
+        <Metric label="Version" value={lead.source_version ?? "-"} />
+      </div>
+    </article>
+  );
+}
+
+function ScoreBreakdownPanel({
+  lead,
+  onApplyScore
+}: {
+  lead: MediaEcosystemLead;
+  onApplyScore: (scoreBreakdown: MediaEcosystemPriorityScore) => void;
+}) {
+  const [draftScore, setDraftScore] = useState<MediaEcosystemPriorityScore>(lead.score_breakdown);
+  useEffect(() => {
+    setDraftScore(lead.score_breakdown);
+  }, [lead.id, lead.score_breakdown]);
+
   const rows = [
-    ["Strategic value", lead.score_breakdown.strategic_value, 20],
-    ["User scale growth", lead.score_breakdown.user_scale_growth, 15],
-    ["Ad scenario value", lead.score_breakdown.ad_scenario_value, 15],
-    ["Programmatic feasibility", lead.score_breakdown.programmatic_feasibility, 15],
-    ["Advertiser demand match", lead.score_breakdown.advertiser_demand_match, 15],
-    ["Commercial negotiability", lead.score_breakdown.commercial_negotiability, 10],
-    ["Risk compliance control", lead.score_breakdown.risk_compliance_control, 10]
+    ["strategic_value", "Strategic value", 20],
+    ["user_scale_growth", "User scale growth", 15],
+    ["ad_scenario_value", "Ad scenario value", 15],
+    ["programmatic_feasibility", "Programmatic feasibility", 15],
+    ["advertiser_demand_match", "Advertiser demand match", 15],
+    ["commercial_negotiability", "Commercial negotiability", 10],
+    ["risk_compliance_control", "Risk compliance control", 10]
   ] as const;
+  const draftTotal = chinaMediaEcosystemService.calculatePriorityScore(draftScore);
 
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
-      <h2 className="text-base font-semibold text-slate-950">Priority score</h2>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h2 className="text-base font-semibold text-slate-950">Priority score</h2>
+        <StatusBadge tone={draftTotal >= 70 ? "success" : draftTotal > 0 ? "warning" : "neutral"}>{`draft ${draftTotal}`}</StatusBadge>
+      </div>
       <div className="mt-4 space-y-2">
-        {rows.map(([label, value, max]) => (
+        {rows.map(([key, label, max]) => (
           <div key={label} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <span className="text-sm text-slate-600">{label}</span>
-            <span className="text-sm font-semibold text-slate-950">
-              {value}/{max}
-            </span>
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-950">
+              <input
+                className="h-8 w-16 rounded-md border border-slate-200 bg-white px-2 text-right text-sm outline-none focus:border-blue-300"
+                type="number"
+                min={0}
+                max={max}
+                value={draftScore[key]}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  setDraftScore((current) => ({
+                    ...current,
+                    [key]: Number.isFinite(value) ? Math.max(0, Math.min(max, Math.round(value))) : 0
+                  }));
+                }}
+              />
+              <span>/ {max}</span>
+            </label>
           </div>
         ))}
       </div>
+      <button
+        className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700"
+        type="button"
+        onClick={() => onApplyScore(draftScore)}
+      >
+        <Target className="size-4" aria-hidden="true" />
+        Apply score
+      </button>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
         <Metric label="Scale note" value={lead.user_scale_note} />
         <Metric label="Scenario note" value={lead.ad_scenario_note} />

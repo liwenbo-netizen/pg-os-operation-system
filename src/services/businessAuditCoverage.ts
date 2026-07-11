@@ -62,6 +62,27 @@ export const CORE_BUSINESS_AUDIT_ACTIONS: CoreBusinessAuditAction[] = [
     criticality: "P0"
   },
   {
+    action: "china_media_ecosystem.owner.assign",
+    objectType: "media_ecosystem_lead",
+    module: "Media",
+    workflowSurface: "China Media Ecosystem Owner Assignment",
+    criticality: "P0"
+  },
+  {
+    action: "china_media_ecosystem.manual_review",
+    objectType: "media_ecosystem_lead",
+    module: "Media",
+    workflowSurface: "China Media Ecosystem Manual Review",
+    criticality: "P0"
+  },
+  {
+    action: "china_media_ecosystem.score.apply",
+    objectType: "media_ecosystem_lead",
+    module: "Media",
+    workflowSurface: "China Media Ecosystem Priority Scoring",
+    criticality: "P0"
+  },
+  {
     action: "china_media_ecosystem.priority_screen",
     objectType: "media_ecosystem_lead",
     module: "Media",
