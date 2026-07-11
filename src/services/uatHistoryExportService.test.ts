@@ -73,11 +73,13 @@ describe("uatHistoryExportService", () => {
     expect(csv).toContain('"phase","title","business_domains"');
     expect(csv).toContain('"Phase 39"');
     expect(csv).toContain('"workbench.task_started; route.visit"');
+    expect(csv).toContain('"CM-4B"');
+    expect(csv).toContain('"china_media_ecosystem.owner.assign_batch; china_media_ecosystem.owner_assigned; china_media_ecosystem.manual_review_batch; china_media_ecosystem.manual_reviewed"');
     expect(JSON.parse(json)).toMatchObject({
-      ledger: expect.arrayContaining([expect.objectContaining({ phase: "Phase 37" }), expect.objectContaining({ phase: "Phase 39" })])
+      ledger: expect.arrayContaining([expect.objectContaining({ phase: "Phase 37" }), expect.objectContaining({ phase: "CM-4B" })])
     });
     expect(createUatAcceptanceLedgerFileName(productionUatAcceptanceLedger, "csv")).toBe(
-      "pgos-production-uat-acceptance-ledger-2026-07-04.csv"
+      "pgos-production-uat-acceptance-ledger-2026-07-11.csv"
     );
   });
 });

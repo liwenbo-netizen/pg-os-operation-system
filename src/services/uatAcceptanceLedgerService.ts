@@ -13,7 +13,7 @@ export type UatAcceptanceEvidenceKind =
 
 export type UatAcceptanceLedgerItem = {
   id: string;
-  phase: "Phase 37" | "Phase 38" | "Phase 39";
+  phase: "Phase 37" | "Phase 38" | "Phase 39" | "CM-4B";
   title: string;
   businessDomains: UatBusinessDomain[];
   roles: RoleCode[];
@@ -186,6 +186,30 @@ export const productionUatAcceptanceLedger: UatAcceptanceLedgerItem[] = [
     auditMarkers: ["workbench.task_started", "route.visit"],
     sourceDocument: "docs/development-package/phase-39-workbench-task-execution-binding-fix.md",
     followUp: "Closed."
+  },
+  {
+    id: "cm-4b-china-media-batch-live-write",
+    phase: "CM-4B",
+    title: "China Media ecosystem batch owner and review live-write proof",
+    businessDomains: ["Media"],
+    roles: ["media_manager", "ceo"],
+    status: "passed",
+    recordedAt: "2026-07-11T13:18:40.000Z",
+    productionUrl: "https://pg-os-operation-system.vercel.app/media/china-ecosystem",
+    evidenceKinds: ["user_assisted", "audit_proof", "data_quality"],
+    proofPoints: [
+      "Media Manager selected three seed-only China media opportunities and batch assigned owner in production.",
+      "The same three opportunities were batch marked reviewed, moving from SEED_ONLY to MANUAL_REVIEWED with user owner retained.",
+      "CEO Audit Events showed one batch audit event plus three per-lead business events for both owner assignment and manual review."
+    ],
+    auditMarkers: [
+      "china_media_ecosystem.owner.assign_batch",
+      "china_media_ecosystem.owner_assigned",
+      "china_media_ecosystem.manual_review_batch",
+      "china_media_ecosystem.manual_reviewed"
+    ],
+    sourceDocument: "docs/development-package/cm-4b-china-media-batch-live-write-uat.md",
+    followUp: "Closed. Next China Media phase can add controlled bulk scoring or pipeline-stage advancement."
   }
 ];
 
