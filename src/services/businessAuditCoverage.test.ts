@@ -16,6 +16,16 @@ describe("businessAuditCoverage", () => {
           criticality: "P0"
         }),
         expect.objectContaining({
+          action: "china_media_ecosystem.owner.assign_batch",
+          module: "Media",
+          criticality: "P0"
+        }),
+        expect.objectContaining({
+          action: "china_media_ecosystem.manual_review_batch",
+          module: "Media",
+          criticality: "P0"
+        }),
+        expect.objectContaining({
           action: "china_media_ecosystem.score.apply",
           module: "Media",
           criticality: "P0"

@@ -6,6 +6,7 @@ import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
 import {
   chinaMediaEcosystemService,
+  mediaEcosystemBatchOperationLimit,
   mediaEcosystemTrackLabels,
   type MediaEcosystemOperationalQueueKey
 } from "../../services/chinaMediaEcosystemService";
@@ -460,6 +461,7 @@ function ChinaMediaEcosystemWorkspace({
   const [reviewFilter, setReviewFilter] = useState<EcosystemReviewFilter>("ALL");
   const [confidenceFilter, setConfidenceFilter] = useState("ALL");
   const [visibleLeadCount, setVisibleLeadCount] = useState(ecosystemListPageSize);
+  const [selectedBatchLeadIds, setSelectedBatchLeadIds] = useState<EntityId[]>([]);
   const operationalQueues = chinaMediaEcosystemService.getOperationalQueues(state);
   const trackOpportunities = chinaMediaEcosystemService.getTrackOpportunities(state);
   const pipeline = chinaMediaEcosystemService.getPipeline(state);
@@ -495,6 +497,8 @@ function ChinaMediaEcosystemWorkspace({
     [confidenceFilter, normalizedSearchQuery, ownerFilter, priorityFilter, queueFilter, reviewFilter, stageFilter, state.mediaEcosystemLeads, trackFilter, user]
   );
   const visibleLeads = filteredLeads.slice(0, visibleLeadCount);
+  const visibleLeadIds = visibleLeads.map((lead) => lead.id);
+  const selectedBatchLeadIdSet = useMemo(() => new Set(selectedBatchLeadIds), [selectedBatchLeadIds]);
   const selectedLead =
     visibleLeads.find((lead) => lead.id === selectedLeadId) ??
     visibleLeads[0] ??
@@ -520,6 +524,10 @@ function ChinaMediaEcosystemWorkspace({
     normalizedSearchQuery.length > 0
   ].filter(Boolean).length;
 
+  useEffect(() => {
+    setSelectedBatchLeadIds([]);
+  }, [confidenceFilter, normalizedSearchQuery, ownerFilter, priorityFilter, queueFilter, reviewFilter, stageFilter, trackFilter]);
+
   function resetOpportunityFilters() {
     setSearchQuery("");
     setQueueFilter("ALL");
@@ -530,6 +538,26 @@ function ChinaMediaEcosystemWorkspace({
     setReviewFilter("ALL");
     setConfidenceFilter("ALL");
     setVisibleLeadCount(ecosystemListPageSize);
+    setSelectedBatchLeadIds([]);
+  }
+
+  function toggleBatchLead(leadId: EntityId) {
+    setSelectedBatchLeadIds((currentIds) =>
+      currentIds.includes(leadId)
+        ? currentIds.filter((id) => id !== leadId)
+        : currentIds.length >= mediaEcosystemBatchOperationLimit
+          ? currentIds
+          : [...currentIds, leadId]
+    );
+  }
+
+  function selectVisibleBatchLeads() {
+    setSelectedBatchLeadIds(visibleLeadIds.slice(0, mediaEcosystemBatchOperationLimit));
+  }
+
+  function runBatchAction(title: string, action: () => MediaActionResult) {
+    onRunAction(title, action);
+    setSelectedBatchLeadIds([]);
   }
 
   return (
@@ -737,37 +765,113 @@ function ChinaMediaEcosystemWorkspace({
               {reviewFilter !== "ALL" ? <StatusBadge tone="warning">{reviewFilter}</StatusBadge> : null}
               {ownerFilter !== "ALL" ? <StatusBadge tone="info">{ownerFilter}</StatusBadge> : null}
             </div>
-          </div>
-          {visibleLeads.map((lead) => (
-            <button
-              key={lead.id}
-              className={`w-full rounded-lg border p-4 text-left shadow-card transition ${
-                selectedLead?.id === lead.id ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-white hover:border-slate-300"
-              }`}
-              type="button"
-              onClick={() => setSelectedLeadId(lead.id)}
-            >
-              <div className="flex items-start justify-between gap-3">
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-900">{lead.media_name}</p>
-                  <p className="mt-1 text-xs text-slate-500">{mediaEcosystemTrackLabels[lead.track]}</p>
+                  <p className="text-sm font-semibold text-slate-900">Batch controls</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    {selectedBatchLeadIds.length} selected / max {mediaEcosystemBatchOperationLimit}
+                  </p>
                 </div>
-                <StatusBadge tone={lead.priority_score >= 70 ? "success" : lead.priority_score >= 50 ? "warning" : "danger"}>
-                  {String(lead.priority_score)}
+                <StatusBadge tone={selectedBatchLeadIds.length > 0 ? "info" : "neutral"}>
+                  {String(selectedBatchLeadIds.length)}
                 </StatusBadge>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <StatusBadge tone={toneForExpansionStage(lead.stage)}>{lead.stage}</StatusBadge>
-                <StatusBadge tone={lead.data_quality_level === "SEED_ONLY" ? "warning" : "success"}>{lead.data_quality_level}</StatusBadge>
-                <StatusBadge tone={lead.owner_user_id ? "success" : "warning"}>
-                  {lead.owner_user_id ? "user owner" : "no user owner"}
-                </StatusBadge>
-                <StatusBadge tone={lead.risk_level === "critical" || lead.risk_level === "high" ? "danger" : "neutral"}>
-                  {lead.risk_level}
-                </StatusBadge>
+              <div className="mt-3 grid gap-2">
+                <button
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                  type="button"
+                  disabled={visibleLeadIds.length === 0}
+                  onClick={selectVisibleBatchLeads}
+                >
+                  Select visible
+                </button>
+                <button
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                  type="button"
+                  disabled={selectedBatchLeadIds.length === 0}
+                  onClick={() => setSelectedBatchLeadIds([])}
+                >
+                  Clear selected
+                </button>
+                <button
+                  className="h-9 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  type="button"
+                  disabled={selectedBatchLeadIds.length === 0}
+                  onClick={() =>
+                    runBatchAction("Batch assign ecosystem owners", () =>
+                      chinaMediaEcosystemService.batchClaimLeadOwners(state, user, selectedBatchLeadIds)
+                    )
+                  }
+                >
+                  Batch assign owner
+                </button>
+                <button
+                  className="h-9 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  type="button"
+                  disabled={selectedBatchLeadIds.length === 0}
+                  onClick={() =>
+                    runBatchAction("Batch mark seed reviewed", () =>
+                      chinaMediaEcosystemService.batchMarkManualReviewed(state, user, selectedBatchLeadIds)
+                    )
+                  }
+                >
+                  Batch mark reviewed
+                </button>
               </div>
-            </button>
-          ))}
+              <p className="mt-3 text-xs leading-5 text-slate-500">
+                Applies only to selected visible opportunities. Closed or already reviewed rows are skipped by guard rules.
+              </p>
+            </div>
+          </div>
+          {visibleLeads.map((lead) => {
+            const isBatchSelected = selectedBatchLeadIdSet.has(lead.id);
+            const isDetailSelected = selectedLead?.id === lead.id;
+
+            return (
+              <article
+                key={lead.id}
+                className={`w-full rounded-lg border p-4 shadow-card transition ${
+                  isDetailSelected || isBatchSelected ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-white hover:border-slate-300"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <label className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center">
+                    <input
+                      className="size-4 rounded border-slate-300 text-blue-600"
+                      type="checkbox"
+                      checked={isBatchSelected}
+                      onChange={() => toggleBatchLead(lead.id)}
+                    />
+                    <span className="sr-only">Select {lead.media_name}</span>
+                  </label>
+                  <button className="min-w-0 flex-1 text-left" type="button" onClick={() => setSelectedLeadId(lead.id)}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{lead.media_name}</p>
+                        <p className="mt-1 text-xs text-slate-500">{mediaEcosystemTrackLabels[lead.track]}</p>
+                      </div>
+                      <StatusBadge tone={lead.priority_score >= 70 ? "success" : lead.priority_score >= 50 ? "warning" : "danger"}>
+                        {String(lead.priority_score)}
+                      </StatusBadge>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <StatusBadge tone={toneForExpansionStage(lead.stage)}>{lead.stage}</StatusBadge>
+                      <StatusBadge tone={lead.data_quality_level === "SEED_ONLY" ? "warning" : "success"}>
+                        {lead.data_quality_level}
+                      </StatusBadge>
+                      <StatusBadge tone={lead.owner_user_id ? "success" : "warning"}>
+                        {lead.owner_user_id ? "user owner" : "no user owner"}
+                      </StatusBadge>
+                      <StatusBadge tone={lead.risk_level === "critical" || lead.risk_level === "high" ? "danger" : "neutral"}>
+                        {lead.risk_level}
+                      </StatusBadge>
+                    </div>
+                  </button>
+                </div>
+              </article>
+            );
+          })}
           {filteredLeads.length > visibleLeads.length ? (
             <button
               className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 shadow-card hover:bg-slate-50"

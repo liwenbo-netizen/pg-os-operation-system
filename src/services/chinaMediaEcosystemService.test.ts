@@ -155,6 +155,88 @@ describe("ChinaMediaEcosystemService", () => {
     );
   });
 
+  it("batch assigns owners while skipping closed or missing ecosystem opportunities", () => {
+    const state = createInitialMediaWorkflowState();
+    const result = chinaMediaEcosystemService.batchClaimLeadOwners(state, user("media_manager"), [
+      "ecosystem-lead-redbook",
+      "ecosystem-lead-smart-tv-oem",
+      "ecosystem-lead-low-quality-app",
+      "missing-lead"
+    ]);
+
+    expect(result.guard).toMatchObject({
+      allowed: true,
+      reason_code: "ECOSYSTEM_BATCH_OWNER_PARTIAL",
+      severity: "warning"
+    });
+    expect(result.state.auditEvents[0]).toMatchObject({
+      action: "china_media_ecosystem.owner.assign_batch",
+      objectType: "media_ecosystem_lead",
+      allowed: true
+    });
+    expect(result.state.mediaEcosystemLeads.find((lead) => lead.id === "ecosystem-lead-redbook")).toMatchObject({
+      owner_user_id: "user-media_manager",
+      owner_role: "media_manager"
+    });
+    expect(result.state.mediaEcosystemLeads.find((lead) => lead.id === "ecosystem-lead-smart-tv-oem")).toMatchObject({
+      owner_user_id: "user-media_manager",
+      owner_role: "media_manager"
+    });
+    expect(result.state.mediaEcosystemLeads.find((lead) => lead.id === "ecosystem-lead-low-quality-app")?.owner_user_id).toBeUndefined();
+    expect(result.state.businessEvents.filter((event) => event.eventCode === "china_media_ecosystem.owner_assigned")).toHaveLength(2);
+  });
+
+  it("batch marks selected review-required opportunities as manually reviewed", () => {
+    const state = createInitialMediaWorkflowState();
+    const result = chinaMediaEcosystemService.batchMarkManualReviewed(state, user("media_manager"), [
+      "ecosystem-lead-campus-game",
+      "ecosystem-lead-generic-news",
+      "ecosystem-lead-redbook",
+      "ecosystem-lead-low-quality-app"
+    ]);
+
+    expect(result.guard).toMatchObject({
+      allowed: true,
+      reason_code: "ECOSYSTEM_BATCH_REVIEW_PARTIAL",
+      severity: "warning"
+    });
+    expect(result.state.auditEvents[0]).toMatchObject({
+      action: "china_media_ecosystem.manual_review_batch",
+      objectType: "media_ecosystem_lead",
+      allowed: true
+    });
+    expect(result.state.mediaEcosystemLeads.find((lead) => lead.id === "ecosystem-lead-campus-game")).toMatchObject({
+      verification_status: "IN_REVIEW",
+      data_quality_level: "MANUAL_REVIEWED",
+      review_required: false,
+      owner_user_id: "user-media_manager"
+    });
+    expect(result.state.mediaEcosystemLeads.find((lead) => lead.id === "ecosystem-lead-generic-news")).toMatchObject({
+      review_required: false,
+      owner_user_id: "user-media_manager"
+    });
+    expect(result.state.mediaEcosystemLeads.find((lead) => lead.id === "ecosystem-lead-redbook")).toMatchObject({
+      review_required: false
+    });
+    expect(result.state.mediaEcosystemLeads.find((lead) => lead.id === "ecosystem-lead-redbook")?.owner_user_id).toBeUndefined();
+    expect(result.state.businessEvents.filter((event) => event.eventCode === "china_media_ecosystem.manual_reviewed")).toHaveLength(2);
+  });
+
+  it("blocks batch operations above the controlled selection limit", () => {
+    const state = createInitialMediaWorkflowState();
+    const leadIds = Array.from({ length: 51 }, (_, index) => `lead-${index}`);
+    const result = chinaMediaEcosystemService.batchClaimLeadOwners(state, user("media_manager"), leadIds);
+
+    expect(result.guard).toMatchObject({
+      allowed: false,
+      reason_code: "ECOSYSTEM_BATCH_LIMIT_EXCEEDED"
+    });
+    expect(result.state.auditEvents[0]).toMatchObject({
+      action: "china_media_ecosystem.owner.assign_batch",
+      allowed: false
+    });
+  });
+
   it("moves a qualified ecosystem lead into trusted candidate and onboarding project", () => {
     let state = createInitialMediaWorkflowState();
 

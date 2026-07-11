@@ -58,6 +58,8 @@ type MediaEcosystemOperationalQueue = {
   nextAction: string;
 };
 
+export const mediaEcosystemBatchOperationLimit = 50;
+
 const priorityScoreCaps: MediaEcosystemPriorityScore = {
   strategic_value: 20,
   user_scale_growth: 15,
@@ -199,6 +201,22 @@ function appendEvents(
   };
 }
 
+function appendBatchEvents(
+  state: MediaWorkflowState,
+  user: BusinessUser,
+  action: string,
+  guard: GuardResult,
+  businessEvents: ModuleBusinessEvent[]
+): MediaWorkflowState {
+  const auditEvent = auditService.createGuardAuditEvent(user, action, "media_ecosystem_lead", guard);
+
+  return {
+    ...state,
+    auditEvents: [auditEvent, ...state.auditEvents],
+    businessEvents: [...businessEvents, ...state.businessEvents]
+  };
+}
+
 function createActivity(leadId: EntityId, user: BusinessUser, event: string, notes?: string): MediaOutreachActivity {
   return {
     id: crypto.randomUUID(),
@@ -212,6 +230,10 @@ function createActivity(leadId: EntityId, user: BusinessUser, event: string, not
 
 function findLead(state: MediaWorkflowState, leadId: EntityId) {
   return state.mediaEcosystemLeads.find((lead) => lead.id === leadId);
+}
+
+function uniqueLeadIds(leadIds: EntityId[]) {
+  return Array.from(new Set(leadIds.filter(Boolean)));
 }
 
 function isClosedLead(lead: MediaEcosystemLead) {
@@ -406,6 +428,182 @@ export class ChinaMediaEcosystemService {
       guard,
       auditEvent: eventState.auditEvents[0],
       businessEvent
+    };
+  }
+
+  batchClaimLeadOwners(state: MediaWorkflowState, user: BusinessUser, leadIds: EntityId[]): WorkflowResult {
+    const selectedIds = uniqueLeadIds(leadIds);
+    if (selectedIds.length === 0) {
+      const guard = blocked("Select at least one ecosystem opportunity before assigning owners.", "ECOSYSTEM_BATCH_EMPTY");
+      const eventState = appendBatchEvents(state, user, "china_media_ecosystem.owner.assign_batch", guard, []);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    if (selectedIds.length > mediaEcosystemBatchOperationLimit) {
+      const guard = blocked(
+        `Batch owner assignment is limited to ${mediaEcosystemBatchOperationLimit} opportunities.`,
+        "ECOSYSTEM_BATCH_LIMIT_EXCEEDED"
+      );
+      const eventState = appendBatchEvents(state, user, "china_media_ecosystem.owner.assign_batch", guard, []);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    if (!canManageEcosystem(user)) {
+      const guard = blocked("Current role cannot batch assign China media ecosystem leads.", "ECOSYSTEM_MANAGE_FORBIDDEN", "media_manager");
+      const eventState = appendBatchEvents(state, user, "china_media_ecosystem.owner.assign_batch", guard, []);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    const eligibleIds = selectedIds.filter((leadId) => {
+      const lead = findLead(state, leadId);
+      return Boolean(lead && !isClosedLead(lead));
+    });
+
+    if (eligibleIds.length === 0) {
+      const guard = blocked("No selected ecosystem opportunities can be assigned.", "ECOSYSTEM_BATCH_NO_ELIGIBLE_LEADS");
+      const eventState = appendBatchEvents(state, user, "china_media_ecosystem.owner.assign_batch", guard, []);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    const eligibleIdSet = new Set(eligibleIds);
+    const activities = eligibleIds.map((leadId) =>
+      createActivity(leadId, user, `Owner batch assigned to ${user.activeRole}.`, "Lead now has an accountable operator.")
+    );
+    const activityByLeadId = new Map(activities.map((activity) => [activity.lead_id, activity]));
+    const nextState: MediaWorkflowState = {
+      ...state,
+      mediaEcosystemLeads: state.mediaEcosystemLeads.map((lead) => {
+        if (!eligibleIdSet.has(lead.id)) {
+          return lead;
+        }
+
+        const activity = activityByLeadId.get(lead.id);
+        return {
+          ...lead,
+          owner_role: user.activeRole,
+          owner_user_id: user.id,
+          next_action:
+            lead.data_quality_level === "SEED_ONLY"
+              ? "Complete manual review before priority scoring."
+              : "Apply priority score and decide outreach readiness.",
+          last_touch_at: activity?.created_at ?? lead.last_touch_at
+        };
+      }),
+      mediaOutreachActivities: [...activities, ...state.mediaOutreachActivities]
+    };
+    const skippedCount = selectedIds.length - eligibleIds.length;
+    const guard =
+      skippedCount > 0
+        ? warning(
+            `Batch assigned ${eligibleIds.length} owner(s); skipped ${skippedCount} closed or missing opportunity(ies).`,
+            "ECOSYSTEM_BATCH_OWNER_PARTIAL"
+          )
+        : allowed(`Batch assigned ${eligibleIds.length} ecosystem owner(s).`, "ECOSYSTEM_BATCH_OWNER_ASSIGNED");
+    const businessEvents = eligibleIds.map((leadId) =>
+      createBusinessEvent("china_media_ecosystem.owner_assigned", "media_ecosystem_lead", leadId, user.activeRole, {
+        ownerRole: user.activeRole,
+        batch: true
+      })
+    );
+    const eventState = appendBatchEvents(nextState, user, "china_media_ecosystem.owner.assign_batch", guard, businessEvents);
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent: businessEvents[0]
+    };
+  }
+
+  batchMarkManualReviewed(state: MediaWorkflowState, user: BusinessUser, leadIds: EntityId[]): WorkflowResult {
+    const selectedIds = uniqueLeadIds(leadIds);
+    if (selectedIds.length === 0) {
+      const guard = blocked("Select at least one ecosystem opportunity before marking review.", "ECOSYSTEM_BATCH_EMPTY");
+      const eventState = appendBatchEvents(state, user, "china_media_ecosystem.manual_review_batch", guard, []);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    if (selectedIds.length > mediaEcosystemBatchOperationLimit) {
+      const guard = blocked(
+        `Batch manual review is limited to ${mediaEcosystemBatchOperationLimit} opportunities.`,
+        "ECOSYSTEM_BATCH_LIMIT_EXCEEDED"
+      );
+      const eventState = appendBatchEvents(state, user, "china_media_ecosystem.manual_review_batch", guard, []);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    if (!canManageEcosystem(user)) {
+      const guard = blocked("Current role cannot batch review China media ecosystem leads.", "ECOSYSTEM_MANAGE_FORBIDDEN", "media_manager");
+      const eventState = appendBatchEvents(state, user, "china_media_ecosystem.manual_review_batch", guard, []);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    const eligibleLeads = selectedIds
+      .map((leadId) => findLead(state, leadId))
+      .filter(
+        (lead): lead is MediaEcosystemLead =>
+          Boolean(
+            lead &&
+              !isClosedLead(lead) &&
+              (lead.review_required || lead.data_quality_level === "SEED_ONLY" || lead.verification_status === "UNVERIFIED")
+          )
+      );
+
+    if (eligibleLeads.length === 0) {
+      const guard = blocked("No selected ecosystem opportunities require manual review.", "ECOSYSTEM_BATCH_NO_ELIGIBLE_LEADS");
+      const eventState = appendBatchEvents(state, user, "china_media_ecosystem.manual_review_batch", guard, []);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    const eligibleIdSet = new Set(eligibleLeads.map((lead) => lead.id));
+    const activities = eligibleLeads.map((lead) =>
+      createActivity(lead.id, user, "Seed opportunity batch reviewed.", "Selected ecosystem opportunity is ready for scoring.")
+    );
+    const activityByLeadId = new Map(activities.map((activity) => [activity.lead_id, activity]));
+    const nextState: MediaWorkflowState = {
+      ...state,
+      mediaEcosystemLeads: state.mediaEcosystemLeads.map((lead) => {
+        if (!eligibleIdSet.has(lead.id)) {
+          return lead;
+        }
+
+        const activity = activityByLeadId.get(lead.id);
+        return {
+          ...lead,
+          owner_role: user.activeRole,
+          owner_user_id: user.id,
+          verification_status: "IN_REVIEW",
+          data_quality_level: "MANUAL_REVIEWED",
+          review_required: false,
+          next_action: "Apply priority score and decide whether this opportunity is outreach-ready.",
+          last_touch_at: activity?.created_at ?? lead.last_touch_at
+        };
+      }),
+      mediaOutreachActivities: [...activities, ...state.mediaOutreachActivities]
+    };
+    const skippedCount = selectedIds.length - eligibleLeads.length;
+    const guard =
+      skippedCount > 0
+        ? warning(
+            `Batch reviewed ${eligibleLeads.length} opportunity(ies); skipped ${skippedCount} already-reviewed, closed, or missing row(s).`,
+            "ECOSYSTEM_BATCH_REVIEW_PARTIAL"
+          )
+        : allowed(`Batch reviewed ${eligibleLeads.length} ecosystem opportunity(ies).`, "ECOSYSTEM_BATCH_REVIEWED");
+    const leadById = new Map(state.mediaEcosystemLeads.map((lead) => [lead.id, lead]));
+    const businessEvents = eligibleLeads.map((lead) =>
+      createBusinessEvent("china_media_ecosystem.manual_reviewed", "media_ecosystem_lead", lead.id, user.activeRole, {
+        fromDataQuality: leadById.get(lead.id)?.data_quality_level,
+        toDataQuality: "MANUAL_REVIEWED",
+        batch: true
+      })
+    );
+    const eventState = appendBatchEvents(nextState, user, "china_media_ecosystem.manual_review_batch", guard, businessEvents);
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent: businessEvents[0]
     };
   }
 
