@@ -4,7 +4,11 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
-import { chinaMediaEcosystemService, mediaEcosystemTrackLabels } from "../../services/chinaMediaEcosystemService";
+import {
+  chinaMediaEcosystemService,
+  mediaEcosystemTrackLabels,
+  type MediaEcosystemOperationalQueueKey
+} from "../../services/chinaMediaEcosystemService";
 import { mediaWorkflowService } from "../../services/mediaWorkflowService";
 import type {
   AuditEvent,
@@ -110,6 +114,28 @@ const ecosystemPriorityOptions = [
 
 type EcosystemPriorityFilter = (typeof ecosystemPriorityOptions)[number]["value"];
 
+const ecosystemOwnerOptions = [
+  { value: "ALL", label: "All owners" },
+  { value: "NO_USER_OWNER", label: "No user owner" },
+  { value: "MINE", label: "My leads" },
+  { value: "MEDIA_MANAGER_ROLE", label: "Media manager" },
+  { value: "MEDIA_DIRECTOR_ROLE", label: "Media director" },
+  { value: "OPERATIONS_DIRECTOR_ROLE", label: "Operations director" }
+] as const;
+
+type EcosystemOwnerFilter = (typeof ecosystemOwnerOptions)[number]["value"];
+
+const ecosystemReviewOptions = [
+  { value: "ALL", label: "All review states" },
+  { value: "REVIEW_REQUIRED", label: "Review required" },
+  { value: "SEED_ONLY", label: "Seed only" },
+  { value: "MANUAL_REVIEWED", label: "Manual reviewed" },
+  { value: "UNVERIFIED", label: "Unverified" },
+  { value: "VERIFIED", label: "Verified" }
+] as const;
+
+type EcosystemReviewFilter = (typeof ecosystemReviewOptions)[number]["value"];
+
 const ecosystemListPageSize = 24;
 
 function matchesEcosystemPriority(lead: MediaEcosystemLead, filter: EcosystemPriorityFilter) {
@@ -123,6 +149,54 @@ function matchesEcosystemPriority(lead: MediaEcosystemLead, filter: EcosystemPri
 
   if (filter === "UNSCORED") {
     return lead.priority_score === 0;
+  }
+
+  return true;
+}
+
+function matchesEcosystemOwner(lead: MediaEcosystemLead, filter: EcosystemOwnerFilter, user: BusinessUser) {
+  if (filter === "NO_USER_OWNER") {
+    return !lead.owner_user_id;
+  }
+
+  if (filter === "MINE") {
+    return lead.owner_user_id === user.id;
+  }
+
+  if (filter === "MEDIA_MANAGER_ROLE") {
+    return lead.owner_role === "media_manager";
+  }
+
+  if (filter === "MEDIA_DIRECTOR_ROLE") {
+    return lead.owner_role === "media_director";
+  }
+
+  if (filter === "OPERATIONS_DIRECTOR_ROLE") {
+    return lead.owner_role === "operations_director";
+  }
+
+  return true;
+}
+
+function matchesEcosystemReview(lead: MediaEcosystemLead, filter: EcosystemReviewFilter) {
+  if (filter === "REVIEW_REQUIRED") {
+    return lead.review_required;
+  }
+
+  if (filter === "SEED_ONLY") {
+    return lead.data_quality_level === "SEED_ONLY";
+  }
+
+  if (filter === "MANUAL_REVIEWED") {
+    return lead.data_quality_level === "MANUAL_REVIEWED";
+  }
+
+  if (filter === "UNVERIFIED") {
+    return lead.verification_status === "UNVERIFIED";
+  }
+
+  if (filter === "VERIFIED") {
+    return lead.verification_status === "VERIFIED";
   }
 
   return true;
@@ -378,13 +452,25 @@ function ChinaMediaEcosystemWorkspace({
 }) {
   const [selectedLeadId, setSelectedLeadId] = useState<EntityId>(state.mediaEcosystemLeads[0]?.id ?? "");
   const [searchQuery, setSearchQuery] = useState("");
+  const [queueFilter, setQueueFilter] = useState<MediaEcosystemOperationalQueueKey>("ALL");
   const [trackFilter, setTrackFilter] = useState<"ALL" | MediaEcosystemTrack>("ALL");
   const [stageFilter, setStageFilter] = useState<"ALL" | MediaExpansionStage>("ALL");
   const [priorityFilter, setPriorityFilter] = useState<EcosystemPriorityFilter>("ALL");
+  const [ownerFilter, setOwnerFilter] = useState<EcosystemOwnerFilter>("ALL");
+  const [reviewFilter, setReviewFilter] = useState<EcosystemReviewFilter>("ALL");
+  const [confidenceFilter, setConfidenceFilter] = useState("ALL");
   const [visibleLeadCount, setVisibleLeadCount] = useState(ecosystemListPageSize);
+  const operationalQueues = chinaMediaEcosystemService.getOperationalQueues(state);
   const trackOpportunities = chinaMediaEcosystemService.getTrackOpportunities(state);
   const pipeline = chinaMediaEcosystemService.getPipeline(state);
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const seedConfidenceOptions = useMemo(
+    () =>
+      Array.from(new Set(state.mediaEcosystemLeads.map((lead) => lead.seed_confidence).filter(Boolean) as string[])).sort(
+        (left, right) => left.localeCompare(right)
+      ),
+    [state.mediaEcosystemLeads]
+  );
   const filteredLeads = useMemo(
     () =>
       [...state.mediaEcosystemLeads]
@@ -397,12 +483,16 @@ function ChinaMediaEcosystemWorkspace({
 
           return (
             (normalizedSearchQuery.length === 0 || searchableText.includes(normalizedSearchQuery)) &&
+            chinaMediaEcosystemService.matchesOperationalQueue(lead, queueFilter) &&
             (trackFilter === "ALL" || lead.track === trackFilter) &&
             (stageFilter === "ALL" || lead.stage === stageFilter) &&
-            matchesEcosystemPriority(lead, priorityFilter)
+            matchesEcosystemPriority(lead, priorityFilter) &&
+            matchesEcosystemOwner(lead, ownerFilter, user) &&
+            matchesEcosystemReview(lead, reviewFilter) &&
+            (confidenceFilter === "ALL" || lead.seed_confidence === confidenceFilter)
           );
         }),
-    [normalizedSearchQuery, priorityFilter, stageFilter, state.mediaEcosystemLeads, trackFilter]
+    [confidenceFilter, normalizedSearchQuery, ownerFilter, priorityFilter, queueFilter, reviewFilter, stageFilter, state.mediaEcosystemLeads, trackFilter, user]
   );
   const visibleLeads = filteredLeads.slice(0, visibleLeadCount);
   const selectedLead =
@@ -418,9 +508,63 @@ function ChinaMediaEcosystemWorkspace({
   const selectedActivities = selectedLead
     ? state.mediaOutreachActivities.filter((activity) => activity.lead_id === selectedLead.id).slice(0, 5)
     : [];
+  const activeQueue = operationalQueues.find((queue) => queue.key === queueFilter) ?? operationalQueues[0];
+  const activeFilterCount = [
+    queueFilter !== "ALL",
+    trackFilter !== "ALL",
+    stageFilter !== "ALL",
+    priorityFilter !== "ALL",
+    ownerFilter !== "ALL",
+    reviewFilter !== "ALL",
+    confidenceFilter !== "ALL",
+    normalizedSearchQuery.length > 0
+  ].filter(Boolean).length;
+
+  function resetOpportunityFilters() {
+    setSearchQuery("");
+    setQueueFilter("ALL");
+    setTrackFilter("ALL");
+    setStageFilter("ALL");
+    setPriorityFilter("ALL");
+    setOwnerFilter("ALL");
+    setReviewFilter("ALL");
+    setConfidenceFilter("ALL");
+    setVisibleLeadCount(ecosystemListPageSize);
+  }
 
   return (
     <div className="space-y-6">
+      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Operational queues</h2>
+            <p className="mt-1 text-sm leading-6 text-slate-500">{activeQueue?.nextAction}</p>
+          </div>
+          <StatusBadge tone={activeFilterCount > 0 ? "info" : "neutral"}>{`${activeFilterCount} active filter(s)`}</StatusBadge>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {operationalQueues.map((queue) => (
+            <button
+              key={queue.key}
+              className={`rounded-lg border p-4 text-left transition ${
+                queueFilter === queue.key ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-slate-50 hover:border-slate-300"
+              }`}
+              type="button"
+              onClick={() => {
+                setQueueFilter(queue.key);
+                setVisibleLeadCount(ecosystemListPageSize);
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-900">{queue.label}</p>
+                <StatusBadge tone={queue.tone}>{String(queue.count)}</StatusBadge>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-slate-500">{queue.nextAction}</p>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
           <div className="flex items-center gap-3">
@@ -473,7 +617,18 @@ function ChinaMediaEcosystemWorkspace({
                   {filteredLeads.length} visible / {state.mediaEcosystemLeads.length} total
                 </p>
               </div>
-              <StatusBadge tone={filteredLeads.length > 0 ? "info" : "warning"}>{String(visibleLeads.length)}</StatusBadge>
+              <div className="flex flex-col items-end gap-2">
+                <StatusBadge tone={filteredLeads.length > 0 ? "info" : "warning"}>{String(visibleLeads.length)}</StatusBadge>
+                {activeFilterCount > 0 ? (
+                  <button
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+                    type="button"
+                    onClick={resetOpportunityFilters}
+                  >
+                    Reset
+                  </button>
+                ) : null}
+              </div>
             </div>
             <label className="mt-4 flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600">
               <Search className="size-4 text-slate-400" aria-hidden="true" />
@@ -531,6 +686,56 @@ function ChinaMediaEcosystemWorkspace({
                   </option>
                 ))}
               </select>
+              <select
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                value={ownerFilter}
+                onChange={(event) => {
+                  setOwnerFilter(event.target.value as EcosystemOwnerFilter);
+                  setVisibleLeadCount(ecosystemListPageSize);
+                }}
+              >
+                {ecosystemOwnerOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                value={reviewFilter}
+                onChange={(event) => {
+                  setReviewFilter(event.target.value as EcosystemReviewFilter);
+                  setVisibleLeadCount(ecosystemListPageSize);
+                }}
+              >
+                {ecosystemReviewOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                value={confidenceFilter}
+                onChange={(event) => {
+                  setConfidenceFilter(event.target.value);
+                  setVisibleLeadCount(ecosystemListPageSize);
+                }}
+              >
+                <option value="ALL">All seed confidence</option>
+                {seedConfidenceOptions.map((confidence) => (
+                  <option key={confidence} value={confidence}>
+                    {confidence}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusBadge tone={queueFilter === "ALL" ? "neutral" : "info"}>
+                {activeQueue?.label ?? "All opportunities"}
+              </StatusBadge>
+              {reviewFilter !== "ALL" ? <StatusBadge tone="warning">{reviewFilter}</StatusBadge> : null}
+              {ownerFilter !== "ALL" ? <StatusBadge tone="info">{ownerFilter}</StatusBadge> : null}
             </div>
           </div>
           {visibleLeads.map((lead) => (
@@ -554,6 +759,9 @@ function ChinaMediaEcosystemWorkspace({
               <div className="mt-3 flex flex-wrap gap-2">
                 <StatusBadge tone={toneForExpansionStage(lead.stage)}>{lead.stage}</StatusBadge>
                 <StatusBadge tone={lead.data_quality_level === "SEED_ONLY" ? "warning" : "success"}>{lead.data_quality_level}</StatusBadge>
+                <StatusBadge tone={lead.owner_user_id ? "success" : "warning"}>
+                  {lead.owner_user_id ? "user owner" : "no user owner"}
+                </StatusBadge>
                 <StatusBadge tone={lead.risk_level === "critical" || lead.risk_level === "high" ? "danger" : "neutral"}>
                   {lead.risk_level}
                 </StatusBadge>
@@ -780,8 +988,11 @@ function SeedReviewPanel({ lead }: { lead: MediaEcosystemLead }) {
         <Metric label="Owner role" value={lead.owner_role} />
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <Metric label="User owner" value={lead.owner_user_id ?? "not assigned"} />
         <Metric label="Seed confidence" value={lead.seed_confidence ?? "-"} />
         <Metric label="Source" value={lead.source_name ?? "-"} />
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
         <Metric label="Version" value={lead.source_version ?? "-"} />
       </div>
     </article>

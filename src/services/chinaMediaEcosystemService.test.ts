@@ -34,6 +34,25 @@ describe("ChinaMediaEcosystemService", () => {
     });
   });
 
+  it("builds operational queues for review, owner, scoring, outreach, gate, and watchlist decisions", () => {
+    const state = createInitialMediaWorkflowState();
+    const queues = chinaMediaEcosystemService.getOperationalQueues(state);
+    const countByQueue = Object.fromEntries(queues.map((queue) => [queue.key, queue.count]));
+
+    expect(countByQueue).toMatchObject({
+      ALL: 5,
+      NEEDS_REVIEW: 2,
+      NEEDS_OWNER: 4,
+      READY_TO_SCORE: 0,
+      OUTREACH_PIPELINE: 2,
+      TRUSTED_GATE: 1,
+      WATCHLIST: 2
+    });
+    expect(chinaMediaEcosystemService.matchesOperationalQueue(state.mediaEcosystemLeads[0], "TRUSTED_GATE")).toBe(true);
+    expect(chinaMediaEcosystemService.matchesOperationalQueue(state.mediaEcosystemLeads[2], "WATCHLIST")).toBe(true);
+    expect(chinaMediaEcosystemService.matchesOperationalQueue(state.mediaEcosystemLeads[4], "WATCHLIST")).toBe(false);
+  });
+
   it("blocks trusted supply candidate creation until all business gates pass", () => {
     const state = createInitialMediaWorkflowState();
     const result = chinaMediaEcosystemService.createTrustedSupplyCandidate(

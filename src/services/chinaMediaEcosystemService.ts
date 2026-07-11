@@ -41,6 +41,23 @@ type EligibilityResult = {
   blockers: string[];
 };
 
+export type MediaEcosystemOperationalQueueKey =
+  | "ALL"
+  | "NEEDS_REVIEW"
+  | "NEEDS_OWNER"
+  | "READY_TO_SCORE"
+  | "OUTREACH_PIPELINE"
+  | "TRUSTED_GATE"
+  | "WATCHLIST";
+
+type MediaEcosystemOperationalQueue = {
+  key: MediaEcosystemOperationalQueueKey;
+  label: string;
+  count: number;
+  tone: "neutral" | "info" | "success" | "warning" | "danger";
+  nextAction: string;
+};
+
 const priorityScoreCaps: MediaEcosystemPriorityScore = {
   strategic_value: 20,
   user_scale_growth: 15,
@@ -77,6 +94,16 @@ const strategicTracks: MediaEcosystemTrack[] = [
   "ECOMMERCE_RETAIL_MEDIA",
   "SHORT_VIDEO_LIVE"
 ];
+
+const activeOutreachStages: MediaExpansionStage[] = [
+  "OUTREACH_READY",
+  "CONTACTED",
+  "MEETING_SCHEDULED",
+  "BUSINESS_QUALIFIED",
+  "TECH_FEASIBILITY_CHECK"
+];
+
+const closedEcosystemStages: MediaExpansionStage[] = ["REJECTED"];
 
 function allowed(message: string, reasonCode: string): GuardResult {
   return {
@@ -187,6 +214,62 @@ function findLead(state: MediaWorkflowState, leadId: EntityId) {
   return state.mediaEcosystemLeads.find((lead) => lead.id === leadId);
 }
 
+function isClosedLead(lead: MediaEcosystemLead) {
+  return closedEcosystemStages.includes(lead.stage);
+}
+
+function isLeadEligibleForTrustedSupply(lead: MediaEcosystemLead) {
+  return (
+    lead.data_quality_level !== "SEED_ONLY" &&
+    lead.priority_score >= 70 &&
+    lead.media_contact_confirmed &&
+    lead.business_interest_confirmed &&
+    lead.ad_inventory_identified &&
+    lead.integration_feasibility !== "impossible"
+  );
+}
+
+function matchesOperationalQueue(lead: MediaEcosystemLead, queue: MediaEcosystemOperationalQueueKey) {
+  if (queue === "ALL") {
+    return true;
+  }
+
+  if (queue === "NEEDS_REVIEW") {
+    return (
+      !isClosedLead(lead) &&
+      (lead.review_required || lead.data_quality_level === "SEED_ONLY" || lead.verification_status === "UNVERIFIED")
+    );
+  }
+
+  if (queue === "NEEDS_OWNER") {
+    return !isClosedLead(lead) && !lead.owner_user_id;
+  }
+
+  if (queue === "READY_TO_SCORE") {
+    return !isClosedLead(lead) && lead.data_quality_level !== "SEED_ONLY" && !lead.review_required && lead.priority_score === 0;
+  }
+
+  if (queue === "OUTREACH_PIPELINE") {
+    return activeOutreachStages.includes(lead.stage);
+  }
+
+  if (queue === "TRUSTED_GATE") {
+    return isLeadEligibleForTrustedSupply(lead);
+  }
+
+  if (queue === "WATCHLIST") {
+    return (
+      !isClosedLead(lead) &&
+      (lead.stage === "ON_HOLD" ||
+        (lead.priority_score > 0 && lead.priority_score < 70) ||
+        lead.risk_level === "high" ||
+        lead.risk_level === "critical")
+    );
+  }
+
+  return true;
+}
+
 function updateLead(
   state: MediaWorkflowState,
   leadId: EntityId,
@@ -213,6 +296,10 @@ export class ChinaMediaEcosystemService {
     return Object.entries(priorityScoreCaps).reduce((total, [key, cap]) => {
       return total + clampScore(input[key as keyof MediaEcosystemPriorityScore], cap);
     }, 0);
+  }
+
+  matchesOperationalQueue(lead: MediaEcosystemLead, queue: MediaEcosystemOperationalQueueKey) {
+    return matchesOperationalQueue(lead, queue);
   }
 
   evaluateTrustedSupplyEligibility(lead: MediaEcosystemLead): EligibilityResult {
@@ -389,11 +476,63 @@ export class ChinaMediaEcosystemService {
     };
   }
 
+  getOperationalQueues(state: MediaWorkflowState): MediaEcosystemOperationalQueue[] {
+    const queueDefinitions: Omit<MediaEcosystemOperationalQueue, "count">[] = [
+      {
+        key: "ALL",
+        label: "All opportunities",
+        tone: "info",
+        nextAction: "Review the full China media ecosystem backlog."
+      },
+      {
+        key: "NEEDS_REVIEW",
+        label: "Needs review",
+        tone: "warning",
+        nextAction: "Confirm source quality before scoring or outreach."
+      },
+      {
+        key: "NEEDS_OWNER",
+        label: "Needs owner",
+        tone: "warning",
+        nextAction: "Assign an accountable operator before moving the opportunity."
+      },
+      {
+        key: "READY_TO_SCORE",
+        label: "Ready to score",
+        tone: "info",
+        nextAction: "Apply the 100-point priority model."
+      },
+      {
+        key: "OUTREACH_PIPELINE",
+        label: "Outreach pipeline",
+        tone: "success",
+        nextAction: "Drive contact, meeting, business qualification, and feasibility proof."
+      },
+      {
+        key: "TRUSTED_GATE",
+        label: "Trusted gate",
+        tone: "success",
+        nextAction: "Convert qualified opportunities into trusted supply candidates."
+      },
+      {
+        key: "WATCHLIST",
+        label: "Watchlist",
+        tone: "danger",
+        nextAction: "Resolve low score, on-hold, or elevated-risk blockers."
+      }
+    ];
+
+    return queueDefinitions.map((queue) => ({
+      ...queue,
+      count: state.mediaEcosystemLeads.filter((lead) => matchesOperationalQueue(lead, queue.key)).length
+    }));
+  }
+
   getSummary(state: MediaWorkflowState) {
     const activeLeads = state.mediaEcosystemLeads.filter((lead) => !["REJECTED", "ON_HOLD"].includes(lead.stage));
     const highPriority = state.mediaEcosystemLeads.filter((lead) => lead.priority_score >= 70);
     const outreachReady = state.mediaEcosystemLeads.filter((lead) =>
-      ["OUTREACH_READY", "CONTACTED", "MEETING_SCHEDULED", "BUSINESS_QUALIFIED", "TECH_FEASIBILITY_CHECK"].includes(lead.stage)
+      activeOutreachStages.includes(lead.stage)
     );
     const eligible = state.mediaEcosystemLeads.filter((lead) => this.evaluateTrustedSupplyEligibility(lead).eligible);
 
