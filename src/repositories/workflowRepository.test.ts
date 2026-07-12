@@ -119,6 +119,8 @@ describe("workflow repositories", () => {
           media_contact_confirmed: true,
           business_interest_confirmed: false,
           ad_inventory_identified: true,
+          media_director_approved_by: uuid(17),
+          media_director_approved_at: "2026-07-10T08:05:00.000Z",
           next_action: "Confirm business interest",
           metadata: { region: "CN", risk_level: "medium", user_scale_note: "DAU confirmed by operator" }
         }
@@ -141,6 +143,7 @@ describe("workflow repositories", () => {
           track: "SHORT_VIDEO_LIVE",
           priority_score: 81,
           status: "candidate",
+          owner_user_id: uuid(17),
           owner_role: "media_manager",
           evaluation_notes: "Candidate entered network evaluation.",
           created_at: "2026-07-10T08:10:00.000Z"
@@ -297,6 +300,7 @@ describe("workflow repositories", () => {
       stage: "CONTACTED",
       priority_score: 81,
       media_contact_confirmed: true,
+      media_director_approved_at: "2026-07-10T08:05:00.000Z",
       verification_status: "IN_REVIEW",
       data_quality_level: "MANUAL_REVIEWED",
       review_required: true
@@ -309,6 +313,7 @@ describe("workflow repositories", () => {
     expect(result.snapshot.mediaState.trustedSupplyCandidates[0]).toMatchObject({
       id: trustedCandidateId,
       lead_id: ecosystemLeadId,
+      owner_user_id: uuid(17),
       status: "candidate"
     });
     expect(result.snapshot.salesState.proposals[0].selectedPublisherIds).toEqual([publisherId]);
@@ -345,6 +350,7 @@ describe("workflow repositories", () => {
     const selectionId = uuid(34);
     const ecosystemLeadId = uuid(35);
     const outreachId = uuid(36);
+    const trustedCandidateId = uuid(37);
 
     snapshot.mediaState.publishers = [
       snapshot.mediaState.publishers[0],
@@ -393,6 +399,8 @@ describe("workflow repositories", () => {
         verification_status: "IN_REVIEW",
         data_quality_level: "MANUAL_REVIEWED",
         review_required: false,
+        media_director_approved_by: uuid(38),
+        media_director_approved_at: "2026-07-10T08:55:00.000Z",
         priority_score: 75,
         score_breakdown: {
           strategic_value: 18,
@@ -413,6 +421,20 @@ describe("workflow repositories", () => {
         event: "priority_screened"
       }
     ];
+    snapshot.mediaState.trustedSupplyCandidates = [
+      {
+        id: trustedCandidateId,
+        lead_id: ecosystemLeadId,
+        media_name: "UUID Ecosystem Media",
+        track: "SOCIAL_COMMUNITY",
+        priority_score: 75,
+        status: "candidate",
+        owner_user_id: uuid(38),
+        owner_role: "media_manager",
+        created_at: "2026-07-10T09:00:00.000Z",
+        evaluation_notes: "Entered trusted supply network evaluation."
+      }
+    ];
 
     const result = await repository.saveSnapshot(snapshot);
 
@@ -420,6 +442,7 @@ describe("workflow repositories", () => {
     expect(result.savedTables).toContain("proposals");
     expect(result.savedTables).toContain("media_ecosystem_opportunities");
     expect(result.savedTables).toContain("media_ecosystem_outreach_activities");
+    expect(result.savedTables).toContain("trusted_supply_candidates");
     expect(fakeSupabase.writes.publishers).toEqual([
       expect.objectContaining({ id: publisherId, name: "UUID Publisher" })
     ]);
@@ -431,7 +454,9 @@ describe("workflow repositories", () => {
         priority_level: "B",
         verification_status: "IN_REVIEW",
         data_quality_level: "MANUAL_REVIEWED",
-        review_required: false
+        review_required: false,
+        media_director_approved_by: uuid(38),
+        media_director_approved_at: "2026-07-10T08:55:00.000Z"
       })
     ]);
     expect(fakeSupabase.writes.media_ecosystem_outreach_activities).toEqual([
@@ -439,6 +464,15 @@ describe("workflow repositories", () => {
         id: outreachId,
         opportunity_id: ecosystemLeadId,
         event: "priority_screened"
+      })
+    ]);
+    expect(fakeSupabase.writes.trusted_supply_candidates).toEqual([
+      expect.objectContaining({
+        id: trustedCandidateId,
+        opportunity_id: ecosystemLeadId,
+        media_name: "UUID Ecosystem Media",
+        owner_user_id: uuid(38),
+        status: "candidate"
       })
     ]);
     expect(fakeSupabase.writes.proposals).toEqual([

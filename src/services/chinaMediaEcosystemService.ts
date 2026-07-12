@@ -165,6 +165,13 @@ function canManageEcosystem(user: BusinessUser) {
   );
 }
 
+function canApproveTrustedSupplyGate(user: BusinessUser) {
+  return (
+    rbacService.hasCapability(user, "publisher.manage") &&
+    rbacService.hasAnyRole(user, ["media_director", "operations_director"])
+  );
+}
+
 function createBusinessEvent(
   eventCode: string,
   objectType: ObjectType,
@@ -241,14 +248,21 @@ function isClosedLead(lead: MediaEcosystemLead) {
 }
 
 function isLeadEligibleForTrustedSupply(lead: MediaEcosystemLead) {
-  return (
-    lead.data_quality_level !== "SEED_ONLY" &&
-    lead.priority_score >= 70 &&
-    lead.media_contact_confirmed &&
-    lead.business_interest_confirmed &&
-    lead.ad_inventory_identified &&
-    lead.integration_feasibility !== "impossible"
-  );
+  return trustedSupplyGateBlockers(lead).length === 0;
+}
+
+function trustedSupplyGateBlockers(lead: MediaEcosystemLead, options?: { includeDirectorApproval?: boolean }) {
+  const includeDirectorApproval = options?.includeDirectorApproval ?? true;
+
+  return [
+    lead.data_quality_level !== "SEED_ONLY" ? undefined : "seed_only_requires_manual_review",
+    lead.priority_score >= 70 ? undefined : "priority_score_below_70",
+    lead.media_contact_confirmed ? undefined : "media_contact_missing",
+    lead.business_interest_confirmed ? undefined : "business_interest_missing",
+    lead.ad_inventory_identified ? undefined : "ad_inventory_missing",
+    lead.integration_feasibility !== "impossible" ? undefined : "integration_impossible",
+    !includeDirectorApproval || lead.media_director_approved_at ? undefined : "media_director_approval_missing"
+  ].filter(Boolean) as string[];
 }
 
 function matchesOperationalQueue(lead: MediaEcosystemLead, queue: MediaEcosystemOperationalQueueKey) {
@@ -325,18 +339,73 @@ export class ChinaMediaEcosystemService {
   }
 
   evaluateTrustedSupplyEligibility(lead: MediaEcosystemLead): EligibilityResult {
-    const blockers = [
-      lead.data_quality_level !== "SEED_ONLY" ? undefined : "seed_only_requires_manual_review",
-      lead.priority_score >= 70 ? undefined : "priority_score_below_70",
-      lead.media_contact_confirmed ? undefined : "media_contact_missing",
-      lead.business_interest_confirmed ? undefined : "business_interest_missing",
-      lead.ad_inventory_identified ? undefined : "ad_inventory_missing",
-      lead.integration_feasibility !== "impossible" ? undefined : "integration_impossible"
-    ].filter(Boolean) as string[];
+    const blockers = trustedSupplyGateBlockers(lead);
 
     return {
       eligible: blockers.length === 0,
       blockers
+    };
+  }
+
+  approveTrustedSupplyGate(state: MediaWorkflowState, user: BusinessUser, leadId: EntityId): WorkflowResult {
+    const lead = findLead(state, leadId);
+    if (!lead) {
+      const guard = blocked("Media ecosystem lead was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "china_media_ecosystem.trusted_gate.approve", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    if (!canApproveTrustedSupplyGate(user)) {
+      const guard = blocked(
+        "Current role cannot approve trusted supply conversion gates.",
+        "TRUSTED_GATE_APPROVAL_FORBIDDEN",
+        "media_director"
+      );
+      return { state: appendEvents(state, user, "china_media_ecosystem.trusted_gate.approve", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    const blockers = trustedSupplyGateBlockers(lead, { includeDirectorApproval: false });
+    if (blockers.length > 0) {
+      const guard = blocked(
+        `Lead cannot be approved for trusted supply conversion: ${blockers.join(", ")}.`,
+        "TRUSTED_GATE_APPROVAL_BLOCKED"
+      );
+      return { state: appendEvents(state, user, "china_media_ecosystem.trusted_gate.approve", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    if (lead.media_director_approved_at) {
+      const guard = warning("Trusted supply conversion gate was already approved.", "TRUSTED_GATE_ALREADY_APPROVED");
+      return { state: appendEvents(state, user, "china_media_ecosystem.trusted_gate.approve", "media_ecosystem_lead", leadId, guard), guard };
+    }
+
+    const activity = createActivity(
+      leadId,
+      user,
+      "Trusted supply conversion gate approved.",
+      "Media director approval is recorded before candidate conversion."
+    );
+    const nextState = updateLead(
+      state,
+      leadId,
+      {
+        media_director_approved_by: user.id,
+        media_director_approved_at: activity.created_at,
+        next_action: "Create trusted supply candidate for controlled network evaluation.",
+        last_touch_at: activity.created_at
+      },
+      activity
+    );
+    const guard = allowed("Trusted supply conversion gate approved.", "TRUSTED_GATE_APPROVED");
+    const businessEvent = createBusinessEvent("china_media_ecosystem.trusted_gate_approved", "media_ecosystem_lead", leadId, user.activeRole, {
+      approvedBy: user.id,
+      priorityScore: lead.priority_score
+    });
+    const eventState = appendEvents(nextState, user, "china_media_ecosystem.trusted_gate.approve", "media_ecosystem_lead", leadId, guard, businessEvent);
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent
     };
   }
 
@@ -954,6 +1023,7 @@ export class ChinaMediaEcosystemService {
       track: lead.track,
       priority_score: lead.priority_score,
       status: "candidate",
+      owner_user_id: user.id,
       owner_role: user.activeRole,
       created_at: new Date().toISOString(),
       evaluation_notes: "Entered trusted supply network evaluation. Candidate status is not a trusted approval."

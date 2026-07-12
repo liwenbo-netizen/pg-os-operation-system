@@ -68,6 +68,60 @@ describe("ChinaMediaEcosystemService", () => {
     expect(result.state.trustedSupplyCandidates).toHaveLength(0);
   });
 
+  it("requires media director approval before trusted supply candidate conversion", () => {
+    let state = createInitialMediaWorkflowState();
+    state = {
+      ...state,
+      mediaEcosystemLeads: state.mediaEcosystemLeads.map((lead) =>
+        lead.id === "ecosystem-lead-redbook"
+          ? {
+              ...lead,
+              media_director_approved_by: undefined,
+              media_director_approved_at: undefined
+            }
+          : lead
+      )
+    };
+
+    const blockedCandidate = chinaMediaEcosystemService.createTrustedSupplyCandidate(
+      state,
+      user("media_manager"),
+      "ecosystem-lead-redbook"
+    );
+    expect(blockedCandidate.guard).toMatchObject({
+      allowed: false,
+      reason_code: "TRUSTED_SUPPLY_GATE_BLOCKED"
+    });
+
+    const forbiddenApproval = chinaMediaEcosystemService.approveTrustedSupplyGate(
+      state,
+      user("media_manager"),
+      "ecosystem-lead-redbook"
+    );
+    expect(forbiddenApproval.guard).toMatchObject({
+      allowed: false,
+      reason_code: "TRUSTED_GATE_APPROVAL_FORBIDDEN"
+    });
+
+    const approved = chinaMediaEcosystemService.approveTrustedSupplyGate(
+      state,
+      user("media_director"),
+      "ecosystem-lead-redbook"
+    );
+    expect(approved.guard).toMatchObject({
+      allowed: true,
+      reason_code: "TRUSTED_GATE_APPROVED"
+    });
+    expect(approved.state.mediaEcosystemLeads.find((lead) => lead.id === "ecosystem-lead-redbook")).toMatchObject({
+      media_director_approved_by: "user-media_director",
+      next_action: "Create trusted supply candidate for controlled network evaluation."
+    });
+    expect(approved.state.businessEvents[0]).toMatchObject({
+      eventCode: "china_media_ecosystem.trusted_gate_approved",
+      objectType: "media_ecosystem_lead"
+    });
+  });
+
   it("requires seed-only opportunities to be manually reviewed before scoring progression", () => {
     let state = createInitialMediaWorkflowState();
     const leadId = "ecosystem-lead-seed-only";

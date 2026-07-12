@@ -174,6 +174,8 @@ export type MediaEcosystemLead = {
   media_contact_confirmed: boolean;
   business_interest_confirmed: boolean;
   ad_inventory_identified: boolean;
+  media_director_approved_by?: UserId;
+  media_director_approved_at?: string;
   risk_level: Severity;
   next_action: string;
   target_contact?: string;
@@ -197,6 +199,7 @@ export type TrustedSupplyCandidate = {
   track: MediaEcosystemTrack;
   priority_score: number;
   status: "candidate" | "onboarding_project_created" | "rejected";
+  owner_user_id?: UserId;
   owner_role: RoleCode;
   created_at: string;
   evaluation_notes: string;

@@ -100,6 +100,7 @@ const AUDIT_FIELD_CONFIG: Record<string, AuditFieldConfig> = {
   commercial_tests: { ownerUserId: true },
   media_ecosystem_opportunities: { ownerUserId: true, createdBy: true, updatedBy: true },
   media_ecosystem_outreach_activities: { actorUserId: true },
+  trusted_supply_candidates: { ownerUserId: true, createdBy: true, updatedBy: true },
   advertisers: { ownerUserId: true, createdBy: true, updatedBy: true },
   opportunities: { ownerUserId: true, createdBy: true, updatedBy: true },
   proposals: { ownerUserId: true, createdBy: true, updatedBy: true },
@@ -325,6 +326,8 @@ function mapMediaEcosystemOpportunity(row: Row): MediaEcosystemLead {
     media_contact_confirmed: booleanValue(row.media_contact_confirmed),
     business_interest_confirmed: booleanValue(row.business_interest_confirmed),
     ad_inventory_identified: booleanValue(row.ad_inventory_identified),
+    media_director_approved_by: optionalString(row.media_director_approved_by),
+    media_director_approved_at: optionalString(row.media_director_approved_at),
     risk_level: stringValue(metadata.risk_level, booleanValue(row.review_required) ? "high" : "medium") as MediaEcosystemLead["risk_level"],
     next_action: stringValue(row.next_action, "Assign owner and complete seed verification."),
     target_contact: dateOnly(row.target_contact_date),
@@ -352,6 +355,7 @@ function mapTrustedSupplyCandidate(row: Row): TrustedSupplyCandidate {
     track: stringValue(row.track, "OTHER_VERTICAL") as TrustedSupplyCandidate["track"],
     priority_score: numberValue(row.priority_score),
     status: stringValue(row.status, "candidate") as TrustedSupplyCandidate["status"],
+    owner_user_id: optionalString(row.owner_user_id),
     owner_role: roleCode(row.owner_role, "media_manager"),
     created_at: stringValue(row.created_at, new Date().toISOString()),
     evaluation_notes: stringValue(row.evaluation_notes, "Entered trusted supply network evaluation."),
@@ -681,6 +685,8 @@ function toMediaEcosystemOpportunityRow(lead: MediaEcosystemLead): Row {
     media_contact_confirmed: lead.media_contact_confirmed,
     business_interest_confirmed: lead.business_interest_confirmed,
     ad_inventory_identified: lead.ad_inventory_identified,
+    media_director_approved_by: optionalUuid(lead.media_director_approved_by),
+    media_director_approved_at: lead.media_director_approved_at,
     linked_publisher_id: optionalUuid(lead.linked_publisher_id),
     metadata: {
       region: lead.region,
@@ -699,6 +705,22 @@ function toMediaOutreachActivityRow(activity: MediaOutreachActivity): Row {
     actor_role: activity.actor_role,
     activity_at: activity.created_at,
     notes: activity.notes
+  };
+}
+
+function toTrustedSupplyCandidateRow(candidate: TrustedSupplyCandidate): Row {
+  return {
+    id: candidate.id,
+    opportunity_id: candidate.lead_id,
+    media_name: candidate.media_name,
+    track: candidate.track,
+    priority_score: candidate.priority_score,
+    status: candidate.status,
+    owner_user_id: optionalUuid(candidate.owner_user_id),
+    owner_role: candidate.owner_role,
+    evaluation_notes: candidate.evaluation_notes,
+    publisher_id: optionalUuid(candidate.publisher_id),
+    created_at: candidate.created_at
   };
 }
 
@@ -1017,6 +1039,11 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
       {
         table: "media_ecosystem_outreach_activities",
         rows: snapshot.mediaState.mediaOutreachActivities.map(toMediaOutreachActivityRow),
+        uuidFields: ["opportunity_id"]
+      },
+      {
+        table: "trusted_supply_candidates",
+        rows: snapshot.mediaState.trustedSupplyCandidates.map(toTrustedSupplyCandidateRow),
         uuidFields: ["opportunity_id"]
       },
       {

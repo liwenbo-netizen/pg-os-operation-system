@@ -986,6 +986,18 @@ function ChinaMediaEcosystemWorkspace({
                   Qualify
                 </button>
                 <button
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-800 hover:bg-amber-100"
+                  type="button"
+                  onClick={() =>
+                    onRunAction("Approve trusted supply gate", () =>
+                      chinaMediaEcosystemService.approveTrustedSupplyGate(state, user, selectedLead.id)
+                    )
+                  }
+                >
+                  <UserCheck className="size-4" aria-hidden="true" />
+                  Approve gate
+                </button>
+                <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700"
                   type="button"
                   onClick={() =>
@@ -1189,12 +1201,19 @@ function EligibilityPanel({
         <StatusBadge tone={blockers.length === 0 ? "success" : "warning"}>{blockers.length === 0 ? "eligible" : "blocked"}</StatusBadge>
       </div>
       <div className="mt-4 space-y-2">
+        <GateRow label="Source reviewed" passed={lead.data_quality_level !== "SEED_ONLY"} />
         <GateRow label="Score >= 70" passed={lead.priority_score >= 70} />
         <GateRow label="Contact confirmed" passed={lead.media_contact_confirmed} />
         <GateRow label="Business interest" passed={lead.business_interest_confirmed} />
         <GateRow label="Inventory identified" passed={lead.ad_inventory_identified} />
         <GateRow label="Feasibility not impossible" passed={lead.integration_feasibility !== "impossible"} />
+        <GateRow label="Media director approved" passed={Boolean(lead.media_director_approved_at)} />
       </div>
+      {lead.media_director_approved_at ? (
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          Approved by {lead.media_director_approved_by ?? "media director"} at {lead.media_director_approved_at}
+        </p>
+      ) : null}
       {candidate ? (
         <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
           <p className="text-sm font-semibold text-emerald-900">{candidate.media_name}</p>

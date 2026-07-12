@@ -31,6 +31,11 @@ describe("businessAuditCoverage", () => {
           criticality: "P0"
         }),
         expect.objectContaining({
+          action: "china_media_ecosystem.trusted_gate.approve",
+          module: "Media",
+          criticality: "P0"
+        }),
+        expect.objectContaining({
           action: "china_media_ecosystem.trusted_candidate.create",
           module: "Media",
           criticality: "P0"

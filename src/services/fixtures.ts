@@ -229,6 +229,8 @@ export const fixtureMediaEcosystemLeads: MediaEcosystemLead[] = [
     media_contact_confirmed: true,
     business_interest_confirmed: true,
     ad_inventory_identified: true,
+    media_director_approved_by: "user-media_director",
+    media_director_approved_at: "2026-07-03T09:00:00.000Z",
     risk_level: "medium",
     next_action: "Create trusted supply candidate and request technical feasibility review.",
     target_contact: "Partnership BD lead",

@@ -118,6 +118,13 @@ export const CORE_BUSINESS_AUDIT_ACTIONS: CoreBusinessAuditAction[] = [
     criticality: "P0"
   },
   {
+    action: "china_media_ecosystem.trusted_gate.approve",
+    objectType: "media_ecosystem_lead",
+    module: "Media",
+    workflowSurface: "Trusted Supply Candidate Gate Approval",
+    criticality: "P0"
+  },
+  {
     action: "china_media_ecosystem.trusted_candidate.create",
     objectType: "trusted_supply_candidate",
     module: "Media",
