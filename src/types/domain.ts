@@ -192,17 +192,30 @@ export type MediaOutreachActivity = {
   notes?: string;
 };
 
+export type TrustedSupplyCandidateStatus =
+  | "candidate"
+  | "readiness_started"
+  | "technical_review_passed"
+  | "onboarding_ready"
+  | "onboarding_project_created"
+  | "rejected";
+
 export type TrustedSupplyCandidate = {
   id: EntityId;
   lead_id: EntityId;
   media_name: string;
   track: MediaEcosystemTrack;
   priority_score: number;
-  status: "candidate" | "onboarding_project_created" | "rejected";
+  status: TrustedSupplyCandidateStatus;
   owner_user_id?: UserId;
   owner_role: RoleCode;
   created_at: string;
   evaluation_notes: string;
+  readiness_started_at?: string;
+  technical_reviewed_at?: string;
+  commercial_reviewed_at?: string;
+  onboarding_ready_at?: string;
+  readiness_notes?: string;
   publisher_id?: EntityId;
 };
 

@@ -132,6 +132,27 @@ export const CORE_BUSINESS_AUDIT_ACTIONS: CoreBusinessAuditAction[] = [
     criticality: "P0"
   },
   {
+    action: "china_media_ecosystem.readiness.start",
+    objectType: "trusted_supply_candidate",
+    module: "Media",
+    workflowSurface: "Trusted Supply Onboarding Readiness",
+    criticality: "P0"
+  },
+  {
+    action: "china_media_ecosystem.technical_review.complete",
+    objectType: "trusted_supply_candidate",
+    module: "Media",
+    workflowSurface: "Trusted Supply Technical Evaluation",
+    criticality: "P0"
+  },
+  {
+    action: "china_media_ecosystem.commercial_review.complete",
+    objectType: "trusted_supply_candidate",
+    module: "Media",
+    workflowSurface: "Trusted Supply Commercial Evaluation",
+    criticality: "P0"
+  },
+  {
     action: "china_media_ecosystem.onboarding_project.create",
     objectType: "trusted_supply_candidate",
     module: "Media",

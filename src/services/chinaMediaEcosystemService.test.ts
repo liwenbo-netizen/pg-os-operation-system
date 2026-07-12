@@ -291,7 +291,7 @@ describe("ChinaMediaEcosystemService", () => {
     });
   });
 
-  it("moves a qualified ecosystem lead into trusted candidate and onboarding project", () => {
+  it("moves a qualified ecosystem lead through readiness into onboarding project", () => {
     let state = createInitialMediaWorkflowState();
 
     const candidate = chinaMediaEcosystemService.createTrustedSupplyCandidate(
@@ -310,6 +310,62 @@ describe("ChinaMediaEcosystemService", () => {
     });
     expect(state.mediaEcosystemLeads.find((lead) => lead.id === "ecosystem-lead-redbook")).toMatchObject({
       stage: "TRUSTED_SUPPLY_CANDIDATE"
+    });
+
+    const blockedOnboarding = chinaMediaEcosystemService.createOnboardingProject(
+      state,
+      user("media_manager"),
+      state.trustedSupplyCandidates[0].id
+    );
+    expect(blockedOnboarding.guard).toMatchObject({
+      allowed: false,
+      reason_code: "ONBOARDING_READINESS_REQUIRED"
+    });
+
+    const readiness = chinaMediaEcosystemService.startCandidateReadiness(
+      state,
+      user("media_manager"),
+      state.trustedSupplyCandidates[0].id
+    );
+    expect(readiness.guard).toMatchObject({
+      allowed: true,
+      reason_code: "TRUSTED_SUPPLY_READINESS_STARTED"
+    });
+    state = readiness.state;
+    expect(state.trustedSupplyCandidates[0]).toMatchObject({
+      status: "readiness_started",
+      readiness_started_at: expect.any(String)
+    });
+
+    const technicalReview = chinaMediaEcosystemService.completeCandidateTechnicalReview(
+      state,
+      user("media_manager"),
+      state.trustedSupplyCandidates[0].id
+    );
+    expect(technicalReview.guard).toMatchObject({
+      allowed: true,
+      reason_code: "TECHNICAL_REVIEW_PASSED"
+    });
+    state = technicalReview.state;
+    expect(state.trustedSupplyCandidates[0]).toMatchObject({
+      status: "technical_review_passed",
+      technical_reviewed_at: expect.any(String)
+    });
+
+    const commercialReview = chinaMediaEcosystemService.completeCandidateCommercialReview(
+      state,
+      user("media_manager"),
+      state.trustedSupplyCandidates[0].id
+    );
+    expect(commercialReview.guard).toMatchObject({
+      allowed: true,
+      reason_code: "TRUSTED_SUPPLY_ONBOARDING_READY"
+    });
+    state = commercialReview.state;
+    expect(state.trustedSupplyCandidates[0]).toMatchObject({
+      status: "onboarding_ready",
+      commercial_reviewed_at: expect.any(String),
+      onboarding_ready_at: expect.any(String)
     });
 
     const onboarding = chinaMediaEcosystemService.createOnboardingProject(
@@ -337,9 +393,42 @@ describe("ChinaMediaEcosystemService", () => {
     expect(onboarding.state.businessEvents.map((event) => event.eventCode)).toEqual(
       expect.arrayContaining([
         "china_media_ecosystem.trusted_candidate_created",
+        "china_media_ecosystem.readiness_started",
+        "china_media_ecosystem.technical_review_passed",
+        "china_media_ecosystem.onboarding_ready",
         "china_media_ecosystem.onboarding_project_created"
       ])
     );
+  });
+
+  it("blocks commercial readiness before technical review passes", () => {
+    let state = createInitialMediaWorkflowState();
+    const candidate = chinaMediaEcosystemService.createTrustedSupplyCandidate(
+      state,
+      user("media_manager"),
+      "ecosystem-lead-redbook"
+    );
+    state = candidate.state;
+
+    const readiness = chinaMediaEcosystemService.startCandidateReadiness(
+      state,
+      user("media_manager"),
+      state.trustedSupplyCandidates[0].id
+    );
+    state = readiness.state;
+
+    const commercialReview = chinaMediaEcosystemService.completeCandidateCommercialReview(
+      state,
+      user("media_manager"),
+      state.trustedSupplyCandidates[0].id
+    );
+    expect(commercialReview.guard).toMatchObject({
+      allowed: false,
+      reason_code: "TECHNICAL_REVIEW_REQUIRED"
+    });
+    expect(commercialReview.state.trustedSupplyCandidates[0]).toMatchObject({
+      status: "readiness_started"
+    });
   });
 
   it("keeps audit viewers read-only for ecosystem operations", () => {

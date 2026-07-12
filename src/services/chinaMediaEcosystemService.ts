@@ -327,6 +327,19 @@ function updateLead(
   };
 }
 
+function updateCandidate(
+  state: MediaWorkflowState,
+  candidateId: EntityId,
+  patch: Partial<TrustedSupplyCandidate>
+): MediaWorkflowState {
+  return {
+    ...state,
+    trustedSupplyCandidates: state.trustedSupplyCandidates.map((candidate) =>
+      candidate.id === candidateId ? { ...candidate, ...patch } : candidate
+    )
+  };
+}
+
 export class ChinaMediaEcosystemService {
   calculatePriorityScore(input: MediaEcosystemPriorityScore) {
     return Object.entries(priorityScoreCaps).reduce((total, [key, cap]) => {
@@ -1058,6 +1071,218 @@ export class ChinaMediaEcosystemService {
     };
   }
 
+  startCandidateReadiness(state: MediaWorkflowState, user: BusinessUser, candidateId: EntityId): WorkflowResult {
+    const candidate = state.trustedSupplyCandidates.find((item) => item.id === candidateId);
+    if (!candidate) {
+      const guard = blocked("Trusted supply candidate was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "china_media_ecosystem.readiness.start", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (!canManageEcosystem(user)) {
+      const guard = blocked("Current role cannot start trusted supply readiness checks.", "ECOSYSTEM_MANAGE_FORBIDDEN", "media_manager");
+      return { state: appendEvents(state, user, "china_media_ecosystem.readiness.start", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (candidate.publisher_id || candidate.status === "onboarding_project_created") {
+      const guard = warning("Onboarding project already exists for this trusted supply candidate.", "ONBOARDING_PROJECT_EXISTS");
+      return { state: appendEvents(state, user, "china_media_ecosystem.readiness.start", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (candidate.readiness_started_at || candidate.status !== "candidate") {
+      const guard = warning("Trusted supply readiness checks are already in progress.", "READINESS_ALREADY_STARTED");
+      return { state: appendEvents(state, user, "china_media_ecosystem.readiness.start", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    const activity = createActivity(
+      candidate.lead_id,
+      user,
+      "Trusted supply onboarding readiness started.",
+      "Candidate remains in evaluation until technical and commercial checks pass."
+    );
+    const readinessNotes = "Onboarding readiness started. Run technical feasibility and commercial evaluation before creating Publisher 360 onboarding.";
+    const candidateState = updateCandidate(state, candidateId, {
+      status: "readiness_started",
+      readiness_started_at: activity.created_at,
+      readiness_notes: readinessNotes,
+      evaluation_notes: readinessNotes
+    });
+    const nextState = updateLead(
+      candidateState,
+      candidate.lead_id,
+      {
+        next_action: "Complete technical feasibility review for trusted supply onboarding readiness.",
+        last_touch_at: activity.created_at
+      },
+      activity
+    );
+    const guard = allowed("Trusted supply onboarding readiness started.", "TRUSTED_SUPPLY_READINESS_STARTED");
+    const businessEvent = createBusinessEvent("china_media_ecosystem.readiness_started", "trusted_supply_candidate", candidateId, user.activeRole, {
+      leadId: candidate.lead_id,
+      previousStatus: candidate.status
+    });
+    const eventState = appendEvents(nextState, user, "china_media_ecosystem.readiness.start", "trusted_supply_candidate", candidateId, guard, businessEvent);
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent
+    };
+  }
+
+  completeCandidateTechnicalReview(state: MediaWorkflowState, user: BusinessUser, candidateId: EntityId): WorkflowResult {
+    const candidate = state.trustedSupplyCandidates.find((item) => item.id === candidateId);
+    if (!candidate) {
+      const guard = blocked("Trusted supply candidate was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "china_media_ecosystem.technical_review.complete", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (!canManageEcosystem(user)) {
+      const guard = blocked("Current role cannot complete technical readiness checks.", "ECOSYSTEM_MANAGE_FORBIDDEN", "media_manager");
+      return { state: appendEvents(state, user, "china_media_ecosystem.technical_review.complete", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (candidate.publisher_id || candidate.status === "onboarding_project_created") {
+      const guard = warning("Onboarding project already exists for this trusted supply candidate.", "ONBOARDING_PROJECT_EXISTS");
+      return { state: appendEvents(state, user, "china_media_ecosystem.technical_review.complete", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (!candidate.readiness_started_at && candidate.status === "candidate") {
+      const guard = blocked("Start onboarding readiness before completing technical review.", "READINESS_NOT_STARTED");
+      return { state: appendEvents(state, user, "china_media_ecosystem.technical_review.complete", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (candidate.technical_reviewed_at) {
+      const guard = warning("Technical readiness review was already completed.", "TECHNICAL_REVIEW_ALREADY_PASSED");
+      return { state: appendEvents(state, user, "china_media_ecosystem.technical_review.complete", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    const lead = findLead(state, candidate.lead_id);
+    if (lead?.integration_feasibility === "impossible") {
+      const guard = blocked("Impossible integration feasibility cannot pass technical readiness.", "TECHNICAL_REVIEW_BLOCKED");
+      return { state: appendEvents(state, user, "china_media_ecosystem.technical_review.complete", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    const activity = createActivity(
+      candidate.lead_id,
+      user,
+      "Technical readiness review passed.",
+      "Technical feasibility is ready for controlled onboarding preparation."
+    );
+    const readinessNotes = "Technical readiness passed. Complete commercial evaluation before onboarding project creation.";
+    const candidateState = updateCandidate(state, candidateId, {
+      status: "technical_review_passed",
+      technical_reviewed_at: activity.created_at,
+      readiness_notes: readinessNotes,
+      evaluation_notes: readinessNotes
+    });
+    const nextState = updateLead(
+      candidateState,
+      candidate.lead_id,
+      {
+        stage: "TECH_FEASIBILITY_CHECK",
+        integration_feasibility: lead?.integration_feasibility === "unknown" ? "needs_work" : (lead?.integration_feasibility ?? "needs_work"),
+        next_action: "Complete commercial evaluation before onboarding project creation.",
+        last_touch_at: activity.created_at
+      },
+      activity
+    );
+    const guard = allowed("Technical readiness review passed.", "TECHNICAL_REVIEW_PASSED");
+    const businessEvent = createBusinessEvent("china_media_ecosystem.technical_review_passed", "trusted_supply_candidate", candidateId, user.activeRole, {
+      leadId: candidate.lead_id,
+      integrationFeasibility: lead?.integration_feasibility ?? "unknown"
+    });
+    const eventState = appendEvents(
+      nextState,
+      user,
+      "china_media_ecosystem.technical_review.complete",
+      "trusted_supply_candidate",
+      candidateId,
+      guard,
+      businessEvent
+    );
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent
+    };
+  }
+
+  completeCandidateCommercialReview(state: MediaWorkflowState, user: BusinessUser, candidateId: EntityId): WorkflowResult {
+    const candidate = state.trustedSupplyCandidates.find((item) => item.id === candidateId);
+    if (!candidate) {
+      const guard = blocked("Trusted supply candidate was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "china_media_ecosystem.commercial_review.complete", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (!canManageEcosystem(user)) {
+      const guard = blocked("Current role cannot complete commercial readiness checks.", "ECOSYSTEM_MANAGE_FORBIDDEN", "media_manager");
+      return { state: appendEvents(state, user, "china_media_ecosystem.commercial_review.complete", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (candidate.publisher_id || candidate.status === "onboarding_project_created") {
+      const guard = warning("Onboarding project already exists for this trusted supply candidate.", "ONBOARDING_PROJECT_EXISTS");
+      return { state: appendEvents(state, user, "china_media_ecosystem.commercial_review.complete", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (!candidate.technical_reviewed_at && candidate.status !== "technical_review_passed") {
+      const guard = blocked("Technical readiness must pass before commercial evaluation.", "TECHNICAL_REVIEW_REQUIRED");
+      return { state: appendEvents(state, user, "china_media_ecosystem.commercial_review.complete", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (candidate.commercial_reviewed_at || candidate.status === "onboarding_ready") {
+      const guard = warning("Commercial readiness review was already completed.", "COMMERCIAL_REVIEW_ALREADY_PASSED");
+      return { state: appendEvents(state, user, "china_media_ecosystem.commercial_review.complete", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    const activity = createActivity(
+      candidate.lead_id,
+      user,
+      "Commercial readiness review passed.",
+      "Candidate is onboarding-ready but still not final trusted supply approval."
+    );
+    const readinessNotes = "Onboarding ready. Create Publisher 360 onboarding project; candidate status is not final trusted supply approval.";
+    const candidateState = updateCandidate(state, candidateId, {
+      status: "onboarding_ready",
+      commercial_reviewed_at: activity.created_at,
+      onboarding_ready_at: activity.created_at,
+      readiness_notes: readinessNotes,
+      evaluation_notes: readinessNotes
+    });
+    const nextState = updateLead(
+      candidateState,
+      candidate.lead_id,
+      {
+        stage: "TRUSTED_SUPPLY_CANDIDATE",
+        next_action: "Create Publisher 360 onboarding project and continue technical integration, commercial test, and sales readiness gates.",
+        last_touch_at: activity.created_at
+      },
+      activity
+    );
+    const guard = allowed("Trusted supply candidate is onboarding-ready.", "TRUSTED_SUPPLY_ONBOARDING_READY");
+    const businessEvent = createBusinessEvent("china_media_ecosystem.onboarding_ready", "trusted_supply_candidate", candidateId, user.activeRole, {
+      leadId: candidate.lead_id
+    });
+    const eventState = appendEvents(
+      nextState,
+      user,
+      "china_media_ecosystem.commercial_review.complete",
+      "trusted_supply_candidate",
+      candidateId,
+      guard,
+      businessEvent
+    );
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent
+    };
+  }
+
   createOnboardingProject(state: MediaWorkflowState, user: BusinessUser, candidateId: EntityId): WorkflowResult {
     const candidate = state.trustedSupplyCandidates.find((item) => item.id === candidateId);
     if (!candidate) {
@@ -1072,6 +1297,14 @@ export class ChinaMediaEcosystemService {
 
     if (candidate.publisher_id) {
       const guard = warning("Onboarding project already exists for this trusted supply candidate.", "ONBOARDING_PROJECT_EXISTS");
+      return { state: appendEvents(state, user, "china_media_ecosystem.onboarding_project.create", "trusted_supply_candidate", candidateId, guard), guard };
+    }
+
+    if (candidate.status !== "onboarding_ready" || !candidate.onboarding_ready_at) {
+      const guard = blocked(
+        "Trusted supply candidate must pass onboarding readiness, technical review, and commercial review before project creation.",
+        "ONBOARDING_READINESS_REQUIRED"
+      );
       return { state: appendEvents(state, user, "china_media_ecosystem.onboarding_project.create", "trusted_supply_candidate", candidateId, guard), guard };
     }
 

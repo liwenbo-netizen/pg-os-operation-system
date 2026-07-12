@@ -359,6 +359,11 @@ function mapTrustedSupplyCandidate(row: Row): TrustedSupplyCandidate {
     owner_role: roleCode(row.owner_role, "media_manager"),
     created_at: stringValue(row.created_at, new Date().toISOString()),
     evaluation_notes: stringValue(row.evaluation_notes, "Entered trusted supply network evaluation."),
+    readiness_started_at: optionalString(row.readiness_started_at),
+    technical_reviewed_at: optionalString(row.technical_reviewed_at),
+    commercial_reviewed_at: optionalString(row.commercial_reviewed_at),
+    onboarding_ready_at: optionalString(row.onboarding_ready_at),
+    readiness_notes: optionalString(row.readiness_notes),
     publisher_id: optionalString(row.publisher_id)
   };
 }
@@ -719,6 +724,11 @@ function toTrustedSupplyCandidateRow(candidate: TrustedSupplyCandidate): Row {
     owner_user_id: optionalUuid(candidate.owner_user_id),
     owner_role: candidate.owner_role,
     evaluation_notes: candidate.evaluation_notes,
+    readiness_started_at: candidate.readiness_started_at,
+    technical_reviewed_at: candidate.technical_reviewed_at,
+    commercial_reviewed_at: candidate.commercial_reviewed_at,
+    onboarding_ready_at: candidate.onboarding_ready_at,
+    readiness_notes: candidate.readiness_notes,
     publisher_id: optionalUuid(candidate.publisher_id),
     created_at: candidate.created_at
   };

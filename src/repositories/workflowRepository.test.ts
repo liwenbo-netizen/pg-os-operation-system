@@ -142,10 +142,15 @@ describe("workflow repositories", () => {
           media_name: "DB Ecosystem Media",
           track: "SHORT_VIDEO_LIVE",
           priority_score: 81,
-          status: "candidate",
+          status: "onboarding_ready",
           owner_user_id: uuid(17),
           owner_role: "media_manager",
           evaluation_notes: "Candidate entered network evaluation.",
+          readiness_started_at: "2026-07-10T08:11:00.000Z",
+          technical_reviewed_at: "2026-07-10T08:12:00.000Z",
+          commercial_reviewed_at: "2026-07-10T08:13:00.000Z",
+          onboarding_ready_at: "2026-07-10T08:13:00.000Z",
+          readiness_notes: "Ready for onboarding project.",
           created_at: "2026-07-10T08:10:00.000Z"
         }
       ],
@@ -314,7 +319,12 @@ describe("workflow repositories", () => {
       id: trustedCandidateId,
       lead_id: ecosystemLeadId,
       owner_user_id: uuid(17),
-      status: "candidate"
+      status: "onboarding_ready",
+      readiness_started_at: "2026-07-10T08:11:00.000Z",
+      technical_reviewed_at: "2026-07-10T08:12:00.000Z",
+      commercial_reviewed_at: "2026-07-10T08:13:00.000Z",
+      onboarding_ready_at: "2026-07-10T08:13:00.000Z",
+      readiness_notes: "Ready for onboarding project."
     });
     expect(result.snapshot.salesState.proposals[0].selectedPublisherIds).toEqual([publisherId]);
     expect(result.snapshot.salesState.campaigns[0]).toMatchObject({ publisherIds: [publisherId], launchChecklistPassed: true });
@@ -428,11 +438,16 @@ describe("workflow repositories", () => {
         media_name: "UUID Ecosystem Media",
         track: "SOCIAL_COMMUNITY",
         priority_score: 75,
-        status: "candidate",
+        status: "onboarding_ready",
         owner_user_id: uuid(38),
         owner_role: "media_manager",
         created_at: "2026-07-10T09:00:00.000Z",
-        evaluation_notes: "Entered trusted supply network evaluation."
+        evaluation_notes: "Entered trusted supply network evaluation.",
+        readiness_started_at: "2026-07-10T09:05:00.000Z",
+        technical_reviewed_at: "2026-07-10T09:10:00.000Z",
+        commercial_reviewed_at: "2026-07-10T09:15:00.000Z",
+        onboarding_ready_at: "2026-07-10T09:15:00.000Z",
+        readiness_notes: "Ready for onboarding project."
       }
     ];
 
@@ -472,7 +487,12 @@ describe("workflow repositories", () => {
         opportunity_id: ecosystemLeadId,
         media_name: "UUID Ecosystem Media",
         owner_user_id: uuid(38),
-        status: "candidate"
+        status: "onboarding_ready",
+        readiness_started_at: "2026-07-10T09:05:00.000Z",
+        technical_reviewed_at: "2026-07-10T09:10:00.000Z",
+        commercial_reviewed_at: "2026-07-10T09:15:00.000Z",
+        onboarding_ready_at: "2026-07-10T09:15:00.000Z",
+        readiness_notes: "Ready for onboarding project."
       })
     ]);
     expect(fakeSupabase.writes.proposals).toEqual([

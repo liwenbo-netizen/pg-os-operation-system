@@ -40,6 +40,21 @@ describe("businessAuditCoverage", () => {
           module: "Media",
           criticality: "P0"
         }),
+        expect.objectContaining({
+          action: "china_media_ecosystem.readiness.start",
+          module: "Media",
+          criticality: "P0"
+        }),
+        expect.objectContaining({
+          action: "china_media_ecosystem.technical_review.complete",
+          module: "Media",
+          criticality: "P0"
+        }),
+        expect.objectContaining({
+          action: "china_media_ecosystem.commercial_review.complete",
+          module: "Media",
+          criticality: "P0"
+        }),
         expect.objectContaining({ action: "proposal.approve", module: "Sales", criticality: "P0" }),
         expect.objectContaining({ action: "campaign.launch.approve", module: "Campaigns", criticality: "P0" }),
         expect.objectContaining({ action: "settlement.confirm", module: "Finance", criticality: "P0" }),

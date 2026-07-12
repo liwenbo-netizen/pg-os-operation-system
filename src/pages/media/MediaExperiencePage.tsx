@@ -91,6 +91,22 @@ function toneForExpansionStage(stage: MediaExpansionStage) {
   return "neutral" as const;
 }
 
+function toneForCandidateStatus(status: TrustedSupplyCandidate["status"]) {
+  if (status === "rejected") {
+    return "danger" as const;
+  }
+
+  if (status === "onboarding_project_created" || status === "onboarding_ready") {
+    return "success" as const;
+  }
+
+  if (status === "readiness_started" || status === "technical_review_passed") {
+    return "warning" as const;
+  }
+
+  return "info" as const;
+}
+
 const ecosystemStageOptions: Array<"ALL" | MediaExpansionStage> = [
   "ALL",
   "ECOSYSTEM_MAPPED",
@@ -1010,9 +1026,60 @@ function ChinaMediaEcosystemWorkspace({
                   Trusted candidate
                 </button>
                 <button
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
                   type="button"
                   disabled={!selectedCandidate}
+                  onClick={() => {
+                    if (!selectedCandidate) {
+                      return;
+                    }
+
+                    onRunAction("Start onboarding readiness", () =>
+                      chinaMediaEcosystemService.startCandidateReadiness(state, user, selectedCandidate.id)
+                    );
+                  }}
+                >
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                  Start readiness
+                </button>
+                <button
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                  type="button"
+                  disabled={!selectedCandidate}
+                  onClick={() => {
+                    if (!selectedCandidate) {
+                      return;
+                    }
+
+                    onRunAction("Complete technical review", () =>
+                      chinaMediaEcosystemService.completeCandidateTechnicalReview(state, user, selectedCandidate.id)
+                    );
+                  }}
+                >
+                  <Wrench className="size-4" aria-hidden="true" />
+                  Tech review
+                </button>
+                <button
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+                  type="button"
+                  disabled={!selectedCandidate}
+                  onClick={() => {
+                    if (!selectedCandidate) {
+                      return;
+                    }
+
+                    onRunAction("Complete commercial review", () =>
+                      chinaMediaEcosystemService.completeCandidateCommercialReview(state, user, selectedCandidate.id)
+                    );
+                  }}
+                >
+                  <TestTube2 className="size-4" aria-hidden="true" />
+                  Commercial review
+                </button>
+                <button
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                  type="button"
+                  disabled={!selectedCandidate || selectedCandidate.status !== "onboarding_ready"}
                   onClick={() => {
                     if (!selectedCandidate) {
                       return;
@@ -1218,9 +1285,17 @@ function EligibilityPanel({
         <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
           <p className="text-sm font-semibold text-emerald-900">{candidate.media_name}</p>
           <p className="mt-1 text-xs leading-5 text-emerald-700">{candidate.evaluation_notes}</p>
-          <div className="mt-2">
-            <StatusBadge tone={candidate.status === "onboarding_project_created" ? "success" : "info"}>{candidate.status}</StatusBadge>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <StatusBadge tone={toneForCandidateStatus(candidate.status)}>{candidate.status}</StatusBadge>
+            {candidate.publisher_id ? <StatusBadge tone="success">publisher linked</StatusBadge> : null}
           </div>
+          <div className="mt-3 space-y-2">
+            <GateRow label="Readiness started" passed={Boolean(candidate.readiness_started_at)} />
+            <GateRow label="Technical review" passed={Boolean(candidate.technical_reviewed_at)} />
+            <GateRow label="Commercial review" passed={Boolean(candidate.commercial_reviewed_at)} />
+            <GateRow label="Onboarding ready" passed={Boolean(candidate.onboarding_ready_at)} />
+          </div>
+          {candidate.readiness_notes ? <p className="mt-3 text-xs leading-5 text-emerald-700">{candidate.readiness_notes}</p> : null}
         </div>
       ) : null}
       {blockers.length > 0 ? <p className="mt-3 text-xs leading-5 text-slate-500">Blocking gates: {blockers.join(", ")}</p> : null}
