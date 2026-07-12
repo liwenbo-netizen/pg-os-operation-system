@@ -13,7 +13,7 @@ export type UatAcceptanceEvidenceKind =
 
 export type UatAcceptanceLedgerItem = {
   id: string;
-  phase: "Phase 37" | "Phase 38" | "Phase 39" | "CM-4B";
+  phase: "Phase 37" | "Phase 38" | "Phase 39" | "CM-4B" | "CM-5A";
   title: string;
   businessDomains: UatBusinessDomain[];
   roles: RoleCode[];
@@ -210,6 +210,34 @@ export const productionUatAcceptanceLedger: UatAcceptanceLedgerItem[] = [
     ],
     sourceDocument: "docs/development-package/cm-4b-china-media-batch-live-write-uat.md",
     followUp: "Closed. Next China Media phase can add controlled bulk scoring or pipeline-stage advancement."
+  },
+  {
+    id: "cm-5a-trusted-supply-candidate-conversion",
+    phase: "CM-5A",
+    title: "China Media trusted supply candidate conversion live-write proof",
+    businessDomains: ["Media"],
+    roles: ["media_director", "ceo"],
+    status: "passed",
+    recordedAt: "2026-07-12T08:01:11.000Z",
+    productionUrl: "https://pg-os-operation-system.vercel.app/media/china-ecosystem",
+    evidenceKinds: ["user_assisted", "audit_proof", "data_quality"],
+    proofPoints: [
+      "Media Director advanced the score-82 Utility tools opportunity through contact confirmation, business qualification, gate approval, and trusted candidate creation in production.",
+      "The opportunity moved to TRUSTED_SUPPLY_CANDIDATE with contact, business interest, inventory, and media director approval gates confirmed; Trusted candidates increased from 0 to 1.",
+      "CEO Audit Events showed the full contact -> qualify -> gate approve -> candidate create chain, including both allowed audit events and business events with UTC+8 timestamps."
+    ],
+    auditMarkers: [
+      "china_media_ecosystem.contact",
+      "china_media_ecosystem.contacted",
+      "china_media_ecosystem.business_qualify",
+      "china_media_ecosystem.business_qualified",
+      "china_media_ecosystem.trusted_gate.approve",
+      "china_media_ecosystem.trusted_gate_approved",
+      "china_media_ecosystem.trusted_candidate.create",
+      "china_media_ecosystem.trusted_candidate_created"
+    ],
+    sourceDocument: "docs/development-package/cm-5a-trusted-supply-candidate-conversion-live-uat.md",
+    followUp: "Closed. Next China Media phase can connect trusted candidates to onboarding readiness without treating candidate status as trusted approval."
   }
 ];
 
