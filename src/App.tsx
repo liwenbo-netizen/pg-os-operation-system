@@ -54,6 +54,7 @@ export function App() {
   const [workflowRepository] = useState(() => createWorkflowRepository());
   const [authSessionRepository] = useState(() => createAuthSessionRepository());
   const [auditLogRepository] = useState(() => createAuditLogRepository());
+  const [authSessionResolved, setAuthSessionResolved] = useState(() => !authSessionRepository.supportsSupabase);
   const [repositoryHealth, setRepositoryHealth] = useState<WorkflowRepositoryHealth>(() => ({
     mode: workflowRepository.mode,
     source: workflowRepository.mode === "supabase" ? "supabase-loading" : "fixtureRepository",
@@ -149,6 +150,7 @@ export function App() {
       })
       .finally(() => {
         if (!cancelled) {
+          setAuthSessionResolved(true);
           setAuthLoading(false);
         }
       });
@@ -159,6 +161,12 @@ export function App() {
   }, [authSessionRepository]);
 
   useEffect(() => {
+    // Supabase RLS reads must wait for persisted auth to hydrate; otherwise an anonymous
+    // request can legitimately return an empty snapshot that masks the signed-in user's data.
+    if (workflowRepository.mode === "supabase" && !authSessionResolved) {
+      return undefined;
+    }
+
     let cancelled = false;
 
     workflowRepository
@@ -195,7 +203,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [workflowRepository]);
+  }, [activeUser?.id, authMode, authSessionResolved, workflowRepository]);
 
   useEffect(() => {
     if (!repositoryLoadedRef.current || workflowRepository.mode !== "supabase") {
