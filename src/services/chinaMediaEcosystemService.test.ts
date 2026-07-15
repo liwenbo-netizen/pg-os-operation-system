@@ -399,6 +399,46 @@ describe("ChinaMediaEcosystemService", () => {
         "china_media_ecosystem.onboarding_project_created"
       ])
     );
+
+    state = onboarding.state;
+    const handoff = chinaMediaEcosystemService.confirmOnboardingHandoff(
+      state,
+      user("media_manager"),
+      state.trustedSupplyCandidates[0].id
+    );
+    expect(handoff.guard).toMatchObject({
+      allowed: true,
+      reason_code: "ONBOARDING_HANDOFF_CREATED"
+    });
+    expect(handoff.state.mediaOutreachActivities[0]).toMatchObject({
+      lead_id: "ecosystem-lead-redbook",
+      event: "Onboarding handoff confirmed."
+    });
+    expect(handoff.state.mediaEcosystemLeads.find((lead) => lead.id === "ecosystem-lead-redbook")?.next_action).toContain(
+      "Integration Manager"
+    );
+    expect(handoff.auditEvent).toMatchObject({
+      action: "china_media_ecosystem.onboarding_handoff.create",
+      objectType: "trusted_supply_candidate",
+      allowed: true
+    });
+    expect(handoff.businessEvent).toMatchObject({
+      eventCode: "china_media_ecosystem.onboarding_handoff_created"
+    });
+
+    const duplicateHandoff = chinaMediaEcosystemService.confirmOnboardingHandoff(
+      handoff.state,
+      user("media_manager"),
+      state.trustedSupplyCandidates[0].id
+    );
+    expect(duplicateHandoff.guard).toMatchObject({
+      allowed: true,
+      reason_code: "ONBOARDING_HANDOFF_EXISTS",
+      severity: "warning"
+    });
+    expect(
+      duplicateHandoff.state.mediaOutreachActivities.filter((activity) => activity.event === "Onboarding handoff confirmed.")
+    ).toHaveLength(1);
   });
 
   it("blocks commercial readiness before technical review passes", () => {

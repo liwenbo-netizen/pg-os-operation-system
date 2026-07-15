@@ -3,6 +3,7 @@ import { authService } from "./authService";
 import { createInitialContractWorkflowState } from "./contractService";
 import { createInitialFinanceWorkflowState } from "./financeSettlementService";
 import { createInitialMediaWorkflowState } from "./mediaWorkflowService";
+import { chinaMediaEcosystemService } from "./chinaMediaEcosystemService";
 import { createInitialSalesWorkflowState } from "./salesWorkflowService";
 import { createInitialGuideWorkflowState } from "./sopService";
 import { createInitialWorkbenchWorkflowState, workbenchService } from "./workbenchService";
@@ -169,6 +170,94 @@ describe("workbenchService phase 10", () => {
     expect(result.businessEvent).toMatchObject({
       eventCode: "workbench.task_started",
       objectId: contractId
+    });
+  });
+
+  it("binds CM-5C handoff and integration tasks to their real workflow objects", () => {
+    const snapshotContext = context();
+    const mediaManager = authService.createMockUser("media_manager");
+    const integrationManager = authService.createMockUser("integration_manager");
+    let mediaState = snapshotContext.mediaState;
+
+    const candidate = chinaMediaEcosystemService.createTrustedSupplyCandidate(
+      mediaState,
+      mediaManager,
+      "ecosystem-lead-redbook"
+    );
+    mediaState = candidate.state;
+    mediaState = chinaMediaEcosystemService.startCandidateReadiness(
+      mediaState,
+      mediaManager,
+      mediaState.trustedSupplyCandidates[0].id
+    ).state;
+    mediaState = chinaMediaEcosystemService.completeCandidateTechnicalReview(
+      mediaState,
+      mediaManager,
+      mediaState.trustedSupplyCandidates[0].id
+    ).state;
+    mediaState = chinaMediaEcosystemService.completeCandidateCommercialReview(
+      mediaState,
+      mediaManager,
+      mediaState.trustedSupplyCandidates[0].id
+    ).state;
+    mediaState = chinaMediaEcosystemService.createOnboardingProject(
+      mediaState,
+      mediaManager,
+      mediaState.trustedSupplyCandidates[0].id
+    ).state;
+    snapshotContext.mediaState = mediaState;
+
+    const candidateId = mediaState.trustedSupplyCandidates[0].id;
+    const publisherId = mediaState.trustedSupplyCandidates[0].publisher_id;
+    const integrationProjectId = mediaState.integrationProjects[0].id;
+    const mediaSnapshot = workbenchService.getSnapshot(snapshotContext, mediaManager);
+    const integrationSnapshotBeforeHandoff = workbenchService.getSnapshot(snapshotContext, integrationManager);
+    const handoffTask = mediaSnapshot.tasks.find((task) => task.id === candidateId);
+    const blockedIntegrationTask = integrationSnapshotBeforeHandoff.tasks.find((task) => task.id === integrationProjectId);
+
+    expect(handoffTask).toMatchObject({
+      related_route: "/media/china-ecosystem",
+      source_object_type: "trusted_supply_candidate",
+      source_object_id: candidateId,
+      status: "open"
+    });
+    expect(blockedIntegrationTask).toMatchObject({
+      related_route: "/media/integration-wizard/:id",
+      source_object_type: "publisher",
+      source_object_id: publisherId,
+      status: "blocked"
+    });
+    expect(
+      workbenchService.startTask(
+        snapshotContext.workbenchState,
+        integrationManager,
+        integrationProjectId,
+        integrationSnapshotBeforeHandoff.tasks
+      ).guard.reason_code
+    ).toBe("WORKBENCH_TASK_BLOCKED");
+
+    snapshotContext.mediaState = chinaMediaEcosystemService.confirmOnboardingHandoff(
+      mediaState,
+      mediaManager,
+      candidateId
+    ).state;
+    const integrationSnapshot = workbenchService.getSnapshot(snapshotContext, integrationManager);
+    const integrationTask = integrationSnapshot.tasks.find((task) => task.id === integrationProjectId);
+
+    expect(integrationTask).toMatchObject({
+      status: "open",
+      source_object_id: publisherId
+    });
+    const startResult = workbenchService.startTask(
+      snapshotContext.workbenchState,
+      integrationManager,
+      integrationProjectId,
+      integrationSnapshot.tasks
+    );
+    expect(startResult.guard.reason_code).toBe("WORKBENCH_TASK_STARTED");
+    expect(startResult.state.tasks.find((task) => task.id === integrationProjectId)).toMatchObject({
+      status: "in_progress",
+      source_object_id: publisherId
     });
   });
 

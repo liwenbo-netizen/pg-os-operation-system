@@ -536,6 +536,7 @@ export function App() {
           guideState={guideWorkflowState}
           onStateChange={setWorkbenchWorkflowState}
           onOpenTask={handleOpenWorkbenchTask}
+          onAuditEvent={handleWorkflowAuditEvent}
         />
       ) : activeRoute.path.startsWith("/media/") ? (
         <MediaExperiencePage
@@ -543,9 +544,10 @@ export function App() {
           role={roleDefinitions[activeRole]}
           user={activeUser}
           state={mediaWorkflowState}
+          selectedObjectId={activeObjectId}
           onStateChange={setMediaWorkflowState}
           onAuditEvent={handleWorkflowAuditEvent}
-          onRouteChange={setActivePath}
+          onRouteChange={handleRouteChange}
         />
       ) : activeRoute.path.startsWith("/sales/") ||
         activeRoute.path.startsWith("/proposals/") ||

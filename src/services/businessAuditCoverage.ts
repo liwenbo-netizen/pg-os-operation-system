@@ -160,6 +160,13 @@ export const CORE_BUSINESS_AUDIT_ACTIONS: CoreBusinessAuditAction[] = [
     criticality: "P0"
   },
   {
+    action: "china_media_ecosystem.onboarding_handoff.create",
+    objectType: "trusted_supply_candidate",
+    module: "Media",
+    workflowSurface: "Trusted Supply Onboarding Handoff",
+    criticality: "P0"
+  },
+  {
     action: "advertiser.create",
     objectType: "advertiser",
     module: "Sales",

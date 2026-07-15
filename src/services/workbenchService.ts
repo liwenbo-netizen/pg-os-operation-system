@@ -15,6 +15,7 @@ import type {
 } from "../types/domain";
 import type { GuardResult } from "../types/guards";
 import { auditService } from "./auditService";
+import { mediaEcosystemHandoffActivityEvent } from "./chinaMediaEcosystemService";
 import { fixtureRepository } from "./fixtures";
 import { rbacService } from "./rbacService";
 
@@ -199,6 +200,20 @@ function collectBusinessEvents(context: OperationsContext) {
   ].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
+function dueDateAfter(value: string | undefined, days: number) {
+  if (!value) {
+    return undefined;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
   const diagnosticTasks = context.mediaState.diagnosticCases
     .filter((diagnosticCase) => !["closed", "rejected"].includes(diagnosticCase.status))
@@ -279,6 +294,68 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
       source_object_id: contract.id
     }));
 
+  const onboardingTasks = context.mediaState.trustedSupplyCandidates
+    .filter((candidate) => candidate.status === "onboarding_project_created" && candidate.publisher_id)
+    .flatMap<WorkbenchTask>((candidate) => {
+      const publisher = context.mediaState.publishers.find((item) => item.id === candidate.publisher_id);
+      const integrationProject = context.mediaState.integrationProjects.find(
+        (item) => item.publisher_id === candidate.publisher_id
+      );
+      const handoffConfirmed = context.mediaState.mediaOutreachActivities.some(
+        (activity) =>
+          activity.lead_id === candidate.lead_id && activity.event === mediaEcosystemHandoffActivityEvent
+      );
+      const artifactsReady = Boolean(publisher && integrationProject);
+      const mediaOwnerRole: RoleCode = ["media_manager", "media_director"].includes(candidate.owner_role)
+        ? candidate.owner_role
+        : "media_manager";
+      const handoffTask: WorkbenchTask = {
+        id: candidate.id,
+        title: `Confirm onboarding handoff: ${candidate.media_name}`,
+        module: "Media",
+        owner_role: mediaOwnerRole,
+        related_route: "/media/china-ecosystem",
+        priority: "P0",
+        status: handoffConfirmed ? "done" : artifactsReady ? "open" : "blocked",
+        due_date: dueDateAfter(candidate.onboarding_ready_at ?? candidate.created_at, 5),
+        blocker: artifactsReady ? undefined : "Publisher 360 or integration project is missing.",
+        next_action: handoffConfirmed
+          ? "Onboarding handoff is confirmed."
+          : "Verify Publisher 360 and integration project, then confirm the operational handoff.",
+        source_object_type: "trusted_supply_candidate",
+        source_object_id: candidate.id
+      };
+
+      if (!integrationProject || !candidate.publisher_id) {
+        return [handoffTask];
+      }
+
+      const integrationDone = integrationProject.status === "technical_live_passed";
+      const integrationBlocked = !handoffConfirmed || integrationProject.status === "technical_blocked";
+      const integrationTask: WorkbenchTask = {
+        id: integrationProject.id,
+        title: `Start technical integration: ${candidate.media_name}`,
+        module: "Media",
+        owner_role: "integration_manager",
+        related_route: "/media/integration-wizard/:id",
+        priority: "P0",
+        status: integrationDone ? "done" : integrationBlocked ? "blocked" : "open",
+        due_date: dueDateAfter(candidate.onboarding_ready_at ?? candidate.created_at, 10),
+        blocker: !handoffConfirmed
+          ? "Media owner must confirm the onboarding handoff first."
+          : integrationProject.status === "technical_blocked"
+            ? "Integration project is technically blocked."
+            : undefined,
+        next_action: integrationDone
+          ? "Technical integration passed."
+          : "Open the Technical Integration Wizard and record connection evidence.",
+        source_object_type: "publisher",
+        source_object_id: candidate.publisher_id
+      };
+
+      return [handoffTask, integrationTask];
+    });
+
   const sopTasks = context.guideState.sopCards
     .filter((sopCard) => sopCard.status === "draft")
     .map<WorkbenchTask>((sopCard) => ({
@@ -294,7 +371,15 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
       source_object_id: sopCard.id
     }));
 
-  return [...diagnosticTasks, ...proposalTasks, ...campaignTasks, ...settlementTasks, ...contractTasks, ...sopTasks];
+  return [
+    ...diagnosticTasks,
+    ...proposalTasks,
+    ...campaignTasks,
+    ...settlementTasks,
+    ...contractTasks,
+    ...onboardingTasks,
+    ...sopTasks
+  ];
 }
 
 function dedupeTasks(tasks: WorkbenchTask[]) {
@@ -305,6 +390,27 @@ function dedupeTasks(tasks: WorkbenchTask[]) {
     }
   });
   return Array.from(byId.values());
+}
+
+function reconcileDerivedTasks(persistedTasks: WorkbenchTask[], derivedTasks: WorkbenchTask[]) {
+  const derivedById = new Map(derivedTasks.map((task) => [task.id, task]));
+  const reconciledPersisted = persistedTasks.map((task) => {
+    const derived = derivedById.get(task.id);
+    if (!derived) {
+      return task;
+    }
+
+    derivedById.delete(task.id);
+    return derived.status === "done"
+      ? {
+          ...task,
+          ...derived,
+          status: "done" as const
+        }
+      : task;
+  });
+
+  return [...reconciledPersisted, ...derivedById.values()];
 }
 
 export function createInitialWorkbenchWorkflowState(): WorkbenchWorkflowState {
@@ -319,7 +425,7 @@ export function createInitialWorkbenchWorkflowState(): WorkbenchWorkflowState {
 
 export class WorkbenchService {
   getSnapshot(context: SnapshotContext, user: BusinessUser) {
-    const tasks = dedupeTasks([...context.workbenchState.tasks, ...createDerivedTasks(context)]);
+    const tasks = dedupeTasks(reconcileDerivedTasks(context.workbenchState.tasks, createDerivedTasks(context)));
     const roleTasks =
       user.activeRole === "ceo"
         ? tasks
@@ -365,6 +471,11 @@ export class WorkbenchService {
 
     if (task.status === "done") {
       const guard = createBlocked("Completed tasks cannot be restarted.", "WORKBENCH_TASK_DONE");
+      return { state: appendEvents(resolved.state, user, "workbench.task.start", taskId, guard), guard };
+    }
+
+    if (task.status === "blocked") {
+      const guard = createBlocked("Blocked tasks cannot start before the blocker is resolved.", "WORKBENCH_TASK_BLOCKED", task.owner_role);
       return { state: appendEvents(resolved.state, user, "workbench.task.start", taskId, guard), guard };
     }
 

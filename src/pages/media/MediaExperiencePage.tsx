@@ -1,5 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, CheckCircle2, Map, Plus, Search, Send, ShieldAlert, Target, TestTube2, UserCheck, Wrench } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  ExternalLink,
+  Handshake,
+  Map,
+  Plus,
+  Search,
+  Send,
+  ShieldAlert,
+  Target,
+  TestTube2,
+  UserCheck,
+  Wrench
+} from "lucide-react";
 import { StatusBadge } from "../../components/StatusBadge";
 import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
@@ -8,7 +22,8 @@ import {
   chinaMediaEcosystemService,
   mediaEcosystemBatchOperationLimit,
   mediaEcosystemTrackLabels,
-  type MediaEcosystemOperationalQueueKey
+  type MediaEcosystemOperationalQueueKey,
+  type OnboardingHandoffSnapshot
 } from "../../services/chinaMediaEcosystemService";
 import { mediaWorkflowService } from "../../services/mediaWorkflowService";
 import type {
@@ -31,9 +46,10 @@ type MediaExperiencePageProps = {
   role: RoleDefinition;
   user: BusinessUser;
   state: MediaWorkflowState;
+  selectedObjectId?: EntityId;
   onStateChange: (state: MediaWorkflowState) => void;
   onAuditEvent: (event: AuditEvent) => void;
-  onRouteChange: (path: string) => void;
+  onRouteChange: (path: string, objectId?: EntityId) => void;
 };
 
 type ActionMessage = {
@@ -225,6 +241,7 @@ export function MediaExperiencePage({
   role,
   user,
   state,
+  selectedObjectId,
   onStateChange,
   onAuditEvent,
   onRouteChange
@@ -240,6 +257,12 @@ export function MediaExperiencePage({
   const selectedSnapshot = selectedPublisher
     ? mediaWorkflowService.getPublisherSnapshot(state, selectedPublisher.id)
     : undefined;
+
+  useEffect(() => {
+    if (selectedObjectId && state.publishers.some((publisher) => publisher.id === selectedObjectId)) {
+      setSelectedPublisherId(selectedObjectId);
+    }
+  }, [selectedObjectId, state.publishers]);
 
   function runAction(title: string, action: () => MediaActionResult) {
     const result = action();
@@ -332,14 +355,20 @@ export function MediaExperiencePage({
       {message ? <GuardNotice message={message} /> : null}
 
       {page === "ecosystem" ? (
-        <ChinaMediaEcosystemWorkspace state={state} user={user} onRunAction={runAction} />
+        <ChinaMediaEcosystemWorkspace
+          state={state}
+          user={user}
+          selectedObjectId={selectedObjectId}
+          onRunAction={runAction}
+          onRouteChange={onRouteChange}
+        />
       ) : (
         <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
         <PublisherSelector
           publishers={state.publishers}
           selectedPublisherId={selectedPublisher?.id}
           onSelect={(publisherId) => setSelectedPublisherId(publisherId)}
-          onOpen360={() => onRouteChange("/media/publishers/:id")}
+          onOpen360={() => onRouteChange("/media/publishers/:id", selectedPublisher?.id)}
         />
 
         {page === "manager" ? (
@@ -348,7 +377,7 @@ export function MediaExperiencePage({
             onSelect={(publisherId) => setSelectedPublisherId(publisherId)}
             onOpen360={(publisherId) => {
               setSelectedPublisherId(publisherId);
-              onRouteChange("/media/publishers/:id");
+              onRouteChange("/media/publishers/:id", publisherId);
             }}
             onAddSlot={(publisherId) =>
               runAction("Add ad slot", () =>
@@ -400,8 +429,8 @@ export function MediaExperiencePage({
                 })
               )
             }
-            onOpenIntegration={() => onRouteChange("/media/integration-wizard/:id")}
-            onOpenTest={() => onRouteChange("/media/commercial-tests/:id")}
+            onOpenIntegration={() => onRouteChange("/media/integration-wizard/:id", selectedSnapshot.publisher!.id)}
+            onOpenTest={() => onRouteChange("/media/commercial-tests/:id", selectedSnapshot.publisher!.id)}
           />
         ) : null}
 
@@ -463,11 +492,15 @@ function GuardNotice({ message }: { message: ActionMessage }) {
 function ChinaMediaEcosystemWorkspace({
   state,
   user,
-  onRunAction
+  selectedObjectId,
+  onRunAction,
+  onRouteChange
 }: {
   state: MediaWorkflowState;
   user: BusinessUser;
+  selectedObjectId?: EntityId;
   onRunAction: (title: string, action: () => MediaActionResult) => void;
+  onRouteChange: (path: string, objectId?: EntityId) => void;
 }) {
   const { t } = useLocale();
   const [selectedLeadId, setSelectedLeadId] = useState<EntityId>(state.mediaEcosystemLeads[0]?.id ?? "");
@@ -519,15 +552,18 @@ function ChinaMediaEcosystemWorkspace({
   const visibleLeadIds = visibleLeads.map((lead) => lead.id);
   const selectedBatchLeadIdSet = useMemo(() => new Set(selectedBatchLeadIds), [selectedBatchLeadIds]);
   const selectedLead =
+    state.mediaEcosystemLeads.find((lead) => lead.id === selectedLeadId) ??
     visibleLeads.find((lead) => lead.id === selectedLeadId) ??
     visibleLeads[0] ??
     filteredLeads[0] ??
-    state.mediaEcosystemLeads.find((lead) => lead.id === selectedLeadId) ??
     state.mediaEcosystemLeads[0];
   const selectedCandidate = selectedLead
     ? state.trustedSupplyCandidates.find((candidate) => candidate.lead_id === selectedLead.id)
     : undefined;
   const eligibility = selectedLead ? chinaMediaEcosystemService.evaluateTrustedSupplyEligibility(selectedLead) : undefined;
+  const handoff = selectedCandidate
+    ? chinaMediaEcosystemService.getOnboardingHandoff(state, selectedCandidate.id)
+    : undefined;
   const selectedActivities = selectedLead
     ? state.mediaOutreachActivities.filter((activity) => activity.lead_id === selectedLead.id).slice(0, 5)
     : [];
@@ -546,6 +582,18 @@ function ChinaMediaEcosystemWorkspace({
   useEffect(() => {
     setSelectedBatchLeadIds([]);
   }, [confidenceFilter, normalizedSearchQuery, ownerFilter, priorityFilter, queueFilter, reviewFilter, stageFilter, trackFilter]);
+
+  useEffect(() => {
+    if (!selectedObjectId) {
+      return;
+    }
+
+    const candidate = state.trustedSupplyCandidates.find((item) => item.id === selectedObjectId);
+    const leadId = candidate?.lead_id ?? state.mediaEcosystemLeads.find((lead) => lead.id === selectedObjectId)?.id;
+    if (leadId) {
+      setSelectedLeadId(leadId);
+    }
+  }, [selectedObjectId, state.mediaEcosystemLeads, state.trustedSupplyCandidates]);
 
   function resetOpportunityFilters() {
     setSearchQuery("");
@@ -1096,6 +1144,23 @@ function ChinaMediaEcosystemWorkspace({
                   <Plus className="size-4" aria-hidden="true" />
                   {t("media.onboardingProject")}
                 </button>
+                <button
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                  type="button"
+                  disabled={!selectedCandidate || selectedCandidate.status !== "onboarding_project_created" || handoff?.confirmed}
+                  onClick={() => {
+                    if (!selectedCandidate) {
+                      return;
+                    }
+
+                    onRunAction(t("media.confirmHandoff"), () =>
+                      chinaMediaEcosystemService.confirmOnboardingHandoff(state, user, selectedCandidate.id)
+                    );
+                  }}
+                >
+                  <Handshake className="size-4" aria-hidden="true" />
+                  {t("media.confirmHandoff")}
+                </button>
               </div>
             </article>
 
@@ -1113,6 +1178,10 @@ function ChinaMediaEcosystemWorkspace({
               </div>
               <EligibilityPanel lead={selectedLead} candidate={selectedCandidate} blockers={eligibility?.blockers ?? []} />
             </div>
+
+            {handoff ? (
+              <OnboardingHandoffPanel handoff={handoff} user={user} onRouteChange={onRouteChange} />
+            ) : null}
 
             <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
               <h2 className="text-base font-semibold text-slate-950">Outreach trail</h2>
@@ -1304,6 +1373,82 @@ function EligibilityPanel({
         </div>
       ) : null}
       {blockers.length > 0 ? <p className="mt-3 text-xs leading-5 text-slate-500">Blocking gates: {blockers.join(", ")}</p> : null}
+    </article>
+  );
+}
+
+function OnboardingHandoffPanel({
+  handoff,
+  user,
+  onRouteChange
+}: {
+  handoff: OnboardingHandoffSnapshot;
+  user: BusinessUser;
+  onRouteChange: (path: string, objectId?: EntityId) => void;
+}) {
+  const { t } = useLocale();
+  const canOpenIntegration = ["integration_manager", "media_director", "operations_director"].includes(user.activeRole);
+
+  return (
+    <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <Handshake className="size-5 text-blue-600" aria-hidden="true" />
+            <h2 className="text-base font-semibold text-slate-950">{t("media.handoffTitle")}</h2>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-slate-500">{t("media.handoffDescription")}</p>
+        </div>
+        <StatusBadge tone={handoff.confirmed ? "success" : "warning"}>
+          {handoff.confirmed ? t("media.handoffConfirmed") : t("media.handoffPending")}
+        </StatusBadge>
+      </div>
+
+      <dl className="mt-5 grid gap-x-6 gap-y-4 border-y border-slate-200 py-4 md:grid-cols-2 xl:grid-cols-4">
+        <div>
+          <dt className="text-xs font-semibold text-slate-500">Publisher 360</dt>
+          <dd className="mt-1 break-words text-sm font-semibold text-slate-900">{handoff.publisher?.name ?? "-"}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold text-slate-500">{t("media.integrationProject")}</dt>
+          <dd className="mt-1 break-all text-sm font-semibold text-slate-900">{handoff.integrationProject?.id ?? "-"}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold text-slate-500">{t("media.owner")}</dt>
+          <dd className="mt-1 break-all text-sm font-semibold text-slate-900">
+            {handoff.candidate.owner_user_id ?? handoff.candidate.owner_role}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold text-slate-500">{t("media.dueDate")}</dt>
+          <dd className="mt-1 text-sm font-semibold text-slate-900">{handoff.dueDate ?? "-"}</dd>
+        </div>
+      </dl>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+        <p className="max-w-3xl text-sm leading-6 text-slate-600">{handoff.nextAction}</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+            type="button"
+            disabled={!handoff.publisher}
+            onClick={() => onRouteChange("/media/publishers/:id", handoff.publisher?.id)}
+          >
+            <ExternalLink className="size-4" aria-hidden="true" />
+            {t("media.openPublisher")}
+          </button>
+          <button
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
+            type="button"
+            disabled={!handoff.publisher || !handoff.integrationProject || !canOpenIntegration}
+            title={canOpenIntegration ? undefined : "Integration Manager, Media Director, or Operations Director role required."}
+            onClick={() => onRouteChange("/media/integration-wizard/:id", handoff.publisher?.id)}
+          >
+            <Wrench className="size-4" aria-hidden="true" />
+            {t("media.openIntegration")}
+          </button>
+        </div>
+      </div>
     </article>
   );
 }

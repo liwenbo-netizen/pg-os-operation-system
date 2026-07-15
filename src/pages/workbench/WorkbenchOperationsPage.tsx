@@ -6,6 +6,7 @@ import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
 import { workbenchService } from "../../services/workbenchService";
 import type {
+  AuditEvent,
   BusinessUser,
   ContractWorkflowState,
   FinanceWorkflowState,
@@ -30,6 +31,7 @@ type WorkbenchOperationsPageProps = {
   guideState: GuideWorkflowState;
   onStateChange: (state: WorkbenchWorkflowState) => void;
   onOpenTask: (task: WorkbenchTask) => void;
+  onAuditEvent: (event: AuditEvent) => void;
 };
 
 type ActionMessage = {
@@ -68,7 +70,8 @@ export function WorkbenchOperationsPage({
   contractState,
   guideState,
   onStateChange,
-  onOpenTask
+  onOpenTask,
+  onAuditEvent
 }: WorkbenchOperationsPageProps) {
   const { locale } = useLocale();
   const [selectedTaskId, setSelectedTaskId] = useState<string>("task-proposal-approval");
@@ -94,12 +97,18 @@ export function WorkbenchOperationsPage({
   function runAction(title: string, action: () => ReturnType<typeof workbenchService.startTask>) {
     const result = action();
     onStateChange(result.state);
+    if (result.auditEvent) {
+      onAuditEvent(result.auditEvent);
+    }
     setMessage({ title, guard: result.guard });
   }
 
   function startTask(task: WorkbenchTask) {
     const result = workbenchService.startTask(state, user, task.id, snapshot.tasks);
     onStateChange(result.state);
+    if (result.auditEvent) {
+      onAuditEvent(result.auditEvent);
+    }
     setMessage({ title: "Start task", guard: result.guard });
 
     if (result.guard.allowed) {

@@ -41,6 +41,15 @@ type EligibilityResult = {
   blockers: string[];
 };
 
+export type OnboardingHandoffSnapshot = {
+  candidate: TrustedSupplyCandidate;
+  publisher?: Publisher;
+  integrationProject?: IntegrationProject;
+  confirmed: boolean;
+  nextAction: string;
+  dueDate?: string;
+};
+
 export type MediaEcosystemOperationalQueueKey =
   | "ALL"
   | "NEEDS_REVIEW"
@@ -59,6 +68,7 @@ type MediaEcosystemOperationalQueue = {
 };
 
 export const mediaEcosystemBatchOperationLimit = 50;
+export const mediaEcosystemHandoffActivityEvent = "Onboarding handoff confirmed.";
 
 const priorityScoreCaps: MediaEcosystemPriorityScore = {
   strategic_value: 20,
@@ -340,6 +350,20 @@ function updateCandidate(
   };
 }
 
+function dateAfter(value: string | undefined, days: number) {
+  if (!value) {
+    return undefined;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 export class ChinaMediaEcosystemService {
   calculatePriorityScore(input: MediaEcosystemPriorityScore) {
     return Object.entries(priorityScoreCaps).reduce((total, [key, cap]) => {
@@ -357,6 +381,34 @@ export class ChinaMediaEcosystemService {
     return {
       eligible: blockers.length === 0,
       blockers
+    };
+  }
+
+  getOnboardingHandoff(state: MediaWorkflowState, candidateId: EntityId): OnboardingHandoffSnapshot | undefined {
+    const candidate = state.trustedSupplyCandidates.find((item) => item.id === candidateId);
+    if (!candidate) {
+      return undefined;
+    }
+
+    const publisher = candidate.publisher_id
+      ? state.publishers.find((item) => item.id === candidate.publisher_id)
+      : undefined;
+    const integrationProject = candidate.publisher_id
+      ? state.integrationProjects.find((item) => item.publisher_id === candidate.publisher_id)
+      : undefined;
+    const confirmed = state.mediaOutreachActivities.some(
+      (activity) => activity.lead_id === candidate.lead_id && activity.event === mediaEcosystemHandoffActivityEvent
+    );
+
+    return {
+      candidate,
+      publisher,
+      integrationProject,
+      confirmed,
+      nextAction: confirmed
+        ? "Integration Manager starts the technical integration wizard and records connection evidence."
+        : "Media owner confirms the Publisher 360 and integration handoff package.",
+      dueDate: dateAfter(candidate.onboarding_ready_at ?? candidate.created_at, confirmed ? 10 : 5)
     };
   }
 
@@ -1353,7 +1405,7 @@ export class ChinaMediaEcosystemService {
       {
         stage: "ONBOARDING_PROJECT_CREATED",
         linked_publisher_id: publisherId,
-        next_action: "Continue Publisher 360 readiness, technical integration, commercial test, and sales readiness gates.",
+        next_action: "Confirm the onboarding handoff package before Integration Manager starts technical integration.",
         last_touch_at: activity.created_at
       },
       activity
@@ -1364,6 +1416,144 @@ export class ChinaMediaEcosystemService {
       publisherId
     });
     const eventState = appendEvents(nextState, user, "china_media_ecosystem.onboarding_project.create", "trusted_supply_candidate", candidateId, guard, businessEvent);
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent
+    };
+  }
+
+  confirmOnboardingHandoff(state: MediaWorkflowState, user: BusinessUser, candidateId: EntityId): WorkflowResult {
+    const candidate = state.trustedSupplyCandidates.find((item) => item.id === candidateId);
+    if (!candidate) {
+      const guard = blocked("Trusted supply candidate was not found.", "NOT_FOUND");
+      return {
+        state: appendEvents(
+          state,
+          user,
+          "china_media_ecosystem.onboarding_handoff.create",
+          "trusted_supply_candidate",
+          candidateId,
+          guard
+        ),
+        guard
+      };
+    }
+
+    if (!canManageEcosystem(user)) {
+      const guard = blocked("Current role cannot confirm onboarding handoffs.", "ECOSYSTEM_MANAGE_FORBIDDEN", "media_manager");
+      return {
+        state: appendEvents(
+          state,
+          user,
+          "china_media_ecosystem.onboarding_handoff.create",
+          "trusted_supply_candidate",
+          candidateId,
+          guard
+        ),
+        guard
+      };
+    }
+
+    if (candidate.status !== "onboarding_project_created" || !candidate.publisher_id) {
+      const guard = blocked(
+        "Create the Publisher 360 onboarding project before confirming handoff.",
+        "ONBOARDING_PROJECT_REQUIRED"
+      );
+      return {
+        state: appendEvents(
+          state,
+          user,
+          "china_media_ecosystem.onboarding_handoff.create",
+          "trusted_supply_candidate",
+          candidateId,
+          guard
+        ),
+        guard
+      };
+    }
+
+    const publisher = state.publishers.find((item) => item.id === candidate.publisher_id);
+    const integrationProject = state.integrationProjects.find((item) => item.publisher_id === candidate.publisher_id);
+    if (!publisher || !integrationProject) {
+      const guard = blocked(
+        "Publisher 360 and integration project must both exist before handoff.",
+        "ONBOARDING_HANDOFF_ARTIFACTS_MISSING"
+      );
+      return {
+        state: appendEvents(
+          state,
+          user,
+          "china_media_ecosystem.onboarding_handoff.create",
+          "trusted_supply_candidate",
+          candidateId,
+          guard
+        ),
+        guard
+      };
+    }
+
+    const existingHandoff = state.mediaOutreachActivities.find(
+      (activity) => activity.lead_id === candidate.lead_id && activity.event === mediaEcosystemHandoffActivityEvent
+    );
+    if (existingHandoff) {
+      const guard = warning("Onboarding handoff was already confirmed.", "ONBOARDING_HANDOFF_EXISTS");
+      return {
+        state: appendEvents(
+          state,
+          user,
+          "china_media_ecosystem.onboarding_handoff.create",
+          "trusted_supply_candidate",
+          candidateId,
+          guard
+        ),
+        guard
+      };
+    }
+
+    const activity = createActivity(
+      candidate.lead_id,
+      user,
+      mediaEcosystemHandoffActivityEvent,
+      `Publisher ${publisher.id} handed to integration project ${integrationProject.id}.`
+    );
+    const nextAction = "Integration Manager starts the technical integration wizard and records connection evidence.";
+    const candidateState = updateCandidate(state, candidateId, {
+      evaluation_notes: "Publisher 360 and technical integration handoff confirmed; trusted supply evaluation remains open."
+    });
+    const nextState = updateLead(
+      candidateState,
+      candidate.lead_id,
+      {
+        next_action: nextAction,
+        last_touch_at: activity.created_at
+      },
+      activity
+    );
+    const guard = allowed("Onboarding handoff confirmed and Integration Manager task released.", "ONBOARDING_HANDOFF_CREATED");
+    const businessEvent = createBusinessEvent(
+      "china_media_ecosystem.onboarding_handoff_created",
+      "trusted_supply_candidate",
+      candidateId,
+      user.activeRole,
+      {
+        leadId: candidate.lead_id,
+        publisherId: publisher.id,
+        integrationProjectId: integrationProject.id,
+        integrationOwnerRole: "integration_manager"
+      }
+    );
+    const eventState = appendEvents(
+      nextState,
+      user,
+      "china_media_ecosystem.onboarding_handoff.create",
+      "trusted_supply_candidate",
+      candidateId,
+      guard,
+      businessEvent
+    );
 
     return {
       state: eventState,
