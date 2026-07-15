@@ -63,7 +63,9 @@
     "verify:uat-rls:dry-run": "node scripts/validate-supabase-uat-rls.mjs --dry-run",
     "verify:uat-rls": "node scripts/validate-supabase-uat-rls.mjs --live",
     "verify:uat-live-writes:dry-run": "node scripts/validate-supabase-live-workflow-writes.mjs --dry-run",
-    "verify:uat-live-writes": "node scripts/validate-supabase-live-workflow-writes.mjs --live"
+    "verify:uat-live-writes": "node scripts/validate-supabase-live-workflow-writes.mjs --live",
+    "uat:cm5b:live:dry-run": "node scripts/run-cm5b-live-uat.mjs --dry-run",
+    "uat:cm5b:live": "node scripts/run-cm5b-live-uat.mjs --apply"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
