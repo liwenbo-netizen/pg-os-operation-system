@@ -1383,7 +1383,9 @@ export class ChinaMediaEcosystemService {
         inventory_identified: Boolean(lead?.ad_inventory_identified),
         feasibility_review_required: lead?.integration_feasibility !== "feasible"
       },
-      notes: "Created from China media ecosystem trusted supply candidate."
+      notes: "Created from China media ecosystem trusted supply candidate.",
+      evidence: [],
+      next_action: "Start technical execution and record connection configuration evidence."
     };
     const activity = createActivity(candidate.lead_id, user, "Onboarding project created from trusted supply candidate.");
     const nextState = updateLead(

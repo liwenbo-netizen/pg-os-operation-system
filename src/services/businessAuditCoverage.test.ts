@@ -9,6 +9,10 @@ describe("businessAuditCoverage", () => {
   it("covers core Media, Sales, Campaign, Finance, and Contract workflow actions", () => {
     expect(CORE_BUSINESS_AUDIT_ACTIONS).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({ action: "integration.execution.start", module: "Media", criticality: "P0" }),
+        expect.objectContaining({ action: "integration.evidence.record", module: "Media", criticality: "P0" }),
+        expect.objectContaining({ action: "integration.blocker.set", module: "Media", criticality: "P0" }),
+        expect.objectContaining({ action: "integration.blocker.resolve", module: "Media", criticality: "P1" }),
         expect.objectContaining({ action: "publisher.create", module: "Media", criticality: "P0" }),
         expect.objectContaining({
           action: "china_media_ecosystem.manual_review",

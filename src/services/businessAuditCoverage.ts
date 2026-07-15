@@ -41,6 +41,34 @@ export const CORE_BUSINESS_AUDIT_ACTIONS: CoreBusinessAuditAction[] = [
     criticality: "P0"
   },
   {
+    action: "integration.execution.start",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Technical Integration Execution",
+    criticality: "P0"
+  },
+  {
+    action: "integration.evidence.record",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Technical Integration Evidence",
+    criticality: "P0"
+  },
+  {
+    action: "integration.blocker.set",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Technical Integration Blocker",
+    criticality: "P0"
+  },
+  {
+    action: "integration.blocker.resolve",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Technical Integration Blocker",
+    criticality: "P1"
+  },
+  {
     action: "commercial_test.create",
     objectType: "publisher",
     module: "Media",

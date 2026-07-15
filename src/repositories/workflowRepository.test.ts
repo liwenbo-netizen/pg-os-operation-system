@@ -630,6 +630,73 @@ describe("workflow repositories", () => {
     expect(fakeSupabase.writes.advertisers).toBeUndefined();
   });
 
+  it("round-trips CM-5D integration evidence, blocker, and readiness fields", async () => {
+    const publisherId = uuid(64);
+    const projectId = uuid(65);
+    const evidenceId = uuid(66);
+    const fakeSupabase = new FakeSupabase({
+      publishers: [
+        {
+          id: publisherId,
+          name: "Integration Publisher",
+          technical_live_status: "in_integration",
+          commercial_test_status: "not_started",
+          sales_scale_status: "not_allowed",
+          risk_level: "medium"
+        }
+      ],
+      integration_projects: [
+        {
+          id: projectId,
+          publisher_id: publisherId,
+          integration_type: "API",
+          status: "in_integration",
+          checklist: { connection_config_received: true },
+          evidence: [
+            {
+              id: evidenceId,
+              evidence_type: "connection_config",
+              title: "API credentials",
+              reference: "VAULT-001",
+              recorded_at: "2026-07-16T01:00:00.000Z",
+              recorded_by_user_id: uuid(67),
+              recorded_by_role: "integration_manager"
+            }
+          ],
+          blocker: "Waiting allowlist",
+          next_action: "Resolve allowlist blocker.",
+          notes: "CM-5D execution"
+        }
+      ]
+    });
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const { snapshot } = await repository.loadSnapshot();
+    const project = snapshot.mediaState.integrationProjects[0];
+
+    expect(project).toMatchObject({
+      id: projectId,
+      blocker: "Waiting allowlist",
+      next_action: "Resolve allowlist blocker."
+    });
+    expect(project.evidence?.[0]).toMatchObject({ evidence_type: "connection_config", reference: "VAULT-001" });
+
+    project.blocker = undefined;
+    project.next_action = "Record test request evidence.";
+    const result = await repository.saveSnapshot(snapshot, {
+      actor: { id: uuid(68), activeRole: "integration_manager" }
+    });
+
+    expect(result.savedTables).toContain("integration_projects");
+    expect(fakeSupabase.writes.integration_projects).toEqual([
+      expect.objectContaining({
+        id: projectId,
+        evidence: [expect.objectContaining({ id: evidenceId, reference: "VAULT-001" })],
+        blocker: undefined,
+        next_action: "Record test request evidence."
+      })
+    ]);
+  });
+
   it("dirty saves new business event rows without bulk audit log rewrites after a successful baseline save", async () => {
     const fakeSupabase = new FakeSupabase();
     const repository = new SupabaseWorkflowRepository(fakeSupabase);

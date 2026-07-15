@@ -4,6 +4,9 @@ import type {
   BusinessUser,
   CommercialTest,
   EntityId,
+  IntegrationEvidence,
+  IntegrationEvidenceType,
+  IntegrationProject,
   MediaWorkflowState,
   ModuleBusinessEvent,
   Publisher,
@@ -47,6 +50,23 @@ type ContractTermInput = {
   revenueShare?: number;
 };
 
+type TechnicalEvidenceInput = {
+  evidenceType: IntegrationEvidenceType;
+  title: string;
+  reference: string;
+};
+
+export const integrationEvidenceDefinitions: Array<{
+  type: IntegrationEvidenceType;
+  checklistKey: string;
+  label: string;
+}> = [
+  { type: "connection_config", checklistKey: "connection_config_received", label: "Connection configuration" },
+  { type: "test_request", checklistKey: "test_request_verified", label: "Test request" },
+  { type: "callback_log", checklistKey: "callback_verified", label: "Callback log" },
+  { type: "production_log", checklistKey: "production_logs_checked", label: "Production log" }
+];
+
 export function createInitialMediaWorkflowState(): MediaWorkflowState {
   return {
     publishers: fixtureRepository.publishers.map((publisher) => ({ ...publisher })),
@@ -55,7 +75,8 @@ export function createInitialMediaWorkflowState(): MediaWorkflowState {
     publisherContractTerms: fixtureRepository.publisherContractTerms.map((term) => ({ ...term })),
     integrationProjects: fixtureRepository.integrationProjects.map((project) => ({
       ...project,
-      checklist: { ...project.checklist }
+      checklist: { ...project.checklist },
+      evidence: project.evidence?.map((evidence) => ({ ...evidence })) ?? []
     })),
     commercialTests: fixtureRepository.commercialTests.map((test) => ({ ...test })),
     mediaEcosystemLeads: fixtureRepository.mediaEcosystemLeads.map((lead) => ({
@@ -157,6 +178,48 @@ function updatePublisher(
   };
 }
 
+function findIntegrationProject(state: MediaWorkflowState, publisherId: EntityId) {
+  return state.integrationProjects.find((project) => project.publisher_id === publisherId);
+}
+
+function updateIntegrationProject(
+  state: MediaWorkflowState,
+  projectId: EntityId,
+  patch: Partial<IntegrationProject>
+): MediaWorkflowState {
+  return {
+    ...state,
+    integrationProjects: state.integrationProjects.map((project) =>
+      project.id === projectId
+        ? {
+            ...project,
+            ...patch
+          }
+        : project
+    )
+  };
+}
+
+function canManageTechnicalExecution(user: BusinessUser) {
+  return rlsService.canWriteTable(user, "integration_projects") && rbacService.hasCapability(user, "integration.manage");
+}
+
+function checklistItemDone(project: IntegrationProject, evidenceType: IntegrationEvidenceType, checklistKey: string) {
+  if (evidenceType === "connection_config") {
+    return Boolean(
+      project.checklist[checklistKey] || project.checklist.vast_tag_received || project.checklist.sdk_configured
+    );
+  }
+
+  return Boolean(project.checklist[checklistKey]);
+}
+
+function nextMissingEvidence(project: IntegrationProject) {
+  return integrationEvidenceDefinitions.find(
+    (definition) => !checklistItemDone(project, definition.type, definition.checklistKey)
+  );
+}
+
 export class MediaWorkflowService {
   getPublisherSnapshot(state: MediaWorkflowState, publisherId: EntityId) {
     return {
@@ -167,6 +230,28 @@ export class MediaWorkflowService {
       integrationProjects: state.integrationProjects.filter((project) => project.publisher_id === publisherId),
       commercialTests: state.commercialTests.filter((test) => test.publisher_id === publisherId),
       diagnosticCases: state.diagnosticCases.filter((diagnosticCase) => diagnosticCase.publisher_id === publisherId)
+    };
+  }
+
+  getIntegrationExecutionSnapshot(state: MediaWorkflowState, publisherId: EntityId) {
+    const publisher = findPublisher(state, publisherId);
+    const project = findIntegrationProject(state, publisherId);
+    const evidence = project?.evidence ?? [];
+    const items = project
+      ? integrationEvidenceDefinitions.map((definition) => ({
+          ...definition,
+          done: checklistItemDone(project, definition.type, definition.checklistKey),
+          evidence: evidence.find((item) => item.evidence_type === definition.type)
+        }))
+      : [];
+
+    return {
+      publisher,
+      project,
+      items,
+      completed: items.filter((item) => item.done && item.evidence).length,
+      total: integrationEvidenceDefinitions.length,
+      ready: Boolean(project && !project.blocker && items.length > 0 && items.every((item) => item.done && item.evidence))
     };
   }
 
@@ -228,7 +313,9 @@ export class MediaWorkflowService {
       integration_type: input.integrationType,
       status: "pending_integration" as const,
       checklist: {},
-      notes: "Created from media onboarding."
+      notes: "Created from media onboarding.",
+      evidence: [],
+      next_action: "Start technical execution and record connection configuration evidence."
     };
     const nextState: MediaWorkflowState = {
       ...state,
@@ -329,7 +416,252 @@ export class MediaWorkflowService {
     };
   }
 
-  submitTechnicalValidation(state: MediaWorkflowState, user: BusinessUser, publisherId: EntityId): WorkflowResult {
+  startTechnicalExecution(state: MediaWorkflowState, user: BusinessUser, publisherId: EntityId): WorkflowResult {
+    const publisher = findPublisher(state, publisherId);
+    const project = findIntegrationProject(state, publisherId);
+    if (!publisher || !project) {
+      const guard = createBlocked("Publisher or integration project was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "integration.execution.start", publisherId, guard), guard };
+    }
+    if (!canManageTechnicalExecution(user)) {
+      const guard = createBlocked(
+        "Current role cannot start technical integration execution.",
+        "INTEGRATION_EXECUTION_FORBIDDEN",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "integration.execution.start", publisherId, guard), guard };
+    }
+    if (project.status === "technical_live_passed") {
+      const guard = createBlocked("Technical readiness has already passed.", "TECHNICAL_READINESS_ALREADY_PASSED");
+      return { state: appendEvents(state, user, "integration.execution.start", publisherId, guard), guard };
+    }
+    if (["in_integration", "technical_review"].includes(project.status)) {
+      const guard = createBlocked("Technical integration execution is already active.", "INTEGRATION_EXECUTION_ALREADY_STARTED");
+      return { state: appendEvents(state, user, "integration.execution.start", publisherId, guard), guard };
+    }
+    if (project.blocker || project.status === "technical_blocked") {
+      const guard = createBlocked(
+        "Resolve the active technical blocker before restarting execution.",
+        "TECHNICAL_BLOCKER_ACTIVE",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "integration.execution.start", publisherId, guard), guard };
+    }
+
+    const nextAction = nextMissingEvidence(project);
+    const nextState = updatePublisher(
+      updateIntegrationProject(state, project.id, {
+        status: "in_integration",
+        next_action: nextAction ? `Record ${nextAction.label.toLowerCase()} evidence.` : "Submit technical readiness review."
+      }),
+      publisherId,
+      { technical_live_status: "in_integration" }
+    );
+    const guard = createAllowed("Technical integration execution started.", "INTEGRATION_EXECUTION_STARTED");
+    const businessEvent = createBusinessEvent("integration.execution_started", publisherId, user.activeRole, {
+      integrationProjectId: project.id
+    });
+    const eventState = appendEvents(nextState, user, "integration.execution.start", publisherId, guard, businessEvent);
+
+    return { state: eventState, guard, auditEvent: eventState.auditEvents[0], businessEvent };
+  }
+
+  recordTechnicalEvidence(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    publisherId: EntityId,
+    input: TechnicalEvidenceInput
+  ): WorkflowResult {
+    const publisher = findPublisher(state, publisherId);
+    const project = findIntegrationProject(state, publisherId);
+    if (!publisher || !project) {
+      const guard = createBlocked("Publisher or integration project was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "integration.evidence.record", publisherId, guard), guard };
+    }
+    if (!canManageTechnicalExecution(user)) {
+      const guard = createBlocked(
+        "Current role cannot record technical evidence.",
+        "INTEGRATION_EVIDENCE_FORBIDDEN",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "integration.evidence.record", publisherId, guard), guard };
+    }
+    if (!["in_integration", "technical_review"].includes(project.status)) {
+      const guard = createBlocked(
+        "Start technical execution before recording evidence.",
+        "INTEGRATION_EXECUTION_NOT_STARTED",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "integration.evidence.record", publisherId, guard), guard };
+    }
+    if (project.blocker || project.status === "technical_blocked") {
+      const guard = createBlocked("Resolve the active blocker before recording evidence.", "TECHNICAL_BLOCKER_ACTIVE");
+      return { state: appendEvents(state, user, "integration.evidence.record", publisherId, guard), guard };
+    }
+    if (!input.title.trim() || !input.reference.trim()) {
+      const guard = createBlocked("Evidence title and reference are required.", "INTEGRATION_EVIDENCE_REQUIRED");
+      return { state: appendEvents(state, user, "integration.evidence.record", publisherId, guard), guard };
+    }
+
+    const definition = integrationEvidenceDefinitions.find((item) => item.type === input.evidenceType);
+    if (!definition) {
+      const guard = createBlocked("Unsupported integration evidence type.", "INTEGRATION_EVIDENCE_TYPE_INVALID");
+      return { state: appendEvents(state, user, "integration.evidence.record", publisherId, guard), guard };
+    }
+    const existing = (project.evidence ?? []).find((item) => item.evidence_type === input.evidenceType);
+    const evidence: IntegrationEvidence = {
+      id: existing?.id ?? crypto.randomUUID(),
+      evidence_type: input.evidenceType,
+      title: input.title.trim(),
+      reference: input.reference.trim(),
+      recorded_at: new Date().toISOString(),
+      recorded_by_user_id: user.id,
+      recorded_by_role: user.activeRole
+    };
+    const nextEvidence = [evidence, ...(project.evidence ?? []).filter((item) => item.evidence_type !== input.evidenceType)];
+    const nextChecklist = { ...project.checklist, [definition.checklistKey]: true };
+    const projectWithEvidence = { ...project, evidence: nextEvidence, checklist: nextChecklist };
+    const nextMissing = nextMissingEvidence(projectWithEvidence);
+    const nextState = updatePublisher(
+      updateIntegrationProject(state, project.id, {
+        evidence: nextEvidence,
+        checklist: nextChecklist,
+        status: nextMissing ? "in_integration" : "technical_review",
+        next_action: nextMissing ? `Record ${nextMissing.label.toLowerCase()} evidence.` : "Submit technical readiness review."
+      }),
+      publisherId,
+      { technical_live_status: nextMissing ? "in_integration" : "technical_review" }
+    );
+    const guard = createAllowed("Technical evidence recorded.", "INTEGRATION_EVIDENCE_RECORDED");
+    const businessEvent = createBusinessEvent("integration.evidence_recorded", publisherId, user.activeRole, {
+      integrationProjectId: project.id,
+      evidenceType: input.evidenceType,
+      evidenceId: evidence.id
+    });
+    const eventState = appendEvents(nextState, user, "integration.evidence.record", publisherId, guard, businessEvent);
+
+    return { state: eventState, guard, auditEvent: eventState.auditEvents[0], businessEvent };
+  }
+
+  setTechnicalBlocker(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    publisherId: EntityId,
+    blocker: string
+  ): WorkflowResult {
+    const publisher = findPublisher(state, publisherId);
+    const project = findIntegrationProject(state, publisherId);
+    if (!publisher || !project) {
+      const guard = createBlocked("Publisher or integration project was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "integration.blocker.set", publisherId, guard), guard };
+    }
+    if (project.status === "technical_live_passed") {
+      const guard = createBlocked("Passed technical readiness cannot be blocked.", "TECHNICAL_READINESS_ALREADY_PASSED");
+      return { state: appendEvents(state, user, "integration.blocker.set", publisherId, guard), guard };
+    }
+    if (!canManageTechnicalExecution(user)) {
+      const guard = createBlocked("Current role cannot set technical blockers.", "INTEGRATION_BLOCKER_FORBIDDEN", "integration_manager");
+      return { state: appendEvents(state, user, "integration.blocker.set", publisherId, guard), guard };
+    }
+    if (!blocker.trim()) {
+      const guard = createBlocked("A concrete blocker description is required.", "INTEGRATION_BLOCKER_REQUIRED");
+      return { state: appendEvents(state, user, "integration.blocker.set", publisherId, guard), guard };
+    }
+
+    const nextState = updatePublisher(
+      updateIntegrationProject(state, project.id, {
+        status: "technical_blocked",
+        blocker: blocker.trim(),
+        next_action: "Resolve the active technical blocker, then resume evidence collection."
+      }),
+      publisherId,
+      { technical_live_status: "technical_blocked" }
+    );
+    const guard = createAllowed("Technical blocker recorded.", "INTEGRATION_BLOCKER_SET");
+    const businessEvent = createBusinessEvent("integration.blocked", publisherId, user.activeRole, {
+      integrationProjectId: project.id,
+      blocker: blocker.trim()
+    });
+    const eventState = appendEvents(nextState, user, "integration.blocker.set", publisherId, guard, businessEvent);
+
+    return { state: eventState, guard, auditEvent: eventState.auditEvents[0], businessEvent };
+  }
+
+  resolveTechnicalBlocker(state: MediaWorkflowState, user: BusinessUser, publisherId: EntityId): WorkflowResult {
+    const publisher = findPublisher(state, publisherId);
+    const project = findIntegrationProject(state, publisherId);
+    if (!publisher || !project) {
+      const guard = createBlocked("Publisher or integration project was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "integration.blocker.resolve", publisherId, guard), guard };
+    }
+    if (!canManageTechnicalExecution(user)) {
+      const guard = createBlocked(
+        "Current role cannot resolve technical blockers.",
+        "INTEGRATION_BLOCKER_FORBIDDEN",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "integration.blocker.resolve", publisherId, guard), guard };
+    }
+    if (!project.blocker && project.status !== "technical_blocked") {
+      const guard = createBlocked("No active technical blocker exists.", "INTEGRATION_BLOCKER_NOT_FOUND");
+      return { state: appendEvents(state, user, "integration.blocker.resolve", publisherId, guard), guard };
+    }
+
+    const nextMissing = nextMissingEvidence(project);
+    const nextState = updatePublisher(
+      updateIntegrationProject(state, project.id, {
+        status: nextMissing ? "in_integration" : "technical_review",
+        blocker: undefined,
+        next_action: nextMissing ? `Record ${nextMissing.label.toLowerCase()} evidence.` : "Submit technical readiness review."
+      }),
+      publisherId,
+      { technical_live_status: nextMissing ? "in_integration" : "technical_review" }
+    );
+    const guard = createAllowed("Technical blocker resolved.", "INTEGRATION_BLOCKER_RESOLVED");
+    const businessEvent = createBusinessEvent("integration.blocker_resolved", publisherId, user.activeRole, {
+      integrationProjectId: project.id
+    });
+    const eventState = appendEvents(nextState, user, "integration.blocker.resolve", publisherId, guard, businessEvent);
+
+    return { state: eventState, guard, auditEvent: eventState.auditEvents[0], businessEvent };
+  }
+
+  submitTechnicalReadiness(state: MediaWorkflowState, user: BusinessUser, publisherId: EntityId): WorkflowResult {
+    const project = findIntegrationProject(state, publisherId);
+    if (!project) {
+      const guard = createBlocked("Integration project was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "publisher.technical_live.submit", publisherId, guard), guard };
+    }
+    if (project.status === "technical_live_passed") {
+      const guard = createBlocked("Technical readiness has already passed.", "TECHNICAL_READINESS_ALREADY_PASSED");
+      return { state: appendEvents(state, user, "publisher.technical_live.submit", publisherId, guard), guard };
+    }
+    if (!canManageTechnicalExecution(user)) {
+      const guard = createBlocked(
+        "Current role cannot submit technical readiness.",
+        "INTEGRATION_READINESS_FORBIDDEN",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "publisher.technical_live.submit", publisherId, guard), guard };
+    }
+    if (project.blocker || project.status === "technical_blocked") {
+      const guard = createBlocked("Resolve the active technical blocker before readiness review.", "TECHNICAL_BLOCKER_ACTIVE");
+      return { state: appendEvents(state, user, "publisher.technical_live.submit", publisherId, guard), guard };
+    }
+    const evidenceTypes = new Set((project.evidence ?? []).map((item) => item.evidence_type));
+    const missing = integrationEvidenceDefinitions.filter(
+      (definition) =>
+        !checklistItemDone(project, definition.type, definition.checklistKey) || !evidenceTypes.has(definition.type)
+    );
+    if (missing.length > 0) {
+      const guard = createBlocked(
+        `Technical readiness requires evidence for: ${missing.map((item) => item.label).join(", ")}.`,
+        "TECHNICAL_EVIDENCE_INCOMPLETE",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "publisher.technical_live.submit", publisherId, guard), guard };
+    }
+
     const guard = getGuardService(state).canUpdatePublisherReadiness(
       user,
       publisherId,
@@ -352,11 +684,12 @@ export class MediaWorkflowService {
               ...project,
               status: "technical_live_passed" as const,
               checklist: {
-                ...project.checklist,
-                callback_verified: true,
-                production_logs_checked: true
+                ...project.checklist
               },
-              notes: "Production validation submitted and passed."
+              blocker: undefined,
+              next_action: "Technical readiness passed. Continue to commercial validation.",
+              readiness_reviewed_at: new Date().toISOString(),
+              notes: "Production validation evidence reviewed and passed."
             }
           : project
       )
@@ -370,6 +703,10 @@ export class MediaWorkflowService {
       auditEvent: eventState.auditEvents[0],
       businessEvent
     };
+  }
+
+  submitTechnicalValidation(state: MediaWorkflowState, user: BusinessUser, publisherId: EntityId): WorkflowResult {
+    return this.submitTechnicalReadiness(state, user, publisherId);
   }
 
   createCommercialTest(state: MediaWorkflowState, user: BusinessUser, publisherId: EntityId): WorkflowResult {

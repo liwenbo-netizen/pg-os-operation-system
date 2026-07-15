@@ -89,6 +89,22 @@ export type IntegrationProject = {
   status: TechnicalLiveStatus;
   checklist: Record<string, boolean>;
   notes: string;
+  evidence?: IntegrationEvidence[];
+  blocker?: string;
+  next_action?: string;
+  readiness_reviewed_at?: string;
+};
+
+export type IntegrationEvidenceType = "connection_config" | "test_request" | "callback_log" | "production_log";
+
+export type IntegrationEvidence = {
+  id: EntityId;
+  evidence_type: IntegrationEvidenceType;
+  title: string;
+  reference: string;
+  recorded_at: string;
+  recorded_by_user_id: UserId;
+  recorded_by_role: RoleCode;
 };
 
 export type CommercialTest = {

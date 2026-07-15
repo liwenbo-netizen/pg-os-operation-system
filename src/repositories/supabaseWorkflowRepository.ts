@@ -9,6 +9,7 @@ import type {
   CommercialTest,
   DiagnosticCase,
   DiagnosticEvidence,
+  IntegrationEvidence,
   IntegrationProject,
   MediaEcosystemLead,
   MediaOutreachActivity,
@@ -256,7 +257,11 @@ function mapIntegrationProject(row: Row): IntegrationProject {
     integration_type: stringValue(row.integration_type),
     status: stringValue(row.status, "pending_integration") as IntegrationProject["status"],
     checklist: objectValue(row.checklist) as Record<string, boolean>,
-    notes: stringValue(row.notes)
+    notes: stringValue(row.notes),
+    evidence: arrayValue<IntegrationEvidence>(row.evidence),
+    blocker: optionalString(row.blocker),
+    next_action: optionalString(row.next_action),
+    readiness_reviewed_at: optionalString(row.readiness_reviewed_at)
   };
 }
 
@@ -1019,7 +1024,11 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           integration_type: project.integration_type,
           status: project.status,
           notes: project.notes,
-          checklist: project.checklist
+          checklist: project.checklist,
+          evidence: project.evidence ?? [],
+          blocker: project.blocker,
+          next_action: project.next_action,
+          readiness_reviewed_at: project.readiness_reviewed_at
         })),
         uuidFields: ["publisher_id"]
       },

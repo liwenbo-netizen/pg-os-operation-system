@@ -25,11 +25,12 @@ import {
   type MediaEcosystemOperationalQueueKey,
   type OnboardingHandoffSnapshot
 } from "../../services/chinaMediaEcosystemService";
-import { mediaWorkflowService } from "../../services/mediaWorkflowService";
+import { integrationEvidenceDefinitions, mediaWorkflowService } from "../../services/mediaWorkflowService";
 import type {
   AuditEvent,
   BusinessUser,
   EntityId,
+  IntegrationEvidenceType,
   MediaEcosystemLead,
   MediaEcosystemPriorityScore,
   MediaEcosystemTrack,
@@ -438,8 +439,28 @@ export function MediaExperiencePage({
           <IntegrationWizard
             publisher={selectedPublisher}
             state={state}
+            onStart={() =>
+              runAction(t("integration.startExecution"), () =>
+                mediaWorkflowService.startTechnicalExecution(state, user, selectedPublisher.id)
+              )
+            }
+            onRecordEvidence={(input) =>
+              runAction(t("integration.recordEvidence"), () =>
+                mediaWorkflowService.recordTechnicalEvidence(state, user, selectedPublisher.id, input)
+              )
+            }
+            onSetBlocker={(blocker) =>
+              runAction(t("integration.setBlocker"), () =>
+                mediaWorkflowService.setTechnicalBlocker(state, user, selectedPublisher.id, blocker)
+              )
+            }
+            onResolveBlocker={() =>
+              runAction(t("integration.resolveBlocker"), () =>
+                mediaWorkflowService.resolveTechnicalBlocker(state, user, selectedPublisher.id)
+              )
+            }
             onSubmit={() =>
-              runAction("Submit production validation", () =>
+              runAction(t("integration.submitReadiness"), () =>
                 mediaWorkflowService.submitTechnicalValidation(state, user, selectedPublisher.id)
               )
             }
@@ -1649,39 +1670,189 @@ function Publisher360({
 function IntegrationWizard({
   publisher,
   state,
+  onStart,
+  onRecordEvidence,
+  onSetBlocker,
+  onResolveBlocker,
   onSubmit
 }: {
   publisher: Publisher;
   state: MediaWorkflowState;
+  onStart: () => void;
+  onRecordEvidence: (input: { evidenceType: IntegrationEvidenceType; title: string; reference: string }) => void;
+  onSetBlocker: (blocker: string) => void;
+  onResolveBlocker: () => void;
   onSubmit: () => void;
 }) {
-  const project = state.integrationProjects.find((candidate) => candidate.publisher_id === publisher.id);
-  const steps = [
-    ["VAST / SDK config", Boolean(project?.checklist.vast_tag_received ?? project?.checklist.sdk_configured)],
-    ["Callback verified", Boolean(project?.checklist.callback_verified)],
-    ["Production logs checked", Boolean(project?.checklist.production_logs_checked)]
-  ] as const;
+  const { t } = useLocale();
+  const snapshot = mediaWorkflowService.getIntegrationExecutionSnapshot(state, publisher.id);
+  const project = snapshot.project;
+  const [evidenceType, setEvidenceType] = useState<IntegrationEvidenceType>("connection_config");
+  const [evidenceTitle, setEvidenceTitle] = useState("");
+  const [evidenceReference, setEvidenceReference] = useState("");
+  const [blocker, setBlocker] = useState("");
+  const executionActive = Boolean(project && ["in_integration", "technical_review"].includes(project.status));
+  const executionStartable = Boolean(project && ["draft", "pending_integration"].includes(project.status));
+  const readinessPassed = project?.status === "technical_live_passed";
+
+  function evidenceLabel(type: IntegrationEvidenceType) {
+    if (type === "connection_config") return t("integration.connectionConfig");
+    if (type === "test_request") return t("integration.testRequest");
+    if (type === "callback_log") return t("integration.callbackLog");
+    return t("integration.productionLog");
+  }
+
+  function recordEvidence() {
+    onRecordEvidence({
+      evidenceType,
+      title: evidenceTitle || evidenceLabel(evidenceType),
+      reference: evidenceReference
+    });
+    setEvidenceTitle("");
+    setEvidenceReference("");
+  }
 
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
+    <article className="rounded-lg border border-slate-200 bg-white shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xl font-semibold text-slate-950">Technical go-live wizard</p>
+        <div className="p-5">
+          <p className="text-xl font-semibold text-slate-950">{t("integration.title")}</p>
           <p className="mt-1 text-sm text-slate-500">{publisher.name}</p>
         </div>
-        <Wrench className="size-6 text-blue-600" aria-hidden="true" />
+        <Wrench className="mr-5 mt-5 size-6 text-blue-600" aria-hidden="true" />
       </div>
-      <div className="mt-5 space-y-3">
-        {steps.map(([label, done]) => (
-          <div key={label} className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <span className="text-sm font-medium text-slate-700">{label}</span>
-            <StatusBadge tone={done ? "success" : "warning"}>{done ? "done" : "pending"}</StatusBadge>
+
+      <div className="grid border-y border-slate-200 md:grid-cols-3">
+        <div className="p-4">
+          <p className="text-xs font-semibold text-slate-500">{t("integration.status")}</p>
+          <div className="mt-2"><StatusBadge tone={toneForStatus(project?.status ?? "pending_integration")}>{project?.status ?? "pending_integration"}</StatusBadge></div>
+        </div>
+        <div className="border-slate-200 p-4 md:border-x">
+          <p className="text-xs font-semibold text-slate-500">{t("integration.progress")}</p>
+          <p className="mt-2 text-lg font-semibold text-slate-950">{snapshot.completed} / {snapshot.total}</p>
+        </div>
+        <div className="p-4">
+          <p className="text-xs font-semibold text-slate-500">{t("integration.nextAction")}</p>
+          <p className="mt-2 text-sm leading-5 text-slate-700">{project?.next_action ?? t("integration.startExecution")}</p>
+        </div>
+      </div>
+
+      <div className="p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-slate-950">{t("integration.evidence")}</h2>
+          <StatusBadge tone={snapshot.ready ? "success" : "warning"}>
+            {snapshot.ready ? t("integration.ready") : t("integration.notReady")}
+          </StatusBadge>
+        </div>
+        <div className="mt-4 divide-y divide-slate-200 border-y border-slate-200">
+          {snapshot.items.map((item) => (
+            <div key={item.type} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <div>
+                <p className="text-sm font-medium text-slate-800">{evidenceLabel(item.type)}</p>
+                <p className="mt-1 text-xs text-slate-500">{item.evidence?.reference ?? item.checklistKey}</p>
+              </div>
+              <StatusBadge tone={item.done && item.evidence ? "success" : "warning"}>
+                {item.done && item.evidence ? t("integration.recorded") : t("integration.required")}
+              </StatusBadge>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <label className="text-sm font-medium text-slate-700">
+            {t("integration.evidenceType")}
+            <select
+              className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"
+              value={evidenceType}
+              onChange={(event) => setEvidenceType(event.target.value as IntegrationEvidenceType)}
+            >
+              {integrationEvidenceDefinitions.map((item) => (
+                <option key={item.type} value={item.type}>{evidenceLabel(item.type)}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm font-medium text-slate-700">
+            {t("integration.evidenceTitle")}
+            <input
+              className="mt-2 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm"
+              value={evidenceTitle}
+              onChange={(event) => setEvidenceTitle(event.target.value)}
+              placeholder={evidenceLabel(evidenceType)}
+            />
+          </label>
+        </div>
+        <label className="mt-3 block text-sm font-medium text-slate-700">
+          {t("integration.evidenceReference")}
+          <input
+            className="mt-2 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm"
+            value={evidenceReference}
+            onChange={(event) => setEvidenceReference(event.target.value)}
+            placeholder="LOG-2026-001 / https://..."
+          />
+        </label>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            className="h-10 rounded-lg border border-blue-200 px-4 text-sm font-semibold text-blue-700 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300"
+            type="button"
+            onClick={onStart}
+            disabled={!executionStartable}
+          >
+            {t("integration.startExecution")}
+          </button>
+          <button
+            className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+            type="button"
+            onClick={recordEvidence}
+            disabled={!executionActive || Boolean(project?.blocker) || !evidenceReference.trim()}
+          >
+            {t("integration.recordEvidence")}
+          </button>
+        </div>
+      </div>
+
+      <div className="border-t border-slate-200 p-5">
+        <h2 className="text-base font-semibold text-slate-950">{t("integration.blocker")}</h2>
+        {project?.blocker ? (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-l-4 border-red-500 bg-red-50 px-4 py-3">
+            <p className="text-sm text-red-800">{project.blocker}</p>
+            <button className="h-9 rounded-lg border border-red-200 bg-white px-3 text-sm font-semibold text-red-700" type="button" onClick={onResolveBlocker}>
+              {t("integration.resolveBlocker")}
+            </button>
           </div>
-        ))}
+        ) : (
+          <p className="mt-2 text-sm text-emerald-700">{t("integration.noBlocker")}</p>
+        )}
+        <div className="mt-3 flex flex-col gap-2 md:flex-row">
+          <input
+            className="h-10 flex-1 rounded-lg border border-slate-200 px-3 text-sm"
+            value={blocker}
+            onChange={(event) => setBlocker(event.target.value)}
+            placeholder={t("integration.blockerPlaceholder")}
+          />
+          <button
+            className="h-10 rounded-lg border border-red-200 px-4 text-sm font-semibold text-red-700 disabled:cursor-not-allowed disabled:text-slate-300"
+            type="button"
+            onClick={() => {
+              onSetBlocker(blocker);
+              setBlocker("");
+            }}
+            disabled={readinessPassed || !blocker.trim()}
+          >
+            {t("integration.setBlocker")}
+          </button>
+        </div>
       </div>
-      <button className="mt-5 h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white" type="button" onClick={onSubmit}>
-        Submit production validation
-      </button>
+
+      <div className="border-t border-slate-200 p-5">
+        <button
+          className="h-10 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+          type="button"
+          onClick={onSubmit}
+          disabled={!snapshot.ready || readinessPassed}
+        >
+          {t("integration.submitReadiness")}
+        </button>
+      </div>
     </article>
   );
 }
