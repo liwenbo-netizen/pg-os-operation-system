@@ -40,7 +40,7 @@ import type {
   TrustedSupplyCandidate
 } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
-import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
+import { getRoleDisplayName, getRouteDisplayTitle, getRoutePageType, useLocale } from "../../lib/i18n";
 
 type MediaExperiencePageProps = {
   route: AppRoute;
@@ -303,7 +303,7 @@ export function MediaExperiencePage({
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <StatusBadge tone="info">{route.service}</StatusBadge>
+            <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
             <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
           </div>
           <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>

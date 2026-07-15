@@ -7,7 +7,7 @@ import type { AppRoute } from "../../routes/routes";
 import { diagnosticWorkflowService } from "../../services/diagnosticWorkflowService";
 import type { BusinessUser, EntityId, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
-import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
+import { getRoleDisplayName, getRouteDisplayTitle, getRoutePageType, useLocale } from "../../lib/i18n";
 
 type DiagnosticCasePageProps = {
   route: AppRoute;
@@ -68,7 +68,7 @@ export function DiagnosticCasePage({ route, role, user, state, salesState, onSta
   if (!selectedCase) {
     return (
       <section className="space-y-4">
-        <StatusBadge tone="info">{route.service}</StatusBadge>
+        <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
         <h1 className="text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
         <p className="text-sm text-slate-500">No diagnostic cases are available.</p>
       </section>
@@ -80,7 +80,7 @@ export function DiagnosticCasePage({ route, role, user, state, salesState, onSta
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge tone="info">{route.service}</StatusBadge>
+            <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
             <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
             <StatusBadge tone={statusTone[selectedCase.status]}>{selectedCase.status}</StatusBadge>
           </div>

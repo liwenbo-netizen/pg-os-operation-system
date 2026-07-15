@@ -1,9 +1,40 @@
-import { useState, type ReactNode } from "react";
-import { AlertTriangle, Clock3, Database, Languages, LogOut, ShieldCheck, Table2, UserCheck, Wrench, X } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowRight,
+  BookOpen,
+  BriefcaseBusiness,
+  ChevronRight,
+  CircleDollarSign,
+  Clock3,
+  Database,
+  FileSignature,
+  Gauge,
+  Languages,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  RadioTower,
+  Search,
+  Settings2,
+  ShieldCheck,
+  Table2,
+  UserCheck,
+  Wrench,
+  X,
+  type LucideIcon
+} from "lucide-react";
 import type { RoleCode } from "../constants/roles";
 import type { AppRoute } from "../routes/routes";
 import { cn } from "../lib/cn";
-import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../lib/i18n";
+import {
+  type AppLocale,
+  getRoleDisplayName,
+  getRouteDisplayTitle,
+  getRoutePrimaryAction,
+  useLocale
+} from "../lib/i18n";
 import type { WarningDiagnostic } from "../services/warningDiagnosticsService";
 
 type AppShellProps = {
@@ -33,6 +64,52 @@ type RepositoryDiagnosticsPanelProps = {
   diagnostics: WarningDiagnostic[];
   onClose: () => void;
 };
+
+export type NavigationGroupId = "workspace" | "supply" | "revenue" | "governance";
+
+const navigationGroupOrder: NavigationGroupId[] = ["workspace", "supply", "revenue", "governance"];
+
+export function getNavigationGroup(route: AppRoute): NavigationGroupId {
+  if (route.module === "Workbench") return "workspace";
+  if (["Media", "Diagnostics"].includes(route.module)) return "supply";
+  if (["Sales", "Proposals", "Campaigns", "Finance", "Contracts"].includes(route.module)) return "revenue";
+  return "governance";
+}
+
+export function groupRoutesForNavigation(routes: AppRoute[], query = "", locale: AppLocale = "en-US") {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const matchingRoutes = normalizedQuery
+    ? routes.filter((route) =>
+        [
+          route.title,
+          getRouteDisplayTitle(route, locale),
+          route.module,
+          route.pageType,
+          route.primaryAction,
+          getRoutePrimaryAction(route, locale)
+        ]
+          .join(" ")
+          .toLocaleLowerCase()
+          .includes(normalizedQuery)
+      )
+    : routes;
+
+  return navigationGroupOrder
+    .map((id) => ({ id, routes: matchingRoutes.filter((route) => getNavigationGroup(route) === id) }))
+    .filter((group) => group.routes.length > 0);
+}
+
+function getRouteIcon(route: AppRoute): LucideIcon {
+  if (route.module === "Workbench") return LayoutDashboard;
+  if (route.module === "Media") return RadioTower;
+  if (route.module === "Diagnostics") return Activity;
+  if (["Sales", "Proposals", "Campaigns"].includes(route.module)) return BriefcaseBusiness;
+  if (route.module === "Finance") return CircleDollarSign;
+  if (route.module === "Contracts") return FileSignature;
+  if (route.module === "Guide") return BookOpen;
+  if (route.module === "Observability") return Gauge;
+  return Settings2;
+}
 
 function RepositoryDiagnosticsPanel({ detail, diagnostics, onClose }: RepositoryDiagnosticsPanelProps) {
   const { t } = useLocale();
@@ -136,71 +213,206 @@ export function AppShell({
   authSessionStatus
 }: AppShellProps) {
   const [isRepositoryPanelOpen, setIsRepositoryPanelOpen] = useState(false);
+  const [isNavigationOpen, setIsNavigationOpen] = useState(false);
+  const [navigationQuery, setNavigationQuery] = useState("");
   const { locale, setLocale, t } = useLocale();
   const repositoryDiagnostics = repositoryStatus?.diagnostics ?? [];
+  const activeRoute = routes.find((route) => route.path === activePath) ?? routes[0];
+  const navigationGroups = useMemo(
+    () => groupRoutesForNavigation(routes, navigationQuery, locale),
+    [locale, navigationQuery, routes]
+  );
+  const workbenchRoute = routes.find((route) => route.module === "Workbench");
+
+  useEffect(() => {
+    setIsNavigationOpen(false);
+  }, [activePath]);
+
+  const getGroupLabel = (groupId: NavigationGroupId) => {
+    const labels: Record<NavigationGroupId, string> = {
+      workspace: t("shell.groupWorkspace"),
+      supply: t("shell.groupSupply"),
+      revenue: t("shell.groupRevenue"),
+      governance: t("shell.groupGovernance")
+    };
+    return labels[groupId];
+  };
+
+  const navigate = (path: string) => {
+    onRouteChange(path);
+    setIsNavigationOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-pgos-bg text-pgos-text">
-      <div className="grid min-h-screen grid-cols-[248px_1fr]">
-        <aside className="border-r border-slate-200 bg-white px-4 py-5">
-          <div className="flex items-center gap-3 px-2">
-            <div className="flex size-10 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
-              PG
+      {isNavigationOpen ? (
+        <button
+          className="fixed inset-0 z-30 bg-slate-950/30 lg:hidden"
+          type="button"
+          aria-label={t("shell.closeMenu")}
+          onClick={() => setIsNavigationOpen(false)}
+        />
+      ) : null}
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 w-[280px] border-r border-slate-200 bg-white transition-transform duration-200 lg:translate-x-0",
+          isNavigationOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex h-[72px] shrink-0 items-center justify-between border-b border-slate-100 px-5">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
+                PG
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-950">PG OS</p>
+                <p className="text-xs text-slate-500">{t("shell.operationSystem")}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900">PG OS</p>
-              <p className="text-xs text-slate-500">{t("shell.operationSystem")}</p>
-            </div>
+            <button
+              className="inline-flex size-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:hidden"
+              type="button"
+              aria-label={t("shell.closeMenu")}
+              onClick={() => setIsNavigationOpen(false)}
+            >
+              <X className="size-5" aria-hidden="true" />
+            </button>
           </div>
 
-          <nav className="mt-8 space-y-1" aria-label={t("shell.guardedRoutes")}>
-            {routes.map((route) => (
-              <button
-                key={route.path}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-medium transition",
-                  activePath === route.path
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                )}
-                type="button"
-                onClick={() => onRouteChange(route.path)}
-              >
-                <span>{getRouteDisplayTitle(route, locale)}</span>
-                <span className="text-xs text-slate-400">{route.priority}</span>
-              </button>
-            ))}
-          </nav>
-        </aside>
+          <div className="border-b border-slate-100 px-4 py-4">
+            <label className="relative block" htmlFor="navigation-search">
+              <span className="sr-only">{t("shell.searchNavigation")}</span>
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+                aria-hidden="true"
+              />
+              <input
+                id="navigation-search"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                type="search"
+                value={navigationQuery}
+                placeholder={t("shell.searchNavigation")}
+                onChange={(event) => setNavigationQuery(event.target.value)}
+              />
+            </label>
+          </div>
 
-        <div className="min-w-0">
-          <header className="flex h-[72px] items-center justify-between border-b border-slate-200 bg-white px-6">
-            <div>
-              <p className="text-xs font-semibold tracking-normal text-slate-500">{t("shell.activeRole")}</p>
-              <p className="text-sm font-semibold text-slate-900">{getRoleDisplayName(activeRole, locale)}</p>
+          <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label={t("shell.navigation")}>
+            {navigationGroups.length > 0 ? (
+              <div className="space-y-6">
+                {navigationGroups.map((group) => (
+                  <section key={group.id} aria-labelledby={`nav-group-${group.id}`}>
+                    <h2
+                      id={`nav-group-${group.id}`}
+                      className="mb-2 px-3 text-[11px] font-semibold uppercase text-slate-400"
+                    >
+                      {getGroupLabel(group.id)}
+                    </h2>
+                    <div className="space-y-1">
+                      {group.routes.map((route) => {
+                        const RouteIcon = getRouteIcon(route);
+                        const isActive = activePath === route.path;
+                        return (
+                          <button
+                            key={route.path}
+                            className={cn(
+                              "group flex min-h-10 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium transition",
+                              isActive
+                                ? "bg-blue-50 text-blue-700"
+                                : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                            )}
+                            type="button"
+                            aria-current={isActive ? "page" : undefined}
+                            onClick={() => navigate(route.path)}
+                          >
+                            <RouteIcon
+                              className={cn(
+                                "size-4 shrink-0",
+                                isActive ? "text-blue-600" : "text-slate-400 group-hover:text-slate-700"
+                              )}
+                              aria-hidden="true"
+                            />
+                            <span className="min-w-0 flex-1 leading-5">{getRouteDisplayTitle(route, locale)}</span>
+                            {isActive ? <ChevronRight className="size-4 shrink-0" aria-hidden="true" /> : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className="px-3 py-8 text-center text-sm text-slate-500">{t("shell.noNavigationResults")}</div>
+            )}
+          </nav>
+
+          <div className="shrink-0 border-t border-slate-100 p-4">
+            <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-3">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
+                <UserCheck className="size-4" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase text-slate-400">{t("shell.activeRole")}</p>
+                <p className="truncate text-sm font-semibold text-slate-900">
+                  {getRoleDisplayName(activeRole, locale)}
+                </p>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
+            <label className="mt-2 flex h-10 items-center gap-2 rounded-lg px-3 text-sm text-slate-600 hover:bg-slate-50 sm:hidden">
+              <Languages className="size-4 text-blue-600" aria-hidden="true" />
+              <span className="sr-only">{t("shell.language")}</span>
+              <select
+                className="min-w-0 flex-1 bg-transparent outline-none"
+                value={locale}
+                onChange={(event) => setLocale(event.target.value as typeof locale)}
+              >
+                <option value="zh-CN">中文</option>
+                <option value="en-US">English</option>
+              </select>
+            </label>
+            <button
+              className="mt-1 flex h-10 w-full items-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-950 sm:hidden"
+              type="button"
+              onClick={onSignOut}
+            >
+              <LogOut className="size-4 text-slate-500" aria-hidden="true" />
+              {t("shell.signOut")}
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div className="min-w-0 lg:pl-[280px]">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
+          <div className="flex h-[72px] items-center justify-between gap-3 px-4 sm:px-6">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 lg:hidden"
+                type="button"
+                aria-label={t("shell.openMenu")}
+                onClick={() => setIsNavigationOpen(true)}
+              >
+                <Menu className="size-5" aria-hidden="true" />
+              </button>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-950">
+                  {activeRoute ? getRouteDisplayTitle(activeRoute, locale) : "PG OS"}
+                </p>
+                <p className="hidden truncate text-xs text-slate-500 sm:block">
+                  {activeRoute ? getGroupLabel(getNavigationGroup(activeRoute)) : t("shell.operationSystem")}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex min-w-0 items-center gap-2">
               <label className="sr-only" htmlFor="role-select">
                 {t("shell.switchRole")}
               </label>
-              <label className="sr-only" htmlFor="language-select">
-                {t("shell.language")}
-              </label>
-              <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700">
-                <Languages className="size-4 text-blue-600" aria-hidden="true" />
-                <select
-                  id="language-select"
-                  className="min-w-0 bg-transparent outline-none"
-                  value={locale}
-                  onChange={(event) => setLocale(event.target.value as typeof locale)}
-                >
-                  <option value="zh-CN">中文</option>
-                  <option value="en-US">English</option>
-                </select>
-              </div>
               <select
                 id="role-select"
-                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700"
+                className="h-10 w-[120px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 sm:w-auto sm:max-w-[210px]"
                 value={activeRole}
                 onChange={(event) => onRoleChange(event.target.value as RoleCode)}
               >
@@ -210,11 +422,28 @@ export function AppShell({
                   </option>
                 ))}
               </select>
+
+              <label className="sr-only" htmlFor="language-select">
+                {t("shell.language")}
+              </label>
+              <div className="hidden h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 sm:flex">
+                <Languages className="size-4 text-blue-600" aria-hidden="true" />
+                <select
+                  id="language-select"
+                  className="min-w-0 bg-transparent text-sm text-slate-700 outline-none"
+                  value={locale}
+                  onChange={(event) => setLocale(event.target.value as typeof locale)}
+                >
+                  <option value="zh-CN">中文</option>
+                  <option value="en-US">English</option>
+                </select>
+              </div>
+
               <div
-                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600"
+                className="hidden h-10 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 xl:flex"
                 title={authSessionStatus?.detail}
               >
-                <UserCheck className="size-4 text-blue-600" aria-hidden="true" />
+                <ShieldCheck className="size-4 text-blue-600" aria-hidden="true" />
                 <span>{authSessionStatus?.label ?? t("shell.mockAuth")}</span>
                 {authSessionStatus && authSessionStatus.warningCount > 0 ? (
                   <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
@@ -222,10 +451,7 @@ export function AppShell({
                   </span>
                 ) : null}
               </div>
-              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                <ShieldCheck className="size-4 text-blue-600" aria-hidden="true" />
-                {t("shell.guardedRoutes")}
-              </div>
+
               <div className="relative">
                 <button
                   className={cn(
@@ -236,12 +462,13 @@ export function AppShell({
                   )}
                   type="button"
                   title={repositoryStatus?.detail}
+                  aria-label={repositoryStatus?.label ?? t("shell.fixtureData")}
                   aria-expanded={isRepositoryPanelOpen}
                   aria-haspopup="dialog"
                   onClick={() => setIsRepositoryPanelOpen((isOpen) => !isOpen)}
                 >
                   <Database className="size-4 text-blue-600" aria-hidden="true" />
-                  <span>{repositoryStatus?.label ?? t("shell.fixtureData")}</span>
+                  <span className="hidden 2xl:inline">{repositoryStatus?.label ?? t("shell.fixtureData")}</span>
                   {repositoryStatus && repositoryStatus.warningCount > 0 ? (
                     <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
                       {repositoryStatus.warningCount}
@@ -256,19 +483,49 @@ export function AppShell({
                   />
                 ) : null}
               </div>
+
               <button
-                className="inline-flex size-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
+                className="hidden size-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 sm:inline-flex"
                 type="button"
                 onClick={onSignOut}
                 aria-label={t("shell.signOut")}
+                title={t("shell.signOut")}
               >
                 <LogOut className="size-4" aria-hidden="true" />
               </button>
             </div>
-          </header>
+          </div>
 
-          <main className="p-6">{children}</main>
-        </div>
+          {activeRoute ? (
+            <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-slate-50/80 px-4 py-2 sm:px-6">
+              <div className="flex min-w-0 items-center gap-2 text-xs text-slate-500">
+                <span>{getGroupLabel(getNavigationGroup(activeRoute))}</span>
+                <ChevronRight className="size-3.5 shrink-0 text-slate-300" aria-hidden="true" />
+                <span className="truncate font-medium text-slate-700">{getRouteDisplayTitle(activeRoute, locale)}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {workbenchRoute && activeRoute.path !== workbenchRoute.path ? (
+                  <button
+                    className="hidden text-xs font-medium text-slate-600 hover:text-blue-700 sm:inline-flex"
+                    type="button"
+                    onClick={() => navigate(workbenchRoute.path)}
+                  >
+                    {t("shell.backWorkbench")}
+                  </button>
+                ) : null}
+                <div className="flex items-center gap-2 text-xs text-blue-700">
+                  <span className="hidden font-medium text-slate-500 md:inline">{t("shell.recommendedAction")}</span>
+                  <span className="font-semibold">{getRoutePrimaryAction(activeRoute, locale)}</span>
+                  <ArrowRight className="size-3.5 shrink-0" aria-hidden="true" />
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </header>
+
+        <main id="page-content" className="mx-auto w-full max-w-[1680px] p-4 sm:p-6 lg:p-8">
+          {children}
+        </main>
       </div>
     </div>
   );

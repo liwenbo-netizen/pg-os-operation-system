@@ -17,7 +17,7 @@ import type {
   WorkbenchWorkflowState
 } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
-import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
+import { getRoleDisplayName, getRouteDisplayTitle, getRoutePageType, useLocale } from "../../lib/i18n";
 
 type WorkbenchOperationsPageProps = {
   route: AppRoute;
@@ -121,7 +121,9 @@ export function WorkbenchOperationsPage({
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge tone={route.path === "/ceo/dashboard" ? "danger" : "info"}>{route.service}</StatusBadge>
+            <StatusBadge tone={route.path === "/ceo/dashboard" ? "danger" : "info"}>
+              {getRoutePageType(route, locale)}
+            </StatusBadge>
             <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
           </div>
           <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">

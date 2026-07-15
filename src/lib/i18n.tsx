@@ -12,6 +12,17 @@ const englishText = {
   "shell.activeRole": "Active role",
   "shell.switchRole": "Switch role",
   "shell.language": "Language",
+  "shell.navigation": "Navigation",
+  "shell.searchNavigation": "Find a page",
+  "shell.noNavigationResults": "No accessible pages match this search.",
+  "shell.groupWorkspace": "My workspace",
+  "shell.groupSupply": "Media supply",
+  "shell.groupRevenue": "Commercial operations",
+  "shell.groupGovernance": "Governance and support",
+  "shell.recommendedAction": "Recommended next step",
+  "shell.backWorkbench": "Back to workbench",
+  "shell.openMenu": "Open navigation",
+  "shell.closeMenu": "Close navigation",
   "shell.guardedRoutes": "Guarded routes",
   "shell.signOut": "Sign out",
   "shell.mockAuth": "Mock auth",
@@ -168,6 +179,17 @@ const chineseText: Record<TranslationKey, string> = {
   "shell.activeRole": "当前角色",
   "shell.switchRole": "切换角色",
   "shell.language": "语言",
+  "shell.navigation": "功能导航",
+  "shell.searchNavigation": "查找页面",
+  "shell.noNavigationResults": "没有匹配且当前角色可访问的页面。",
+  "shell.groupWorkspace": "我的工作台",
+  "shell.groupSupply": "媒体供应",
+  "shell.groupRevenue": "商业运营",
+  "shell.groupGovernance": "治理与支持",
+  "shell.recommendedAction": "推荐下一步",
+  "shell.backWorkbench": "返回工作台",
+  "shell.openMenu": "打开导航",
+  "shell.closeMenu": "关闭导航",
   "shell.guardedRoutes": "权限路由",
   "shell.signOut": "退出登录",
   "shell.mockAuth": "模拟登录",
@@ -308,6 +330,48 @@ const chineseRouteTitles: Record<string, string> = {
   "/admin": "系统管理"
 };
 
+const chinesePrimaryActions: Record<string, string> = {
+  "/ceo/dashboard": "查看关键审批",
+  "/workbench": "处理下一项任务",
+  "/media/director-command-center": "审批规模化就绪",
+  "/media/manager-workbench": "新建媒体",
+  "/media/china-ecosystem": "转为可信供给候选",
+  "/media/publishers/:id": "继续准入流程",
+  "/media/integration-wizard/:id": "提交生产验证",
+  "/media/commercial-tests/:id": "提交测试结论",
+  "/diagnostics/:id": "提交诊断结论",
+  "/sales/manager-workbench": "创建提案",
+  "/proposals/:id/wizard": "提交审批",
+  "/campaigns/:id/wizard": "申请上线审批",
+  "/finance/settlements/:id": "确认结算",
+  "/contracts/:id": "完成法务审核",
+  "/guide": "打开 SOP",
+  "/system/health": "查看系统健康度",
+  "/audit/events": "查看审计事件",
+  "/uat/scripts": "记录 UAT 结果",
+  "/uat/history": "导出 UAT 台账",
+  "/admin": "管理用户"
+};
+
+const chinesePageTypes: Record<string, string> = {
+  "Audit Console": "审计台",
+  "Command Center": "指挥中心",
+  Dashboard: "经营看板",
+  Diagnostic: "诊断工作台",
+  "Ecosystem Expansion": "生态拓展",
+  "Guide Center": "指南中心",
+  Health: "健康监控",
+  "Legal Workspace": "合同工作台",
+  "Object 360": "对象全景",
+  "Settlement Workspace": "结算工作台",
+  Shell: "系统管理",
+  "Test Workspace": "测试工作台",
+  "UAT Archive": "验收台账",
+  "UAT Checklist": "验收清单",
+  Wizard: "操作向导",
+  Workbench: "工作台"
+};
+
 export function formatText(template: string, values: TranslationValues = {}) {
   return template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? `{${key}}`));
 }
@@ -327,6 +391,14 @@ export function getRoleScope(roleCode: RoleCode, locale: AppLocale) {
 
 export function getRouteDisplayTitle(route: Pick<AppRoute, "path" | "title">, locale: AppLocale) {
   return locale === "zh-CN" ? chineseRouteTitles[route.path] ?? route.title : route.title;
+}
+
+export function getRoutePrimaryAction(route: Pick<AppRoute, "path" | "primaryAction">, locale: AppLocale) {
+  return locale === "zh-CN" ? chinesePrimaryActions[route.path] ?? route.primaryAction : route.primaryAction;
+}
+
+export function getRoutePageType(route: Pick<AppRoute, "pageType">, locale: AppLocale) {
+  return locale === "zh-CN" ? chinesePageTypes[route.pageType] ?? route.pageType : route.pageType;
 }
 
 export function getInitialLocale(language = typeof navigator === "undefined" ? "" : navigator.language): AppLocale {

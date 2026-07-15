@@ -3,7 +3,13 @@ import type { AppRoute } from "../routes/routes";
 import { RightRail } from "../components/RightRail";
 import { StatusBadge } from "../components/StatusBadge";
 import { SummaryCard } from "../components/SummaryCard";
-import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../lib/i18n";
+import {
+  getRoleDisplayName,
+  getRouteDisplayTitle,
+  getRoutePageType,
+  getRoutePrimaryAction,
+  useLocale
+} from "../lib/i18n";
 
 type RoutePlaceholderPageProps = {
   route: AppRoute;
@@ -18,18 +24,16 @@ export function RoutePlaceholderPage({ route, role }: RoutePlaceholderPageProps)
       <header className="flex items-start justify-between gap-6">
         <div>
           <div className="flex items-center gap-3">
-            <StatusBadge tone={route.priority === "P0" ? "danger" : route.priority === "P1" ? "warning" : "info"}>
-              {route.priority}
-            </StatusBadge>
-            <StatusBadge tone="info">{route.pageType}</StatusBadge>
+            <StatusBadge tone="neutral">{route.module}</StatusBadge>
+            <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
           </div>
           <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            {route.service} gated by {route.guard}. Current role: {getRoleDisplayName(role.code, locale)}.
+            {getRoleDisplayName(role.code, locale)} · {getRoutePrimaryAction(route, locale)}
           </p>
         </div>
         <button className="h-11 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700" type="button">
-          {route.primaryAction}
+          {getRoutePrimaryAction(route, locale)}
         </button>
       </header>
 
@@ -63,19 +67,19 @@ export function RoutePlaceholderPage({ route, role }: RoutePlaceholderPageProps)
           </article>
 
           <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
-            <h2 className="text-lg font-semibold tracking-normal text-slate-950">Route binding</h2>
+            <h2 className="text-lg font-semibold tracking-normal text-slate-950">Workspace details</h2>
             <dl className="mt-4 grid gap-4 text-sm md:grid-cols-4">
               <div>
-                <dt className="text-slate-500">Route</dt>
-                <dd className="mt-1 font-semibold text-slate-900">{route.path}</dd>
+                <dt className="text-slate-500">Module</dt>
+                <dd className="mt-1 font-semibold text-slate-900">{route.module}</dd>
               </div>
               <div>
-                <dt className="text-slate-500">Service</dt>
-                <dd className="mt-1 font-semibold text-slate-900">{route.service}</dd>
+                <dt className="text-slate-500">Workspace</dt>
+                <dd className="mt-1 font-semibold text-slate-900">{getRoutePageType(route, locale)}</dd>
               </div>
               <div>
-                <dt className="text-slate-500">Guard</dt>
-                <dd className="mt-1 font-semibold text-slate-900">{route.guard}</dd>
+                <dt className="text-slate-500">Access</dt>
+                <dd className="mt-1 font-semibold text-slate-900">Role controlled</dd>
               </div>
               <div>
                 <dt className="text-slate-500">UAT</dt>

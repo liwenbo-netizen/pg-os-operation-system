@@ -4,7 +4,7 @@
 
 :root {
   color: #0f172a;
-  background: #f8fafc;
+  background: #f4f7fb;
   font-family:
     Inter,
     ui-sans-serif,
@@ -15,15 +15,47 @@
     sans-serif;
 }
 
+html {
+  color-scheme: light;
+}
+
 body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  background: #f4f7fb;
+  text-rendering: optimizeLegibility;
 }
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
+button,
+select {
+  touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+::selection {
+  background: #dbeafe;
+  color: #172554;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

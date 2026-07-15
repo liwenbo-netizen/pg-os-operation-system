@@ -560,7 +560,7 @@ export function App() {
           mediaState={mediaWorkflowState}
           onStateChange={setSalesWorkflowState}
           onAuditEvent={handleWorkflowAuditEvent}
-          onRouteChange={setActivePath}
+          onRouteChange={handleRouteChange}
         />
       ) : activeRoute.path.startsWith("/diagnostics/") ? (
         <DiagnosticCasePage
