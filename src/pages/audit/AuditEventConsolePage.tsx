@@ -1,6 +1,5 @@
 import { ChevronLeft, ChevronRight, Database, RefreshCw, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { roleDefinitions } from "../../constants/roles";
 import {
   createAuditEventRepository,
   createSnapshotAuditEventPage,
@@ -11,6 +10,7 @@ import type { AppRoute } from "../../routes/routes";
 import type { BusinessUser } from "../../types/domain";
 import type { WorkflowSnapshot } from "../../repositories/workflowRepository";
 import { formatUtcPlus8DateTime } from "../../lib/time";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
 
 type AuditEventConsolePageProps = {
   route: AppRoute;
@@ -45,6 +45,7 @@ function sourceClassName(source: AuditEventSource) {
 }
 
 export function AuditEventConsolePage({ route, snapshot, user }: AuditEventConsolePageProps) {
+  const { locale } = useLocale();
   const repository = useMemo(() => createAuditEventRepository(), []);
   const [page, setPage] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
@@ -99,13 +100,13 @@ export function AuditEventConsolePage({ route, snapshot, user }: AuditEventConso
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-normal text-blue-700">{route.module}</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{route.title}</h1>
+          <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Read-only audit and business event stream for production support and UAT trace review.
           </p>
         </div>
         <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-          <p className="font-semibold text-slate-900">{roleDefinitions[user.activeRole].name}</p>
+          <p className="font-semibold text-slate-900">{getRoleDisplayName(user.activeRole, locale)}</p>
           <p className="mt-1 flex items-center gap-2">
             <Database className="size-4" aria-hidden="true" />
             <span className={`rounded border px-2 py-0.5 text-xs font-semibold ${sourceClass}`}>

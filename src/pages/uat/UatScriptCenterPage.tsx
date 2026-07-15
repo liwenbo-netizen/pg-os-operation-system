@@ -20,6 +20,7 @@ import type { BusinessUser } from "../../types/domain";
 import { formatUtcPlus8DateTime } from "../../lib/time";
 import { cn } from "../../lib/cn";
 import { buildBusinessUatCoverage } from "../../services/businessUatCoverageService";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
 
 type UatScriptCenterPageProps = {
   authMode: AuthSessionMode;
@@ -102,6 +103,7 @@ function latestUpdatedAt(script: UatScript, results: UatScriptResults) {
 }
 
 export function UatScriptCenterPage({ authMode, route, user }: UatScriptCenterPageProps) {
+  const { locale } = useLocale();
   const [results, setResults] = useState<UatScriptResults>(() => loadStoredResults());
   const [syncState, setSyncState] = useState<SyncState>(() => ({
     source: authMode === "supabase" ? "loading" : "local",
@@ -226,13 +228,13 @@ export function UatScriptCenterPage({ authMode, route, user }: UatScriptCenterPa
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-normal text-blue-700">{route.module}</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{route.title}</h1>
+          <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Production UAT checklist for role login, click path, expected result, actual result, and pass/fail evidence.
           </p>
         </div>
         <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-          <p className="font-semibold text-slate-900">{roleDefinitions[user.activeRole].name}</p>
+          <p className="font-semibold text-slate-900">{getRoleDisplayName(user.activeRole, locale)}</p>
           <p className="mt-1">{user.email}</p>
         </div>
       </div>

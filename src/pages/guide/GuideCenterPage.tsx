@@ -7,6 +7,7 @@ import type { AppRoute } from "../../routes/routes";
 import { sopService } from "../../services/sopService";
 import type { BusinessUser, EntityId, GuideWorkflowState, SopCard } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
 
 type GuideCenterPageProps = {
   route: AppRoute;
@@ -34,6 +35,7 @@ const priorityTone = {
 } as const;
 
 export function GuideCenterPage({ route, role, user, state, onStateChange }: GuideCenterPageProps) {
+  const { locale } = useLocale();
   const [query, setQuery] = useState("settlement");
   const [moduleFilter, setModuleFilter] = useState<SopCard["module"] | "All">("All");
   const [selectedSopId, setSelectedSopId] = useState<EntityId>("sop-finance-settlement-confirm");
@@ -62,7 +64,7 @@ export function GuideCenterPage({ route, role, user, state, onStateChange }: Gui
     return (
       <section className="space-y-4">
         <StatusBadge tone="info">{route.service}</StatusBadge>
-        <h1 className="text-3xl font-semibold tracking-normal text-slate-950">{route.title}</h1>
+        <h1 className="text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
         <p className="text-sm text-slate-500">No SOP cards are available.</p>
       </section>
     );
@@ -74,10 +76,10 @@ export function GuideCenterPage({ route, role, user, state, onStateChange }: Gui
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge tone="info">{route.service}</StatusBadge>
-            <StatusBadge tone="neutral">{role.name}</StatusBadge>
+            <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
             <StatusBadge tone={statusTone[selectedSop.status]}>{selectedSop.status}</StatusBadge>
           </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">Guide Center</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Search role-based SOP cards, open operating steps, and publish workflow guidance for PG OS business operations.
           </p>

@@ -7,6 +7,7 @@ import type { AppRoute } from "../../routes/routes";
 import { diagnosticWorkflowService } from "../../services/diagnosticWorkflowService";
 import type { BusinessUser, EntityId, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
 
 type DiagnosticCasePageProps = {
   route: AppRoute;
@@ -41,6 +42,7 @@ const severityTone = {
 } as const;
 
 export function DiagnosticCasePage({ route, role, user, state, salesState, onStateChange }: DiagnosticCasePageProps) {
+  const { locale } = useLocale();
   const [selectedCaseId, setSelectedCaseId] = useState<EntityId>("diagnostic-dc-001");
   const [message, setMessage] = useState<ActionMessage | null>(null);
   const summary = diagnosticWorkflowService.getSummary(state);
@@ -67,7 +69,7 @@ export function DiagnosticCasePage({ route, role, user, state, salesState, onSta
     return (
       <section className="space-y-4">
         <StatusBadge tone="info">{route.service}</StatusBadge>
-        <h1 className="text-3xl font-semibold tracking-normal text-slate-950">{route.title}</h1>
+        <h1 className="text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
         <p className="text-sm text-slate-500">No diagnostic cases are available.</p>
       </section>
     );
@@ -79,10 +81,10 @@ export function DiagnosticCasePage({ route, role, user, state, salesState, onSta
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge tone="info">{route.service}</StatusBadge>
-            <StatusBadge tone="neutral">{role.name}</StatusBadge>
+            <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
             <StatusBadge tone={statusTone[selectedCase.status]}>{selectedCase.status}</StatusBadge>
           </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{selectedCase.case_no} Diagnostic Workspace</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{`${selectedCase.case_no} ${getRouteDisplayTitle(route, locale)}`}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             {selectedCase.case_type} investigation for {snapshot.publisher?.name ?? "cross-object"} impact and downstream blockers.
           </p>

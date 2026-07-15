@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowRight, KeyRound, ShieldCheck, UserRound } from "lucide-react";
-import { roleCodes, roleDefinitions, type RoleCode } from "../constants/roles";
+import { roleCodes, type RoleCode } from "../constants/roles";
+import { getRoleDisplayName, getRoleScope, useLocale } from "../lib/i18n";
 import type { SupabasePasswordSignInInput } from "../repositories/authSessionRepository";
 
 type LoginMode = "mock" | "supabase";
@@ -26,6 +27,7 @@ export function LoginPage({
   onMockSignIn,
   onSupabaseSignIn
 }: LoginPageProps) {
+  const { locale, t } = useLocale();
   const [loginMode, setLoginMode] = useState<LoginMode>("mock");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,15 +56,15 @@ export function LoginPage({
               PG
             </div>
             <h1 className="mt-10 max-w-2xl text-4xl font-semibold tracking-normal text-slate-950">
-              PG OS business operations workspace
+              {t("login.title")}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
-              Role-aware operating console for publisher readiness, sales guardrails, finance settlement, legal review, SOP, and OKR work.
+              {t("login.description")}
             </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            {["Media readiness", "Proposal guard", "Audit first"].map((label) => (
+            {[t("login.mediaReadiness"), t("login.proposalGuard"), t("login.auditFirst")].map((label) => (
               <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <ShieldCheck className="size-5 text-blue-600" aria-hidden="true" />
                 <p className="mt-3 text-sm font-semibold text-slate-800">{label}</p>
@@ -79,10 +81,10 @@ export function LoginPage({
           }}
         >
           <div>
-            <p className="text-sm font-semibold text-blue-700">Phase 12 access</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">Sign in</h2>
+            <p className="text-sm font-semibold text-blue-700">{t("login.phaseAccess")}</p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{t("login.signIn")}</h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              Use the local role simulator or bind a Supabase session to PG OS profile roles.
+              {t("login.instructions")}
             </p>
           </div>
 
@@ -95,7 +97,7 @@ export function LoginPage({
               onClick={() => setLoginMode("mock")}
             >
               <UserRound className="size-4" aria-hidden="true" />
-              Mock role
+              {t("login.mockRole")}
             </button>
             <button
               className={`inline-flex h-10 items-center justify-center gap-2 rounded-md text-sm font-semibold ${
@@ -114,7 +116,7 @@ export function LoginPage({
             <div className="mt-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700" htmlFor="login-email">
-                  Email
+                  {t("login.email")}
                 </label>
                 <input
                   id="login-email"
@@ -128,7 +130,7 @@ export function LoginPage({
 
               <div>
                 <label className="block text-sm font-medium text-slate-700" htmlFor="login-password">
-                  Password
+                  {t("login.password")}
                 </label>
                 <input
                   id="login-password"
@@ -143,7 +145,7 @@ export function LoginPage({
           ) : null}
 
           <label className="mt-6 block text-sm font-medium text-slate-700" htmlFor="login-role">
-            {isSupabaseMode ? "Requested active role" : "Role"}
+            {isSupabaseMode ? t("login.requestedRole") : t("login.role")}
           </label>
           <select
             id="login-role"
@@ -153,14 +155,14 @@ export function LoginPage({
           >
             {roleCodes.map((roleCode) => (
               <option key={roleCode} value={roleCode}>
-                {roleDefinitions[roleCode].name}
+                {getRoleDisplayName(roleCode, locale)}
               </option>
             ))}
           </select>
 
           <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-            <p className="font-semibold text-slate-800">{roleDefinitions[selectedRole].name}</p>
-            <p className="mt-1">{roleDefinitions[selectedRole].scope}</p>
+            <p className="font-semibold text-slate-800">{getRoleDisplayName(selectedRole, locale)}</p>
+            <p className="mt-1">{getRoleScope(selectedRole, locale)}</p>
           </div>
 
           {authError ? (
@@ -180,12 +182,12 @@ export function LoginPage({
             type="submit"
             disabled={authLoading || (isSupabaseMode && !isSupabaseAvailable)}
           >
-            {authLoading ? "Signing in" : "Enter workspace"}
+            {authLoading ? t("login.signingIn") : t("login.enterWorkspace")}
             <ArrowRight className="size-4" aria-hidden="true" />
           </button>
 
           <p className="mt-4 text-xs leading-5 text-slate-500">
-            Supabase env: {isSupabaseAvailable ? "configured" : "not configured"}
+            {t("login.environment", { status: isSupabaseAvailable ? t("login.configured") : t("login.notConfigured") })}
           </p>
         </form>
       </section>

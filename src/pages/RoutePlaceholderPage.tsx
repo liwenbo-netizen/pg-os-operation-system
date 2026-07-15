@@ -3,6 +3,7 @@ import type { AppRoute } from "../routes/routes";
 import { RightRail } from "../components/RightRail";
 import { StatusBadge } from "../components/StatusBadge";
 import { SummaryCard } from "../components/SummaryCard";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../lib/i18n";
 
 type RoutePlaceholderPageProps = {
   route: AppRoute;
@@ -10,6 +11,8 @@ type RoutePlaceholderPageProps = {
 };
 
 export function RoutePlaceholderPage({ route, role }: RoutePlaceholderPageProps) {
+  const { locale } = useLocale();
+
   return (
     <section className="space-y-6">
       <header className="flex items-start justify-between gap-6">
@@ -20,9 +23,9 @@ export function RoutePlaceholderPage({ route, role }: RoutePlaceholderPageProps)
             </StatusBadge>
             <StatusBadge tone="info">{route.pageType}</StatusBadge>
           </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{route.title}</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            {route.service} gated by {route.guard}. Current role: {role.name}.
+            {route.service} gated by {route.guard}. Current role: {getRoleDisplayName(role.code, locale)}.
           </p>
         </div>
         <button className="h-11 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700" type="button">
@@ -92,4 +95,3 @@ export function RoutePlaceholderPage({ route, role }: RoutePlaceholderPageProps)
     </section>
   );
 }
-

@@ -1,6 +1,5 @@
 import { Activity, AlertTriangle, CheckCircle2, Database, KeyRound, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { roleDefinitions } from "../../constants/roles";
 import {
   createAuditEventRepository,
   createSnapshotAuditEventPage,
@@ -16,6 +15,7 @@ import {
   type SystemHealthEventCoverage
 } from "../../services/observabilityService";
 import { formatUtcPlus8DateTime } from "../../lib/time";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
 
 type StatusProps = {
   status: HealthCheckStatus;
@@ -81,6 +81,7 @@ export function SystemHealthPage({
   supportsSupabase,
   user
 }: SystemHealthPageProps) {
+  const { locale } = useLocale();
   const eventRepository = useMemo(() => createAuditEventRepository(), []);
   const [eventPage, setEventPage] = useState<AuditEventPage>(() =>
     createSnapshotAuditEventPage(snapshot, { page: 0, pageSize: EVENT_SAMPLE_SIZE })
@@ -163,13 +164,13 @@ export function SystemHealthPage({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-normal text-blue-700">{route.module}</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{route.title}</h1>
+          <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Production readiness signals for auth, repository sync, runtime warnings, and event coverage.
           </p>
         </div>
         <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-          <p className="font-semibold text-slate-900">{roleDefinitions[user.activeRole].name}</p>
+          <p className="font-semibold text-slate-900">{getRoleDisplayName(user.activeRole, locale)}</p>
           <p className="mt-1">{user.email}</p>
         </div>
       </div>

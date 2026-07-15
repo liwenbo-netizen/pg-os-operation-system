@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from "react";
-import { AlertTriangle, Clock3, Database, LogOut, ShieldCheck, Table2, UserCheck, Wrench, X } from "lucide-react";
-import { roleDefinitions, type RoleCode } from "../constants/roles";
+import { AlertTriangle, Clock3, Database, Languages, LogOut, ShieldCheck, Table2, UserCheck, Wrench, X } from "lucide-react";
+import type { RoleCode } from "../constants/roles";
 import type { AppRoute } from "../routes/routes";
 import { cn } from "../lib/cn";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../lib/i18n";
 import type { WarningDiagnostic } from "../services/warningDiagnosticsService";
 
 type AppShellProps = {
@@ -34,22 +35,24 @@ type RepositoryDiagnosticsPanelProps = {
 };
 
 function RepositoryDiagnosticsPanel({ detail, diagnostics, onClose }: RepositoryDiagnosticsPanelProps) {
+  const { t } = useLocale();
+
   return (
     <section
       className="absolute right-0 top-12 z-30 w-[680px] max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white shadow-xl"
       role="dialog"
-      aria-label="Supabase warning diagnostics"
+      aria-label={t("diagnostics.title")}
     >
       <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-3">
         <div>
-          <p className="text-sm font-semibold text-slate-950">Supabase diagnostics</p>
+          <p className="text-sm font-semibold text-slate-950">{t("diagnostics.title")}</p>
           <p className="mt-1 text-xs text-slate-500">{detail}</p>
         </div>
         <button
           className="inline-flex size-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
           type="button"
           onClick={onClose}
-          aria-label="Close diagnostics"
+          aria-label={t("diagnostics.close")}
         >
           <X className="size-4" aria-hidden="true" />
         </button>
@@ -76,32 +79,32 @@ function RepositoryDiagnosticsPanel({ detail, diagnostics, onClose }: Repository
                 <div className="rounded-lg bg-slate-50 p-2">
                   <div className="flex items-center gap-1 font-semibold text-slate-900">
                     <Table2 className="size-3.5 text-blue-600" aria-hidden="true" />
-                    Table
+                    {t("diagnostics.table")}
                   </div>
                   <p className="mt-1 break-words">{diagnostic.table}</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 p-2">
-                  <div className="font-semibold text-slate-900">Role</div>
+                  <div className="font-semibold text-slate-900">{t("diagnostics.role")}</div>
                   <p className="mt-1 break-words">{diagnostic.role}</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 p-2">
                   <div className="flex items-center gap-1 font-semibold text-slate-900">
                     <Clock3 className="size-3.5 text-blue-600" aria-hidden="true" />
-                    Time
+                    {t("diagnostics.time")}
                   </div>
                   <p className="mt-1 break-words">{diagnostic.time}</p>
                 </div>
               </div>
 
               <div className="mt-3 rounded-lg border border-red-100 bg-red-50 p-3">
-                <p className="text-xs font-semibold text-red-800">Error</p>
+                <p className="text-xs font-semibold text-red-800">{t("diagnostics.error")}</p>
                 <p className="mt-1 break-words text-xs leading-5 text-red-700">{diagnostic.error}</p>
               </div>
 
               <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3">
                 <div className="flex items-center gap-2 text-xs font-semibold text-blue-900">
                   <Wrench className="size-3.5" aria-hidden="true" />
-                  Suggested fix
+                  {t("diagnostics.suggestedFix")}
                 </div>
                 <p className="mt-1 break-words text-xs leading-5 text-blue-800">{diagnostic.suggestion}</p>
               </div>
@@ -111,8 +114,8 @@ function RepositoryDiagnosticsPanel({ detail, diagnostics, onClose }: Repository
       ) : (
         <div className="p-4">
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-            <p className="text-sm font-semibold text-emerald-800">No active repository warnings</p>
-            <p className="mt-1 text-xs text-emerald-700">The latest repository status has no Supabase warning diagnostics.</p>
+            <p className="text-sm font-semibold text-emerald-800">{t("diagnostics.noWarnings")}</p>
+            <p className="mt-1 text-xs text-emerald-700">{t("diagnostics.noWarningsDetail")}</p>
           </div>
         </div>
       )}
@@ -133,6 +136,7 @@ export function AppShell({
   authSessionStatus
 }: AppShellProps) {
   const [isRepositoryPanelOpen, setIsRepositoryPanelOpen] = useState(false);
+  const { locale, setLocale, t } = useLocale();
   const repositoryDiagnostics = repositoryStatus?.diagnostics ?? [];
 
   return (
@@ -145,11 +149,11 @@ export function AppShell({
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900">PG OS</p>
-              <p className="text-xs text-slate-500">Operation System</p>
+              <p className="text-xs text-slate-500">{t("shell.operationSystem")}</p>
             </div>
           </div>
 
-          <nav className="mt-8 space-y-1" aria-label="Primary navigation">
+          <nav className="mt-8 space-y-1" aria-label={t("shell.guardedRoutes")}>
             {routes.map((route) => (
               <button
                 key={route.path}
@@ -162,7 +166,7 @@ export function AppShell({
                 type="button"
                 onClick={() => onRouteChange(route.path)}
               >
-                <span>{route.title}</span>
+                <span>{getRouteDisplayTitle(route, locale)}</span>
                 <span className="text-xs text-slate-400">{route.priority}</span>
               </button>
             ))}
@@ -172,13 +176,28 @@ export function AppShell({
         <div className="min-w-0">
           <header className="flex h-[72px] items-center justify-between border-b border-slate-200 bg-white px-6">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Active role</p>
-              <p className="text-sm font-semibold text-slate-900">{roleDefinitions[activeRole].name}</p>
+              <p className="text-xs font-semibold tracking-normal text-slate-500">{t("shell.activeRole")}</p>
+              <p className="text-sm font-semibold text-slate-900">{getRoleDisplayName(activeRole, locale)}</p>
             </div>
             <div className="flex items-center gap-3">
               <label className="sr-only" htmlFor="role-select">
-                Switch role
+                {t("shell.switchRole")}
               </label>
+              <label className="sr-only" htmlFor="language-select">
+                {t("shell.language")}
+              </label>
+              <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700">
+                <Languages className="size-4 text-blue-600" aria-hidden="true" />
+                <select
+                  id="language-select"
+                  className="min-w-0 bg-transparent outline-none"
+                  value={locale}
+                  onChange={(event) => setLocale(event.target.value as typeof locale)}
+                >
+                  <option value="zh-CN">中文</option>
+                  <option value="en-US">English</option>
+                </select>
+              </div>
               <select
                 id="role-select"
                 className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700"
@@ -187,7 +206,7 @@ export function AppShell({
               >
                 {availableRoles.map((roleCode) => (
                   <option key={roleCode} value={roleCode}>
-                    {roleDefinitions[roleCode].name}
+                    {getRoleDisplayName(roleCode, locale)}
                   </option>
                 ))}
               </select>
@@ -196,7 +215,7 @@ export function AppShell({
                 title={authSessionStatus?.detail}
               >
                 <UserCheck className="size-4 text-blue-600" aria-hidden="true" />
-                <span>{authSessionStatus?.label ?? "Mock auth"}</span>
+                <span>{authSessionStatus?.label ?? t("shell.mockAuth")}</span>
                 {authSessionStatus && authSessionStatus.warningCount > 0 ? (
                   <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
                     {authSessionStatus.warningCount}
@@ -205,7 +224,7 @@ export function AppShell({
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
                 <ShieldCheck className="size-4 text-blue-600" aria-hidden="true" />
-                Guarded routes
+                {t("shell.guardedRoutes")}
               </div>
               <div className="relative">
                 <button
@@ -222,7 +241,7 @@ export function AppShell({
                   onClick={() => setIsRepositoryPanelOpen((isOpen) => !isOpen)}
                 >
                   <Database className="size-4 text-blue-600" aria-hidden="true" />
-                  <span>{repositoryStatus?.label ?? "Fixture data"}</span>
+                  <span>{repositoryStatus?.label ?? t("shell.fixtureData")}</span>
                   {repositoryStatus && repositoryStatus.warningCount > 0 ? (
                     <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
                       {repositoryStatus.warningCount}
@@ -231,7 +250,7 @@ export function AppShell({
                 </button>
                 {isRepositoryPanelOpen ? (
                   <RepositoryDiagnosticsPanel
-                    detail={repositoryStatus?.detail ?? "Repository status unavailable"}
+                    detail={repositoryStatus?.detail ?? t("shell.fixtureData")}
                     diagnostics={repositoryDiagnostics}
                     onClose={() => setIsRepositoryPanelOpen(false)}
                   />
@@ -241,7 +260,7 @@ export function AppShell({
                 className="inline-flex size-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
                 type="button"
                 onClick={onSignOut}
-                aria-label="Sign out"
+                aria-label={t("shell.signOut")}
               >
                 <LogOut className="size-4" aria-hidden="true" />
               </button>

@@ -35,8 +35,10 @@ import {
 import { createAuditLogRepository, type AuditLogWriteInput } from "./repositories/auditLogRepository";
 import type { AuditEvent, BusinessUser, EntityId, WorkbenchTask } from "./types/domain";
 import { formatUtcPlus8DateTime } from "./lib/time";
+import { getRoleDisplayName, useLocale } from "./lib/i18n";
 
 export function App() {
+  const { locale, t } = useLocale();
   const [activeRole, setActiveRole] = useState<RoleCode>("ceo");
   const [activePath, setActivePath] = useState(getDefaultRouteForRole("ceo"));
   const [activeObjectId, setActiveObjectId] = useState<EntityId | undefined>();
@@ -74,13 +76,13 @@ export function App() {
   );
   const authSessionStatus = useMemo(
     () => ({
-      label: authMode === "supabase" ? "Supabase auth" : "Mock auth",
+      label: authMode === "supabase" ? t("shell.supabaseAuth") : t("shell.mockAuth"),
       detail: activeUser
-        ? `${activeUser.email} / ${activeUser.roles.map((role) => roleDefinitions[role].name).join(", ")}`
-        : "Not signed in",
+        ? `${activeUser.email} / ${activeUser.roles.map((role) => getRoleDisplayName(role, locale)).join(", ")}`
+        : t("login.signIn"),
       warningCount: authWarnings.length + (authError ? 1 : 0)
     }),
-    [activeUser, authError, authMode, authWarnings.length]
+    [activeUser, authError, authMode, authWarnings.length, locale, t]
   );
   const repositoryDiagnostics = useMemo(
     () =>
@@ -96,11 +98,11 @@ export function App() {
     const label =
       repositoryHealth.mode === "supabase"
         ? repositoryHealth.source === "supabase-loading"
-          ? "Supabase loading"
+          ? t("shell.supabaseLoading")
           : warningCount > 0
-            ? "Supabase warning"
-            : "Supabase synced"
-        : "Fixture data";
+            ? t("shell.supabaseWarning")
+            : t("shell.supabaseSynced")
+        : t("shell.fixtureData");
 
     return {
       label,
@@ -108,7 +110,7 @@ export function App() {
       warningCount,
       diagnostics: repositoryDiagnostics
     };
-  }, [repositoryHealth, repositoryDiagnostics]);
+  }, [repositoryHealth, repositoryDiagnostics, t]);
   const workflowSnapshot = useMemo<WorkflowSnapshot>(
     () => ({
       mediaState: mediaWorkflowState,
@@ -364,7 +366,7 @@ export function App() {
           requestedRole: nextRole
         }
       });
-      setAuthWarnings([`${roleDefinitions[nextRole].name} is not assigned to ${activeUser.email}.`]);
+      setAuthWarnings([`${getRoleDisplayName(nextRole, locale)} is not assigned to ${activeUser.email}.`]);
       return;
     }
 

@@ -8,6 +8,7 @@ import { salesWorkflowService } from "../../services/salesWorkflowService";
 import type { AuditEvent, BusinessUser, EntityId, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
 import { resolveCreateOpportunityAdvertiserId } from "./salesExperiencePageModel";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
 
 type SalesExperiencePageProps = {
   route: AppRoute;
@@ -61,6 +62,7 @@ export function SalesExperiencePage({
   onAuditEvent,
   onRouteChange
 }: SalesExperiencePageProps) {
+  const { locale } = useLocale();
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<EntityId>("opportunity-daily-yoga-q3");
   const [selectedProposalId, setSelectedProposalId] = useState<EntityId>("proposal-daily-yoga");
   const [selectedCampaignId, setSelectedCampaignId] = useState<EntityId>("campaign-ready");
@@ -98,9 +100,9 @@ export function SalesExperiencePage({
         <div>
           <div className="flex items-center gap-3">
             <StatusBadge tone="info">{route.service}</StatusBadge>
-            <StatusBadge tone="neutral">{role.name}</StatusBadge>
+            <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
           </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{route.title}</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Phase 5 mainline: advertiser, opportunity, Proposal media validation, Campaign launch guard, and approval handoff.
           </p>

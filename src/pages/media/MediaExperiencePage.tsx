@@ -24,6 +24,7 @@ import type {
   TrustedSupplyCandidate
 } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
 
 type MediaExperiencePageProps = {
   route: AppRoute;
@@ -228,6 +229,7 @@ export function MediaExperiencePage({
   onAuditEvent,
   onRouteChange
 }: MediaExperiencePageProps) {
+  const { locale, t } = useLocale();
   const [selectedPublisherId, setSelectedPublisherId] = useState<EntityId>("publisher-new-ctv");
   const [message, setMessage] = useState<ActionMessage | null>(null);
 
@@ -278,13 +280,13 @@ export function MediaExperiencePage({
         <div>
           <div className="flex items-center gap-3">
             <StatusBadge tone="info">{route.service}</StatusBadge>
-            <StatusBadge tone="neutral">{role.name}</StatusBadge>
+            <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
           </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{route.title}</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             {page === "ecosystem"
-              ? "China and APAC media ecosystem expansion: map tracks, screen priority, prove outreach, and convert qualified opportunities into trusted supply candidates."
-              : "Media P0 mainline: publisher profile, ad slots, terms, technical live, commercial test, and sales readiness."}
+              ? t("media.ecosystemDescription")
+              : t("media.mainlineDescription")}
           </p>
         </div>
         {page === "ecosystem" ? null : (
@@ -303,27 +305,27 @@ export function MediaExperiencePage({
             }
           >
             <Plus className="size-4" aria-hidden="true" />
-            New publisher
+            {t("media.newPublisher")}
           </button>
         )}
       </header>
 
       {page === "ecosystem" ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <SummaryCard label="Mapped leads" value={String(ecosystemSummary.totalLeads)} />
-          <SummaryCard label="Active leads" value={String(ecosystemSummary.activeLeads)} tone="success" />
-          <SummaryCard label="Priority 70+" value={String(ecosystemSummary.highPriority)} tone="warning" />
-          <SummaryCard label="Outreach pipeline" value={String(ecosystemSummary.outreachPipeline)} />
-          <SummaryCard label="Gate eligible" value={String(ecosystemSummary.eligibleForTrustedSupply)} tone="success" />
-          <SummaryCard label="Trusted candidates" value={String(ecosystemSummary.trustedCandidates)} tone="warning" />
+          <SummaryCard label={t("media.mappedLeads")} value={String(ecosystemSummary.totalLeads)} />
+          <SummaryCard label={t("media.activeLeads")} value={String(ecosystemSummary.activeLeads)} tone="success" />
+          <SummaryCard label={t("media.priority70")} value={String(ecosystemSummary.highPriority)} tone="warning" />
+          <SummaryCard label={t("media.outreachPipeline")} value={String(ecosystemSummary.outreachPipeline)} />
+          <SummaryCard label={t("media.gateEligible")} value={String(ecosystemSummary.eligibleForTrustedSupply)} tone="success" />
+          <SummaryCard label={t("media.trustedCandidates")} value={String(ecosystemSummary.trustedCandidates)} tone="warning" />
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <SummaryCard label="Publishers" value={String(summary.total)} />
-          <SummaryCard label="Tech live" value={String(summary.technicalLive)} tone="success" />
-          <SummaryCard label="Test passed" value={String(summary.testPassed)} tone="success" />
-          <SummaryCard label="Sales ready" value={String(summary.proposalSelectable)} tone="warning" />
-          <SummaryCard label="High risk" value={String(summary.highRisk)} tone="danger" />
+          <SummaryCard label={t("media.publishers")} value={String(summary.total)} />
+          <SummaryCard label={t("media.techLive")} value={String(summary.technicalLive)} tone="success" />
+          <SummaryCard label={t("media.testPassed")} value={String(summary.testPassed)} tone="success" />
+          <SummaryCard label={t("media.salesReady")} value={String(summary.proposalSelectable)} tone="warning" />
+          <SummaryCard label={t("media.highRisk")} value={String(summary.highRisk)} tone="danger" />
         </div>
       )}
 
@@ -467,6 +469,7 @@ function ChinaMediaEcosystemWorkspace({
   user: BusinessUser;
   onRunAction: (title: string, action: () => MediaActionResult) => void;
 }) {
+  const { t } = useLocale();
   const [selectedLeadId, setSelectedLeadId] = useState<EntityId>(state.mediaEcosystemLeads[0]?.id ?? "");
   const [searchQuery, setSearchQuery] = useState("");
   const [queueFilter, setQueueFilter] = useState<MediaEcosystemOperationalQueueKey>("ALL");
@@ -581,10 +584,10 @@ function ChinaMediaEcosystemWorkspace({
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">Operational queues</h2>
+            <h2 className="text-lg font-semibold text-slate-950">{t("media.operationalQueues")}</h2>
             <p className="mt-1 text-sm leading-6 text-slate-500">{activeQueue?.nextAction}</p>
           </div>
-          <StatusBadge tone={activeFilterCount > 0 ? "info" : "neutral"}>{`${activeFilterCount} active filter(s)`}</StatusBadge>
+          <StatusBadge tone={activeFilterCount > 0 ? "info" : "neutral"}>{t("media.activeFilters", { count: activeFilterCount })}</StatusBadge>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {operationalQueues.map((queue) => (
@@ -613,7 +616,7 @@ function ChinaMediaEcosystemWorkspace({
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
           <div className="flex items-center gap-3">
             <Map className="size-5 text-blue-600" aria-hidden="true" />
-            <h2 className="text-lg font-semibold text-slate-950">Strategic track map</h2>
+            <h2 className="text-lg font-semibold text-slate-950">{t("media.strategicTrackMap")}</h2>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {trackOpportunities.map((track) => (
@@ -638,7 +641,7 @@ function ChinaMediaEcosystemWorkspace({
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
           <div className="flex items-center gap-3">
             <Target className="size-5 text-blue-600" aria-hidden="true" />
-            <h2 className="text-lg font-semibold text-slate-950">Expansion pipeline</h2>
+            <h2 className="text-lg font-semibold text-slate-950">{t("media.expansionPipeline")}</h2>
           </div>
           <div className="mt-4 space-y-2">
             {pipeline.map((lane) => (
@@ -656,9 +659,9 @@ function ChinaMediaEcosystemWorkspace({
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-card">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-slate-900">Opportunity pool</p>
+                <p className="text-sm font-semibold text-slate-900">{t("media.opportunityPool")}</p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
-                  {filteredLeads.length} visible / {state.mediaEcosystemLeads.length} total
+                  {t("media.visibleTotal", { visible: filteredLeads.length, total: state.mediaEcosystemLeads.length })}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2">
@@ -669,7 +672,7 @@ function ChinaMediaEcosystemWorkspace({
                     type="button"
                     onClick={resetOpportunityFilters}
                   >
-                    Reset
+                    {t("media.reset")}
                   </button>
                 ) : null}
               </div>
@@ -679,7 +682,7 @@ function ChinaMediaEcosystemWorkspace({
               <input
                 className="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
                 value={searchQuery}
-                placeholder="Search media"
+                placeholder={t("media.searchMedia")}
                 onChange={(event) => {
                   setSearchQuery(event.target.value);
                   setVisibleLeadCount(ecosystemListPageSize);
@@ -695,7 +698,7 @@ function ChinaMediaEcosystemWorkspace({
                   setVisibleLeadCount(ecosystemListPageSize);
                 }}
               >
-                <option value="ALL">All tracks</option>
+                <option value="ALL">{t("media.allTracks")}</option>
                 {Object.entries(mediaEcosystemTrackLabels).map(([track, label]) => (
                   <option key={track} value={track}>
                     {label}
@@ -712,7 +715,7 @@ function ChinaMediaEcosystemWorkspace({
               >
                 {ecosystemStageOptions.map((stage) => (
                   <option key={stage} value={stage}>
-                    {stage === "ALL" ? "All stages" : stage}
+                    {stage === "ALL" ? t("media.allStages") : stage}
                   </option>
                 ))}
               </select>
@@ -899,7 +902,7 @@ function ChinaMediaEcosystemWorkspace({
           ) : null}
           {filteredLeads.length === 0 ? (
             <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-card">
-              No matching ecosystem opportunities.
+              {t("media.noMatching")}
             </div>
           ) : null}
         </aside>
@@ -929,14 +932,14 @@ function ChinaMediaEcosystemWorkspace({
               </div>
 
               <div className="mt-5 grid gap-3 md:grid-cols-4">
-                <SignalCheck label="Contact" checked={selectedLead.media_contact_confirmed} />
-                <SignalCheck label="Business interest" checked={selectedLead.business_interest_confirmed} />
-                <SignalCheck label="Inventory" checked={selectedLead.ad_inventory_identified} />
-                <SignalCheck label="Feasibility" checked={selectedLead.integration_feasibility !== "impossible"} />
+                <SignalCheck label={t("media.contact")} checked={selectedLead.media_contact_confirmed} />
+                <SignalCheck label={t("media.businessInterest")} checked={selectedLead.business_interest_confirmed} />
+                <SignalCheck label={t("media.inventory")} checked={selectedLead.ad_inventory_identified} />
+                <SignalCheck label={t("media.feasibility")} checked={selectedLead.integration_feasibility !== "impossible"} />
               </div>
 
               <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">Next action</p>
+                <p className="text-xs font-semibold tracking-normal text-slate-500">{t("media.nextAction")}</p>
                 <p className="mt-2 text-sm leading-6 text-slate-700">{selectedLead.next_action}</p>
               </div>
 
@@ -945,85 +948,85 @@ function ChinaMediaEcosystemWorkspace({
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   type="button"
                   onClick={() =>
-                    onRunAction("Claim ecosystem lead", () =>
+                    onRunAction(t("media.claimOwner"), () =>
                       chinaMediaEcosystemService.claimLeadOwner(state, user, selectedLead.id)
                     )
                   }
                 >
                   <UserCheck className="size-4" aria-hidden="true" />
-                  Claim owner
+                  {t("media.claimOwner")}
                 </button>
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   type="button"
                   onClick={() =>
-                    onRunAction("Mark seed reviewed", () =>
+                    onRunAction(t("media.markReviewed"), () =>
                       chinaMediaEcosystemService.markManualReviewed(state, user, selectedLead.id)
                     )
                   }
                 >
                   <CheckCircle2 className="size-4" aria-hidden="true" />
-                  Mark reviewed
+                  {t("media.markReviewed")}
                 </button>
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   type="button"
                   onClick={() =>
-                    onRunAction("Priority screen lead", () =>
+                    onRunAction(t("media.priorityScreen"), () =>
                       chinaMediaEcosystemService.scoreLeadPriority(state, user, selectedLead.id)
                     )
                   }
                 >
                   <Target className="size-4" aria-hidden="true" />
-                  Priority screen
+                  {t("media.priorityScreen")}
                 </button>
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   type="button"
                   onClick={() =>
-                    onRunAction("Record media contact", () =>
+                    onRunAction(t("media.recordContact"), () =>
                       chinaMediaEcosystemService.recordContacted(state, user, selectedLead.id)
                     )
                   }
                 >
                   <Send className="size-4" aria-hidden="true" />
-                  Record contact
+                  {t("media.recordContact")}
                 </button>
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   type="button"
                   onClick={() =>
-                    onRunAction("Qualify business readiness", () =>
+                    onRunAction(t("media.qualify"), () =>
                       chinaMediaEcosystemService.qualifyBusinessReadiness(state, user, selectedLead.id)
                     )
                   }
                 >
                   <CheckCircle2 className="size-4" aria-hidden="true" />
-                  Qualify
+                  {t("media.qualify")}
                 </button>
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm font-semibold text-amber-800 hover:bg-amber-100"
                   type="button"
                   onClick={() =>
-                    onRunAction("Approve trusted supply gate", () =>
+                    onRunAction(t("media.approveGate"), () =>
                       chinaMediaEcosystemService.approveTrustedSupplyGate(state, user, selectedLead.id)
                     )
                   }
                 >
                   <UserCheck className="size-4" aria-hidden="true" />
-                  Approve gate
+                  {t("media.approveGate")}
                 </button>
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700"
                   type="button"
                   onClick={() =>
-                    onRunAction("Create trusted supply candidate", () =>
+                    onRunAction(t("media.trustedCandidate"), () =>
                       chinaMediaEcosystemService.createTrustedSupplyCandidate(state, user, selectedLead.id)
                     )
                   }
                 >
                   <ArrowRight className="size-4" aria-hidden="true" />
-                  Trusted candidate
+                  {t("media.trustedCandidate")}
                 </button>
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
@@ -1034,13 +1037,13 @@ function ChinaMediaEcosystemWorkspace({
                       return;
                     }
 
-                    onRunAction("Start onboarding readiness", () =>
+                    onRunAction(t("media.startReadiness"), () =>
                       chinaMediaEcosystemService.startCandidateReadiness(state, user, selectedCandidate.id)
                     );
                   }}
                 >
                   <ArrowRight className="size-4" aria-hidden="true" />
-                  Start readiness
+                  {t("media.startReadiness")}
                 </button>
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
@@ -1051,13 +1054,13 @@ function ChinaMediaEcosystemWorkspace({
                       return;
                     }
 
-                    onRunAction("Complete technical review", () =>
+                    onRunAction(t("media.techReview"), () =>
                       chinaMediaEcosystemService.completeCandidateTechnicalReview(state, user, selectedCandidate.id)
                     );
                   }}
                 >
                   <Wrench className="size-4" aria-hidden="true" />
-                  Tech review
+                  {t("media.techReview")}
                 </button>
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
@@ -1068,13 +1071,13 @@ function ChinaMediaEcosystemWorkspace({
                       return;
                     }
 
-                    onRunAction("Complete commercial review", () =>
+                    onRunAction(t("media.commercialReview"), () =>
                       chinaMediaEcosystemService.completeCandidateCommercialReview(state, user, selectedCandidate.id)
                     );
                   }}
                 >
                   <TestTube2 className="size-4" aria-hidden="true" />
-                  Commercial review
+                  {t("media.commercialReview")}
                 </button>
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
@@ -1085,13 +1088,13 @@ function ChinaMediaEcosystemWorkspace({
                       return;
                     }
 
-                    onRunAction("Create onboarding project", () =>
+                    onRunAction(t("media.onboardingProject"), () =>
                       chinaMediaEcosystemService.createOnboardingProject(state, user, selectedCandidate.id)
                     );
                   }}
                 >
                   <Plus className="size-4" aria-hidden="true" />
-                  Onboarding project
+                  {t("media.onboardingProject")}
                 </button>
               </div>
             </article>
@@ -1131,7 +1134,7 @@ function ChinaMediaEcosystemWorkspace({
             </article>
           </section>
         ) : (
-          <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">No ecosystem leads are available.</article>
+          <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">{t("media.noLeads")}</article>
         )}
       </div>
     </div>
@@ -1148,11 +1151,13 @@ function MetricMini({ label, value }: { label: string; value: string }) {
 }
 
 function SignalCheck({ label, checked }: { label: string; checked: boolean }) {
+  const { t } = useLocale();
+
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
       <p className="text-xs font-semibold uppercase tracking-normal text-slate-500">{label}</p>
       <div className="mt-2">
-        <StatusBadge tone={checked ? "success" : "warning"}>{checked ? "confirmed" : "pending"}</StatusBadge>
+        <StatusBadge tone={checked ? "success" : "warning"}>{checked ? t("media.confirmed") : t("media.pending")}</StatusBadge>
       </div>
     </div>
   );

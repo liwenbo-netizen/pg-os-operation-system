@@ -16,6 +16,7 @@ import type {
   WorkbenchWorkflowState
 } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
 
 type WorkbenchOperationsPageProps = {
   route: AppRoute;
@@ -69,6 +70,7 @@ export function WorkbenchOperationsPage({
   onStateChange,
   onOpenTask
 }: WorkbenchOperationsPageProps) {
+  const { locale } = useLocale();
   const [selectedTaskId, setSelectedTaskId] = useState<string>("task-proposal-approval");
   const [message, setMessage] = useState<ActionMessage | null>(null);
   const snapshot = useMemo(
@@ -111,10 +113,10 @@ export function WorkbenchOperationsPage({
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge tone={route.path === "/ceo/dashboard" ? "danger" : "info"}>{route.service}</StatusBadge>
-            <StatusBadge tone="neutral">{role.name}</StatusBadge>
+            <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
           </div>
           <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">
-            {route.path === "/ceo/dashboard" ? "CEO Operating Dashboard" : "Role Workbench"}
+            {getRouteDisplayTitle(route, locale)}
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Prioritized tasks, approvals, risks, recent business events, and OKR progress across PG OS workflows.

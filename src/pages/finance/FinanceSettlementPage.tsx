@@ -7,6 +7,7 @@ import type { AppRoute } from "../../routes/routes";
 import { financeSettlementService } from "../../services/financeSettlementService";
 import type { AuditEvent, BusinessUser, EntityId, FinanceWorkflowState, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
 
 type FinanceSettlementPageProps = {
   route: AppRoute;
@@ -48,6 +49,7 @@ export function FinanceSettlementPage({
   onStateChange,
   onAuditEvent
 }: FinanceSettlementPageProps) {
+  const { locale } = useLocale();
   const [activeSettlementId, setActiveSettlementId] = useState<EntityId>(selectedSettlementId ?? "settlement-clean");
   const [message, setMessage] = useState<ActionMessage | null>(null);
   const summary = financeSettlementService.getSummary(state, mediaState);
@@ -83,7 +85,7 @@ export function FinanceSettlementPage({
     return (
       <section className="space-y-4">
         <StatusBadge tone="info">{route.service}</StatusBadge>
-        <h1 className="text-3xl font-semibold tracking-normal text-slate-950">{route.title}</h1>
+        <h1 className="text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
         <p className="text-sm text-slate-500">No settlements are available.</p>
       </section>
     );
@@ -95,10 +97,10 @@ export function FinanceSettlementPage({
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge tone="info">{route.service}</StatusBadge>
-            <StatusBadge tone="neutral">{role.name}</StatusBadge>
+            <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
             <StatusBadge tone={statusTone[selectedSettlement.status]}>{selectedSettlement.status}</StatusBadge>
           </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">Settlement Workspace</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Confirm publisher payable amount, handle diagnostic blockers, issue invoice, and close payment status.
           </p>

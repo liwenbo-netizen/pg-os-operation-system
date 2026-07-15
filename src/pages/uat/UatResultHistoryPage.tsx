@@ -24,6 +24,7 @@ import {
   summarizeAcceptanceLedger,
   type UatAcceptanceStatus
 } from "../../services/uatAcceptanceLedgerService";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
 import type { UatStepStatus } from "../../services/uatScriptService";
 import type { BusinessUser } from "../../types/domain";
 import { cn } from "../../lib/cn";
@@ -95,6 +96,7 @@ function uniqueRoles(steps: UatStepHistoryItem[]) {
 }
 
 export function UatResultHistoryPage({ route, user }: UatResultHistoryPageProps) {
+  const { locale } = useLocale();
   const [repository] = useState(() => createUatScriptResultRepository());
   const [selectedRunId, setSelectedRunId] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<UatStepStatus | "all">("all");
@@ -205,7 +207,7 @@ export function UatResultHistoryPage({ route, user }: UatResultHistoryPageProps)
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-normal text-blue-700">{route.module}</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{route.title}</h1>
+          <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Read-only production UAT run history, step evidence, and export records.
           </p>
@@ -215,7 +217,7 @@ export function UatResultHistoryPage({ route, user }: UatResultHistoryPageProps)
           </div>
         </div>
         <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-          <p className="font-semibold text-slate-900">{roleDefinitions[user.activeRole].name}</p>
+          <p className="font-semibold text-slate-900">{getRoleDisplayName(user.activeRole, locale)}</p>
           <p className="mt-1">{user.email}</p>
         </div>
       </div>

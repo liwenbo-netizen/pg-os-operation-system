@@ -15,6 +15,7 @@ import type {
   SalesWorkflowState
 } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
+import { getRoleDisplayName, getRouteDisplayTitle, useLocale } from "../../lib/i18n";
 
 type ContractWorkspacePageProps = {
   route: AppRoute;
@@ -67,6 +68,7 @@ export function ContractWorkspacePage({
   onStateChange,
   onAuditEvent
 }: ContractWorkspacePageProps) {
+  const { locale } = useLocale();
   const [activeContractId, setActiveContractId] = useState<EntityId>(selectedContractId ?? "contract-233-framework");
   const [message, setMessage] = useState<ActionMessage | null>(null);
   const summary = contractService.getSummary(state);
@@ -102,7 +104,7 @@ export function ContractWorkspacePage({
     return (
       <section className="space-y-4">
         <StatusBadge tone="info">{route.service}</StatusBadge>
-        <h1 className="text-3xl font-semibold tracking-normal text-slate-950">{route.title}</h1>
+        <h1 className="text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
         <p className="text-sm text-slate-500">No contracts are available.</p>
       </section>
     );
@@ -114,10 +116,10 @@ export function ContractWorkspacePage({
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <StatusBadge tone="info">{route.service}</StatusBadge>
-            <StatusBadge tone="neutral">{role.name}</StatusBadge>
+            <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
             <StatusBadge tone={statusTone[selectedContract.status]}>{selectedContract.status}</StatusBadge>
           </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">Contract Workspace</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Legal and finance collaboration for counterparty contracts, settlement side letters, and signing readiness.
           </p>
