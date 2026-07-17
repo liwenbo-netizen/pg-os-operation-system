@@ -79,15 +79,20 @@ describe("uatHistoryExportService", () => {
     expect(csv).toContain(
       '"china_media_ecosystem.contact; china_media_ecosystem.contacted; china_media_ecosystem.business_qualify; china_media_ecosystem.business_qualified; china_media_ecosystem.trusted_gate.approve; china_media_ecosystem.trusted_gate_approved; china_media_ecosystem.trusted_candidate.create; china_media_ecosystem.trusted_candidate_created"'
     );
+    expect(csv).toContain('"CM-5D-5H"');
+    expect(csv).toContain(
+      '"commercial_test.conclude; publisher.commercial_test_passed; trusted_supply.evaluate; trusted_supply.score_evaluated; trusted_supply.pool.confirm; trusted_supply.pool_confirmed; trusted_supply.package.create; trusted_supply.package_created; trusted_supply.package.activate; trusted_supply.package_activated"'
+    );
     expect(JSON.parse(json)).toMatchObject({
       ledger: expect.arrayContaining([
         expect.objectContaining({ phase: "Phase 37" }),
         expect.objectContaining({ phase: "CM-4B" }),
-        expect.objectContaining({ phase: "CM-5A" })
+        expect.objectContaining({ phase: "CM-5A" }),
+        expect.objectContaining({ phase: "CM-5D-5H" })
       ])
     });
     expect(createUatAcceptanceLedgerFileName(productionUatAcceptanceLedger, "csv")).toBe(
-      "pgos-production-uat-acceptance-ledger-2026-07-12.csv"
+      "pgos-production-uat-acceptance-ledger-2026-07-17.csv"
     );
   });
 });

@@ -237,12 +237,12 @@ export function UatResultHistoryPage({ route, user }: UatResultHistoryPageProps)
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <ClipboardCheck className="size-5 text-blue-600" aria-hidden="true" />
-              <StatusBadge tone="success">Phase 37-CM-5A</StatusBadge>
+              <StatusBadge tone="success">Phase 37-CM-5H</StatusBadge>
             </div>
             <h2 className="mt-3 text-xl font-semibold tracking-normal text-slate-950">Formal sign-off ledger</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
               Consolidated production UAT acceptance records for deployment readiness, live-write proof, RLS/audit proof, and workbench task
-              execution binding, including China Media ecosystem expansion evidence.
+              execution binding, including China Media ecosystem expansion and trusted-supply operating evidence.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

@@ -13,7 +13,7 @@ export type UatAcceptanceEvidenceKind =
 
 export type UatAcceptanceLedgerItem = {
   id: string;
-  phase: "Phase 37" | "Phase 38" | "Phase 39" | "CM-4B" | "CM-5A";
+  phase: "Phase 37" | "Phase 38" | "Phase 39" | "CM-4B" | "CM-5A" | "CM-5D-5H";
   title: string;
   businessDomains: UatBusinessDomain[];
   roles: RoleCode[];
@@ -238,6 +238,38 @@ export const productionUatAcceptanceLedger: UatAcceptanceLedgerItem[] = [
     ],
     sourceDocument: "docs/development-package/cm-5a-trusted-supply-candidate-conversion-live-uat.md",
     followUp: "Closed. Next China Media phase can connect trusted candidates to onboarding readiness without treating candidate status as trusted approval."
+  },
+  {
+    id: "cm-5d-5h-trusted-supply-operating-mainline",
+    phase: "CM-5D-5H",
+    title: "Trusted supply operating mainline production proof",
+    businessDomains: ["Platform", "Media", "Sales"],
+    roles: ["integration_manager", "adops_manager", "media_manager", "media_director", "sales_manager", "data_analyst", "ceo"],
+    status: "passed",
+    recordedAt: "2026-07-17T09:22:26.000Z",
+    productionUrl: "https://pg-os-operation-system.vercel.app/media/publishers",
+    evidenceKinds: ["automated", "user_assisted", "audit_proof", "data_quality"],
+    proofPoints: [
+      "CM-5D completed nine production integration-execution checks covering evidence, blocker lifecycle, technical readiness, and CEO audit proof.",
+      "AdOps completed the QuZhi Campus controlled commercial test at Fill 62%, Clear 72%, and IVT 1.8%; the publisher readiness status was synchronized by the least-privilege database trigger.",
+      "Media Manager recalculated trust from 59 to 77 (level A) with a Core recommendation, while the operating pool remained unconfirmed until Media Director approval.",
+      "Media Director confirmed the Core pool, created and activated the controlled supply package, and Sales Manager received a match score of 96 with a 35% suggested budget share.",
+      "Data Analyst received the QuZhi Campus trusted-supply quality review task, and CEO verified the full allowed/business audit chain with UTC+8 timestamps."
+    ],
+    auditMarkers: [
+      "commercial_test.conclude",
+      "publisher.commercial_test_passed",
+      "trusted_supply.evaluate",
+      "trusted_supply.score_evaluated",
+      "trusted_supply.pool.confirm",
+      "trusted_supply.pool_confirmed",
+      "trusted_supply.package.create",
+      "trusted_supply.package_created",
+      "trusted_supply.package.activate",
+      "trusted_supply.package_activated"
+    ],
+    sourceDocument: "docs/development-package/cm-5d-5h-trusted-supply-live-write-uat.md",
+    followUp: "Closed. Continue routine score-trend, IVT, blocker, and package-quality monitoring."
   }
 ];
 
