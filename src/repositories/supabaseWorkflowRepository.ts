@@ -261,7 +261,8 @@ function mapIntegrationProject(row: Row): IntegrationProject {
     evidence: arrayValue<IntegrationEvidence>(row.evidence),
     blocker: optionalString(row.blocker),
     next_action: optionalString(row.next_action),
-    readiness_reviewed_at: optionalString(row.readiness_reviewed_at)
+    readiness_reviewed_at: optionalString(row.readiness_reviewed_at),
+    go_live_date: optionalString(row.go_live_date)
   };
 }
 
@@ -1028,7 +1029,8 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           evidence: project.evidence ?? [],
           blocker: project.blocker,
           next_action: project.next_action,
-          readiness_reviewed_at: project.readiness_reviewed_at
+          readiness_reviewed_at: project.readiness_reviewed_at,
+          go_live_date: project.go_live_date
         })),
         uuidFields: ["publisher_id"]
       },

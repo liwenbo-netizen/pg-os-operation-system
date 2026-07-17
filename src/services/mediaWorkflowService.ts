@@ -673,6 +673,7 @@ export class MediaWorkflowService {
       return { state: appendEvents(state, user, "publisher.technical_live.submit", publisherId, guard), guard };
     }
 
+    const readinessReviewedAt = new Date().toISOString();
     const nextState = updatePublisher(state, publisherId, {
       technical_live_status: "technical_live_passed"
     });
@@ -688,7 +689,8 @@ export class MediaWorkflowService {
               },
               blocker: undefined,
               next_action: "Technical readiness passed. Continue to commercial validation.",
-              readiness_reviewed_at: new Date().toISOString(),
+              readiness_reviewed_at: readinessReviewedAt,
+              go_live_date: readinessReviewedAt.slice(0, 10),
               notes: "Production validation evidence reviewed and passed."
             }
           : project

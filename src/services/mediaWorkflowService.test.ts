@@ -84,7 +84,9 @@ describe("MediaWorkflowService P0 mainline", () => {
     });
     expect(state.integrationProjects.find((project) => project.publisher_id === "publisher-new-ctv")).toMatchObject({
       status: "technical_live_passed",
-      next_action: "Technical readiness passed. Continue to commercial validation."
+      next_action: "Technical readiness passed. Continue to commercial validation.",
+      go_live_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      readiness_reviewed_at: expect.any(String)
     });
     expect(
       mediaWorkflowService.setTechnicalBlocker(state, user("integration_manager"), "publisher-new-ctv", "Late blocker").guard

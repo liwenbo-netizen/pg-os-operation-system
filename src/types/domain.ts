@@ -93,6 +93,7 @@ export type IntegrationProject = {
   blocker?: string;
   next_action?: string;
   readiness_reviewed_at?: string;
+  go_live_date?: string;
 };
 
 export type IntegrationEvidenceType = "connection_config" | "test_request" | "callback_log" | "production_log";

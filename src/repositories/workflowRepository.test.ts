@@ -665,6 +665,7 @@ describe("workflow repositories", () => {
           ],
           blocker: "Waiting allowlist",
           next_action: "Resolve allowlist blocker.",
+          go_live_date: "2026-07-20",
           notes: "CM-5D execution"
         }
       ]
@@ -676,7 +677,8 @@ describe("workflow repositories", () => {
     expect(project).toMatchObject({
       id: projectId,
       blocker: "Waiting allowlist",
-      next_action: "Resolve allowlist blocker."
+      next_action: "Resolve allowlist blocker.",
+      go_live_date: "2026-07-20"
     });
     expect(project.evidence?.[0]).toMatchObject({ evidence_type: "connection_config", reference: "VAULT-001" });
 
@@ -692,7 +694,8 @@ describe("workflow repositories", () => {
         id: projectId,
         evidence: [expect.objectContaining({ id: evidenceId, reference: "VAULT-001" })],
         blocker: undefined,
-        next_action: "Record test request evidence."
+        next_action: "Record test request evidence.",
+        go_live_date: "2026-07-20"
       })
     ]);
   });
