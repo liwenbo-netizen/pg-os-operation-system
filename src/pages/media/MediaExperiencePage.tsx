@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   Target,
   TestTube2,
+  TrendingUp,
   UserCheck,
   Wrench
 } from "lucide-react";
@@ -26,6 +27,7 @@ import {
   type OnboardingHandoffSnapshot
 } from "../../services/chinaMediaEcosystemService";
 import { integrationEvidenceDefinitions, mediaWorkflowService } from "../../services/mediaWorkflowService";
+import { trustedSupplyNetworkService } from "../../services/trustedSupplyNetworkService";
 import type {
   AuditEvent,
   BusinessUser,
@@ -408,6 +410,7 @@ export function MediaExperiencePage({
         {page === "publisher" && selectedSnapshot ? (
           <Publisher360
             snapshot={selectedSnapshot}
+            trustedSnapshot={trustedSupplyNetworkService.getSnapshot(state, selectedSnapshot.publisher!.id)}
             onAddSlot={() =>
               runAction("Add ad slot", () =>
                 mediaWorkflowService.addAdSlot(state, user, selectedSnapshot.publisher!.id, {
@@ -432,6 +435,26 @@ export function MediaExperiencePage({
             }
             onOpenIntegration={() => onRouteChange("/media/integration-wizard/:id", selectedSnapshot.publisher!.id)}
             onOpenTest={() => onRouteChange("/media/commercial-tests/:id", selectedSnapshot.publisher!.id)}
+            onEvaluateTrust={() =>
+              runAction(t("trusted.evaluate"), () =>
+                trustedSupplyNetworkService.evaluatePublisher(state, user, selectedSnapshot.publisher!.id)
+              )
+            }
+            onConfirmPool={() =>
+              runAction(t("trusted.confirmPool"), () =>
+                trustedSupplyNetworkService.confirmPool(state, user, selectedSnapshot.publisher!.id)
+              )
+            }
+            onCreatePackage={() =>
+              runAction(t("trusted.createPackage"), () =>
+                trustedSupplyNetworkService.createSupplyPackage(state, user, selectedSnapshot.publisher!.id)
+              )
+            }
+            onActivatePackage={(packageId) =>
+              runAction(t("trusted.activatePackage"), () =>
+                trustedSupplyNetworkService.activateSupplyPackage(state, user, packageId)
+              )
+            }
           />
         ) : null}
 
@@ -1617,17 +1640,28 @@ function MediaDirectorCommandCenter({
 
 function Publisher360({
   snapshot,
+  trustedSnapshot,
   onAddSlot,
   onAddTerm,
   onOpenIntegration,
-  onOpenTest
+  onOpenTest,
+  onEvaluateTrust,
+  onConfirmPool,
+  onCreatePackage,
+  onActivatePackage
 }: {
   snapshot: ReturnType<typeof mediaWorkflowService.getPublisherSnapshot>;
+  trustedSnapshot: ReturnType<typeof trustedSupplyNetworkService.getSnapshot>;
   onAddSlot: () => void;
   onAddTerm: () => void;
   onOpenIntegration: () => void;
   onOpenTest: () => void;
+  onEvaluateTrust: () => void;
+  onConfirmPool: () => void;
+  onCreatePackage: () => void;
+  onActivatePackage: (packageId: EntityId) => void;
 }) {
+  const { t } = useLocale();
   const publisher = snapshot.publisher;
 
   if (!publisher) {
@@ -1662,6 +1696,184 @@ function Publisher360({
         <DetailPanel title="Commercial terms" items={snapshot.contractTerms.map((term) => `${term.billing_model} / ${term.payment_terms}`)} action="Add terms" onAction={onAddTerm} />
         <DetailPanel title="Integration" items={snapshot.integrationProjects.map((project) => `${project.integration_type} / ${project.status}`)} action="Open wizard" onAction={onOpenIntegration} />
         <DetailPanel title="Commercial test" items={snapshot.commercialTests.map((test) => `${test.test_name} / ${test.status}`)} action="Open test" onAction={onOpenTest} />
+      </div>
+
+      <TrustedSupplyPanel
+        snapshot={trustedSnapshot}
+        onEvaluate={onEvaluateTrust}
+        onConfirmPool={onConfirmPool}
+        onCreatePackage={onCreatePackage}
+        onActivatePackage={onActivatePackage}
+        labels={{
+          title: t("trusted.title"),
+          description: t("trusted.description"),
+          notEvaluated: t("trusted.notEvaluated"),
+          score: t("trusted.score"),
+          level: t("trusted.level"),
+          suggestedPool: t("trusted.suggestedPool"),
+          confirmedPool: t("trusted.confirmedPool"),
+          evaluate: t("trusted.evaluate"),
+          confirmPool: t("trusted.confirmPool"),
+          createPackage: t("trusted.createPackage"),
+          activatePackage: t("trusted.activatePackage"),
+          scoreBreakdown: t("trusted.scoreBreakdown"),
+          reasons: t("trusted.reasons"),
+          risks: t("trusted.risks"),
+          noRisks: t("trusted.noRisks"),
+          packages: t("trusted.packages"),
+          noPackages: t("trusted.noPackages"),
+          quality: t("trusted.quality"),
+          scoreTrend: t("trusted.scoreTrend"),
+          blockers: t("trusted.blockers"),
+          nextAction: t("trusted.nextAction"),
+          humanGate: t("trusted.humanGate")
+        }}
+      />
+    </div>
+  );
+}
+
+function TrustedSupplyPanel({
+  snapshot,
+  onEvaluate,
+  onConfirmPool,
+  onCreatePackage,
+  onActivatePackage,
+  labels
+}: {
+  snapshot: ReturnType<typeof trustedSupplyNetworkService.getSnapshot>;
+  onEvaluate: () => void;
+  onConfirmPool: () => void;
+  onCreatePackage: () => void;
+  onActivatePackage: (packageId: EntityId) => void;
+  labels: Record<string, string>;
+}) {
+  const profile = snapshot.profile;
+  const breakdownLabels: Record<string, string> = {
+    profile_completeness: "Profile",
+    authorization: "Authorization",
+    technical: "Technical",
+    context_signals: "Context signals",
+    quality_ivt: "Quality / IVT",
+    transparency: "Transparency",
+    commercial: "Commercial",
+    advertiser_fit: "Advertiser fit",
+    delivery: "Delivery",
+    risk_deduction: "Risk deduction"
+  };
+
+  return (
+    <article className="rounded-lg border border-slate-200 bg-white shadow-card">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 p-5">
+        <div>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="size-5 text-blue-600" aria-hidden="true" />
+            <h2 className="text-lg font-semibold text-slate-950">{labels.title}</h2>
+          </div>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{labels.description}</p>
+        </div>
+        <StatusBadge tone={snapshot.quality.status === "healthy" ? "success" : snapshot.quality.status === "at_risk" || snapshot.quality.status === "suspended" ? "danger" : "warning"}>
+          {snapshot.quality.status}
+        </StatusBadge>
+      </div>
+
+      <div className="grid border-b border-slate-200 md:grid-cols-4">
+        <TrustMetric label={labels.score} value={profile ? String(profile.total_score) : labels.notEvaluated} />
+        <TrustMetric label={labels.level} value={profile?.trust_level ?? "-"} />
+        <TrustMetric label={labels.suggestedPool} value={profile?.suggested_pool ?? "-"} />
+        <TrustMetric label={labels.confirmedPool} value={profile?.confirmed_pool ?? "-"} />
+      </div>
+
+      <div className="grid gap-6 p-5 xl:grid-cols-[1.15fr_0.85fr]">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-950">{labels.scoreBreakdown}</h3>
+          {profile ? (
+            <div className="mt-3 grid gap-x-5 gap-y-3 sm:grid-cols-2">
+              {Object.entries(profile.score_breakdown).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between border-b border-slate-100 pb-2 text-sm">
+                  <span className="text-slate-600">{breakdownLabels[key] ?? key}</span>
+                  <span className={`font-semibold ${key === "risk_deduction" && value > 0 ? "text-red-700" : "text-slate-900"}`}>
+                    {key === "risk_deduction" ? `-${value}` : value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-slate-500">{labels.humanGate}</p>
+          )}
+
+          <div className="mt-5 grid gap-5 md:grid-cols-2">
+            <TrustList title={labels.reasons} items={profile?.recommendation_reasons ?? []} empty={labels.notEvaluated} />
+            <TrustList title={labels.risks} items={profile?.risk_warnings ?? []} empty={labels.noRisks} danger />
+          </div>
+        </div>
+
+        <div className="space-y-5 border-slate-200 xl:border-l xl:pl-6">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-950">{labels.quality}</h3>
+            <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div><dt className="text-slate-500">{labels.scoreTrend}</dt><dd className="mt-1 font-semibold text-slate-900">{snapshot.quality.scoreDelta >= 0 ? "+" : ""}{snapshot.quality.scoreDelta}</dd></div>
+              <div><dt className="text-slate-500">{labels.blockers}</dt><dd className="mt-1 font-semibold text-slate-900">{snapshot.quality.openBlockingCases}</dd></div>
+            </dl>
+            <div className="mt-3 space-y-1 text-sm text-slate-600">
+              {snapshot.quality.signals.map((signal) => <p key={signal}>{signal}</p>)}
+            </div>
+            <p className="mt-3 border-l-2 border-blue-500 pl-3 text-sm font-medium text-slate-700">{snapshot.quality.nextAction}</p>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold text-slate-950">{labels.packages}</h3>
+            <div className="mt-3 space-y-2">
+              {snapshot.packages.map((packageRecord) => (
+                <div key={packageRecord.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{packageRecord.package_name}</p>
+                    <p className="mt-1 text-xs text-slate-500">{packageRecord.pool} / {packageRecord.status} / {packageRecord.ad_formats.join(", ")}</p>
+                  </div>
+                  {packageRecord.status === "draft" ? (
+                    <button className="h-9 rounded-lg border border-emerald-200 px-3 text-sm font-semibold text-emerald-700" type="button" onClick={() => onActivatePackage(packageRecord.id)}>
+                      {labels.activatePackage}
+                    </button>
+                  ) : <StatusBadge tone="success">active</StatusBadge>}
+                </div>
+              ))}
+              {snapshot.packages.length === 0 ? <p className="text-sm text-slate-500">{labels.noPackages}</p> : null}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 border-t border-slate-200 p-5">
+        <button className="h-10 rounded-lg border border-blue-200 px-4 text-sm font-semibold text-blue-700" type="button" onClick={onEvaluate}>
+          {labels.evaluate}
+        </button>
+        <button className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300" type="button" onClick={onConfirmPool} disabled={!profile || Boolean(profile.confirmed_pool)}>
+          {labels.confirmPool}
+        </button>
+        <button className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300" type="button" onClick={onCreatePackage} disabled={!profile?.confirmed_pool || !["core", "test"].includes(profile.confirmed_pool)}>
+          {labels.createPackage}
+        </button>
+        <p className="flex basis-full items-center gap-2 text-xs text-slate-500"><ShieldAlert className="size-4" aria-hidden="true" />{labels.humanGate}</p>
+      </div>
+    </article>
+  );
+}
+
+function TrustMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-slate-200 p-4 md:not-last:border-r">
+      <p className="text-xs font-semibold text-slate-500">{label}</p>
+      <p className="mt-2 text-lg font-semibold text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function TrustList({ title, items, empty, danger = false }: { title: string; items: string[]; empty: string; danger?: boolean }) {
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
+      <div className={`mt-2 space-y-2 border-l-2 pl-3 text-sm ${danger ? "border-red-300 text-red-800" : "border-emerald-300 text-slate-600"}`}>
+        {items.length ? items.map((item) => <p key={item}>{item}</p>) : <p>{empty}</p>}
       </div>
     </div>
   );
@@ -1868,12 +2080,13 @@ function CommercialTestWorkspace({
   onCreateTest: () => void;
   onPassLatestTest: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xl font-semibold text-slate-950">Commercial test workspace</p>
-          <p className="mt-1 text-sm text-slate-500">{publisher.name}</p>
+          <p className="text-xl font-semibold text-slate-950">{t("commercial.title")}</p>
+          <p className="mt-1 text-sm text-slate-500">{publisher.name} · {t("commercial.description")}</p>
         </div>
         <TestTube2 className="size-6 text-blue-600" aria-hidden="true" />
       </div>
@@ -1887,16 +2100,22 @@ function CommercialTestWorkspace({
             <p className="mt-3 text-xs leading-5 text-slate-500">
               Fill {(test.fill_rate * 100).toFixed(1)}% / Clear {(test.clear_rate * 100).toFixed(1)}% / IVT {(test.ivt_rate * 100).toFixed(1)}%
             </p>
+            <dl className="mt-3 space-y-2 border-t border-slate-200 pt-3 text-xs">
+              <div><dt className="text-slate-500">{t("commercial.owner")}</dt><dd className="mt-1 font-medium text-slate-800">{test.owner_role ?? "adops_manager"}</dd></div>
+              <div><dt className="text-slate-500">{t("commercial.period")}</dt><dd className="mt-1 font-medium text-slate-800">{test.start_date ?? "-"} / {test.end_date ?? "-"}</dd></div>
+              <div><dt className="text-slate-500">{t("commercial.thresholds")}</dt><dd className="mt-1 leading-5 text-slate-700">Fill ≥ {((test.test_plan?.min_fill_rate ?? 0.5) * 100).toFixed(0)}% · Clear ≥ {((test.test_plan?.min_clear_rate ?? 0.6) * 100).toFixed(0)}% · IVT ≤ {((test.test_plan?.max_ivt_rate ?? 0.03) * 100).toFixed(0)}%</dd></div>
+              <div><dt className="text-slate-500">{t("commercial.nextAction")}</dt><dd className="mt-1 leading-5 text-slate-700">{test.next_action ?? "Run controlled traffic and record delivery metrics."}</dd></div>
+            </dl>
           </div>
         ))}
         {tests.length === 0 ? <p className="text-sm text-slate-500">No commercial test exists for this publisher.</p> : null}
       </div>
       <div className="mt-5 flex flex-wrap gap-2">
         <button className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700" type="button" onClick={onCreateTest}>
-          Create test
+          {t("commercial.create")}
         </button>
         <button className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white" type="button" onClick={onPassLatestTest}>
-          Submit pass conclusion
+          {t("commercial.submit")}
         </button>
       </div>
     </article>

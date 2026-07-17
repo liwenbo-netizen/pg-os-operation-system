@@ -66,6 +66,9 @@ describe("workflow repositories", () => {
     const ecosystemLeadId = uuid(16);
     const outreachId = uuid(17);
     const trustedCandidateId = uuid(18);
+    const trustProfileId = uuid(20);
+    const trustHistoryId = uuid(21);
+    const supplyPackageId = uuid(22);
 
     const fakeSupabase = new FakeSupabase({
       publishers: [
@@ -90,6 +93,59 @@ describe("workflow repositories", () => {
           status: "test_passed",
           target_budget: "1200",
           metrics: { spend: 1100, fill_rate: 0.61, clear_rate: 0.72, ivt_rate: 0.01 }
+        }
+      ],
+      media_trust_profiles: [
+        {
+          id: trustProfileId,
+          publisher_id: publisherId,
+          status: "confirmed",
+          total_score: 82,
+          trust_level: "A",
+          score_breakdown: { technical: 15, risk_deduction: 4 },
+          suggested_pool: "core",
+          confirmed_pool: "core",
+          advertiser_fit_tags: ["wellness"],
+          recommendation_reasons: ["Production verified"],
+          risk_warnings: ["Medium risk"],
+          owner_role: "media_director",
+          next_action: "Create package",
+          evaluated_at: "2026-07-17T08:00:00.000Z"
+        }
+      ],
+      media_trust_score_history: [
+        {
+          id: trustHistoryId,
+          publisher_id: publisherId,
+          total_score: 82,
+          trust_level: "A",
+          score_breakdown: { technical: 15, risk_deduction: 4 },
+          suggested_pool: "core",
+          reasons: ["Production verified"],
+          risk_warnings: ["Medium risk"],
+          calculated_at: "2026-07-17T08:00:00.000Z",
+          calculated_by_role: "media_manager"
+        }
+      ],
+      media_supply_packages: [
+        {
+          id: supplyPackageId,
+          publisher_id: publisherId,
+          package_name: "DB controlled supply",
+          status: "active",
+          pool: "core",
+          ad_formats: ["Video"],
+          placement_types: ["In-app"],
+          geo: "CN",
+          inventory_scale: 1000,
+          floor_price: 12,
+          billing_model: "CPM",
+          advertiser_fit_tags: ["wellness"],
+          risk_notes: [],
+          owner_role: "media_manager",
+          created_at: "2026-07-17T08:00:00.000Z",
+          updated_at: "2026-07-17T08:00:00.000Z",
+          activated_at: "2026-07-17T08:05:00.000Z"
         }
       ],
       media_ecosystem_opportunities: [
@@ -298,6 +354,13 @@ describe("workflow repositories", () => {
     expect(result.health).toMatchObject({ mode: "supabase", source: "supabase" });
     expect(result.snapshot.mediaState.publishers[0]).toMatchObject({ id: publisherId, name: "DB Publisher" });
     expect(result.snapshot.mediaState.commercialTests[0]).toMatchObject({ fill_rate: 0.61, spend: 1100 });
+    expect(result.snapshot.mediaState.mediaTrustProfiles[0]).toMatchObject({
+      id: trustProfileId,
+      total_score: 82,
+      confirmed_pool: "core"
+    });
+    expect(result.snapshot.mediaState.mediaTrustScoreHistory[0]).toMatchObject({ id: trustHistoryId, trust_level: "A" });
+    expect(result.snapshot.mediaState.mediaSupplyPackages[0]).toMatchObject({ id: supplyPackageId, status: "active" });
     expect(result.snapshot.mediaState.mediaEcosystemLeads[0]).toMatchObject({
       id: ecosystemLeadId,
       media_name: "DB Ecosystem Media",

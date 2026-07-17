@@ -13,6 +13,9 @@ import type {
   IntegrationProject,
   MediaEcosystemLead,
   MediaOutreachActivity,
+  MediaSupplyPackage,
+  MediaTrustProfile,
+  MediaTrustScoreRecord,
   ModuleBusinessEvent,
   OkrObjective,
   Opportunity,
@@ -72,6 +75,9 @@ const TABLES_TO_LOAD = [
   "publisher_contract_terms",
   "integration_projects",
   "commercial_tests",
+  "media_trust_profiles",
+  "media_trust_score_history",
+  "media_supply_packages",
   "media_ecosystem_opportunities",
   "media_ecosystem_outreach_activities",
   "trusted_supply_candidates",
@@ -99,6 +105,8 @@ const AUDIT_FIELD_CONFIG: Record<string, AuditFieldConfig> = {
   publishers: { ownerUserId: true, createdBy: true, updatedBy: true },
   integration_projects: { ownerUserId: true },
   commercial_tests: { ownerUserId: true },
+  media_trust_profiles: { ownerUserId: true },
+  media_supply_packages: { ownerUserId: true, createdBy: true, updatedBy: true },
   media_ecosystem_opportunities: { ownerUserId: true, createdBy: true, updatedBy: true },
   media_ecosystem_outreach_activities: { actorUserId: true },
   trusted_supply_candidates: { ownerUserId: true, createdBy: true, updatedBy: true },
@@ -274,12 +282,79 @@ function mapCommercialTest(row: Row): CommercialTest {
     publisher_id: stringValue(row.publisher_id),
     test_name: stringValue(row.test_name, "Commercial readiness test"),
     status: stringValue(row.status, "ready_for_test") as CommercialTest["status"],
+    owner_user_id: optionalString(row.owner_user_id),
+    owner_role: optionalString(row.owner_role) as CommercialTest["owner_role"],
+    start_date: dateOnly(row.start_date),
+    end_date: dateOnly(row.end_date),
     target_budget: numberValue(row.target_budget),
+    currency: stringValue(row.currency, "CNY"),
     spend: numberValue(metrics.spend),
     fill_rate: numberValue(metrics.fill_rate),
     clear_rate: numberValue(metrics.clear_rate),
     ivt_rate: numberValue(metrics.ivt_rate),
+    test_plan: Object.keys(objectValue(row.test_plan)).length
+      ? (objectValue(row.test_plan) as CommercialTest["test_plan"])
+      : undefined,
+    next_action: optionalString(row.next_action),
+    reviewed_at: optionalString(row.reviewed_at),
     result_summary: optionalString(row.result_summary)
+  };
+}
+
+function mapMediaTrustProfile(row: Row): MediaTrustProfile {
+  return {
+    id: stringValue(row.id),
+    publisher_id: stringValue(row.publisher_id),
+    status: stringValue(row.status, "draft") as MediaTrustProfile["status"],
+    total_score: numberValue(row.total_score),
+    trust_level: stringValue(row.trust_level, "D") as MediaTrustProfile["trust_level"],
+    score_breakdown: objectValue(row.score_breakdown) as MediaTrustProfile["score_breakdown"],
+    suggested_pool: stringValue(row.suggested_pool, "opportunity") as MediaTrustProfile["suggested_pool"],
+    confirmed_pool: optionalString(row.confirmed_pool) as MediaTrustProfile["confirmed_pool"],
+    advertiser_fit_tags: arrayValue<string>(row.advertiser_fit_tags),
+    recommendation_reasons: arrayValue<string>(row.recommendation_reasons),
+    risk_warnings: arrayValue<string>(row.risk_warnings),
+    owner_role: roleCode(row.owner_role, "media_manager"),
+    next_action: stringValue(row.next_action, "Evaluate trusted supply readiness."),
+    evaluated_at: stringValue(row.evaluated_at, new Date().toISOString()),
+    confirmed_at: optionalString(row.confirmed_at)
+  };
+}
+
+function mapMediaTrustScoreRecord(row: Row): MediaTrustScoreRecord {
+  return {
+    id: stringValue(row.id),
+    publisher_id: stringValue(row.publisher_id),
+    total_score: numberValue(row.total_score),
+    trust_level: stringValue(row.trust_level, "D") as MediaTrustScoreRecord["trust_level"],
+    score_breakdown: objectValue(row.score_breakdown) as MediaTrustScoreRecord["score_breakdown"],
+    suggested_pool: stringValue(row.suggested_pool, "opportunity") as MediaTrustScoreRecord["suggested_pool"],
+    reasons: arrayValue<string>(row.reasons),
+    risk_warnings: arrayValue<string>(row.risk_warnings),
+    calculated_at: stringValue(row.calculated_at, new Date().toISOString()),
+    calculated_by_role: roleCode(row.calculated_by_role, "media_manager")
+  };
+}
+
+function mapMediaSupplyPackage(row: Row): MediaSupplyPackage {
+  return {
+    id: stringValue(row.id),
+    publisher_id: stringValue(row.publisher_id),
+    package_name: stringValue(row.package_name, "Controlled supply package"),
+    status: stringValue(row.status, "draft") as MediaSupplyPackage["status"],
+    pool: stringValue(row.pool, "test") as MediaSupplyPackage["pool"],
+    ad_formats: arrayValue<string>(row.ad_formats),
+    placement_types: arrayValue<string>(row.placement_types),
+    geo: stringValue(row.geo, "CN"),
+    inventory_scale: numberValue(row.inventory_scale),
+    floor_price: optionalNumber(row.floor_price),
+    billing_model: optionalString(row.billing_model),
+    advertiser_fit_tags: arrayValue<string>(row.advertiser_fit_tags),
+    risk_notes: arrayValue<string>(row.risk_notes),
+    owner_role: roleCode(row.owner_role, "media_manager"),
+    created_at: stringValue(row.created_at, new Date().toISOString()),
+    updated_at: stringValue(row.updated_at, new Date().toISOString()),
+    activated_at: optionalString(row.activated_at)
   };
 }
 
@@ -897,6 +972,21 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
         ),
         integrationProjects: rowsOrFallback(loadedRows.integration_projects, fallback.mediaState.integrationProjects, mapIntegrationProject),
         commercialTests: rowsOrFallback(loadedRows.commercial_tests, fallback.mediaState.commercialTests, mapCommercialTest),
+        mediaTrustProfiles: rowsOrFallback(
+          loadedRows.media_trust_profiles,
+          fallback.mediaState.mediaTrustProfiles,
+          mapMediaTrustProfile
+        ),
+        mediaTrustScoreHistory: rowsOrFallback(
+          loadedRows.media_trust_score_history,
+          fallback.mediaState.mediaTrustScoreHistory,
+          mapMediaTrustScoreRecord
+        ),
+        mediaSupplyPackages: rowsOrFallback(
+          loadedRows.media_supply_packages,
+          fallback.mediaState.mediaSupplyPackages,
+          mapMediaSupplyPackage
+        ),
         mediaEcosystemLeads: rowsOrFallback(
           loadedRows.media_ecosystem_opportunities,
           fallback.mediaState.mediaEcosystemLeads,
@@ -1041,7 +1131,15 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           publisher_id: test.publisher_id,
           test_name: test.test_name,
           status: test.status,
+          owner_user_id: optionalUuid(test.owner_user_id),
+          owner_role: test.owner_role,
+          start_date: test.start_date,
+          end_date: test.end_date,
           target_budget: test.target_budget,
+          currency: test.currency ?? "CNY",
+          test_plan: test.test_plan ?? {},
+          next_action: test.next_action,
+          reviewed_at: test.reviewed_at,
           result_summary: test.result_summary,
           metrics: {
             spend: test.spend,
@@ -1049,6 +1147,66 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
             clear_rate: test.clear_rate,
             ivt_rate: test.ivt_rate
           }
+        })),
+        uuidFields: ["publisher_id"]
+      },
+      {
+        table: "media_trust_profiles",
+        rows: snapshot.mediaState.mediaTrustProfiles.map((profile) => ({
+          id: profile.id,
+          publisher_id: profile.publisher_id,
+          status: profile.status,
+          total_score: profile.total_score,
+          trust_level: profile.trust_level,
+          score_breakdown: profile.score_breakdown,
+          suggested_pool: profile.suggested_pool,
+          confirmed_pool: profile.confirmed_pool,
+          advertiser_fit_tags: profile.advertiser_fit_tags,
+          recommendation_reasons: profile.recommendation_reasons,
+          risk_warnings: profile.risk_warnings,
+          owner_role: profile.owner_role,
+          next_action: profile.next_action,
+          evaluated_at: profile.evaluated_at,
+          confirmed_at: profile.confirmed_at
+        })),
+        uuidFields: ["publisher_id"]
+      },
+      {
+        table: "media_trust_score_history",
+        rows: snapshot.mediaState.mediaTrustScoreHistory.map((record) => ({
+          id: record.id,
+          publisher_id: record.publisher_id,
+          total_score: record.total_score,
+          trust_level: record.trust_level,
+          score_breakdown: record.score_breakdown,
+          suggested_pool: record.suggested_pool,
+          reasons: record.reasons,
+          risk_warnings: record.risk_warnings,
+          calculated_at: record.calculated_at,
+          calculated_by_role: record.calculated_by_role
+        })),
+        uuidFields: ["publisher_id"]
+      },
+      {
+        table: "media_supply_packages",
+        rows: snapshot.mediaState.mediaSupplyPackages.map((packageRecord) => ({
+          id: packageRecord.id,
+          publisher_id: packageRecord.publisher_id,
+          package_name: packageRecord.package_name,
+          status: packageRecord.status,
+          pool: packageRecord.pool,
+          ad_formats: packageRecord.ad_formats,
+          placement_types: packageRecord.placement_types,
+          geo: packageRecord.geo,
+          inventory_scale: packageRecord.inventory_scale,
+          floor_price: packageRecord.floor_price,
+          billing_model: packageRecord.billing_model,
+          advertiser_fit_tags: packageRecord.advertiser_fit_tags,
+          risk_notes: packageRecord.risk_notes,
+          owner_role: packageRecord.owner_role,
+          activated_at: packageRecord.activated_at,
+          created_at: packageRecord.created_at,
+          updated_at: packageRecord.updated_at
         })),
         uuidFields: ["publisher_id"]
       },

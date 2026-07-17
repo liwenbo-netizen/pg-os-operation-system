@@ -90,6 +90,34 @@ export const CORE_BUSINESS_AUDIT_ACTIONS: CoreBusinessAuditAction[] = [
     criticality: "P0"
   },
   {
+    action: "trusted_supply.evaluate",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Trusted Supply Qualification",
+    criticality: "P0"
+  },
+  {
+    action: "trusted_supply.pool.confirm",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Trusted Supply Pool Confirmation",
+    criticality: "P0"
+  },
+  {
+    action: "trusted_supply.package.create",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Controlled Supply Packaging",
+    criticality: "P0"
+  },
+  {
+    action: "trusted_supply.package.activate",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Controlled Supply Activation",
+    criticality: "P0"
+  },
+  {
     action: "china_media_ecosystem.owner.assign",
     objectType: "media_ecosystem_lead",
     module: "Media",

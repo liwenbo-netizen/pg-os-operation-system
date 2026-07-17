@@ -113,12 +113,103 @@ export type CommercialTest = {
   publisher_id: EntityId;
   test_name: string;
   status: CommercialTestStatus;
+  owner_user_id?: UserId;
+  owner_role?: RoleCode;
+  start_date?: string;
+  end_date?: string;
   target_budget: number;
+  currency?: string;
   spend: number;
   fill_rate: number;
   clear_rate: number;
   ivt_rate: number;
+  test_plan?: {
+    inventory_scope: string;
+    min_fill_rate: number;
+    min_clear_rate: number;
+    max_ivt_rate: number;
+    notes?: string;
+  };
+  next_action?: string;
+  reviewed_at?: string;
   result_summary?: string;
+};
+
+export type MediaTrustLevel = "S" | "A" | "B" | "C" | "D";
+export type TrustedSupplyPool = "opportunity" | "test" | "core" | "risk" | "suspended";
+
+export type MediaTrustScoreBreakdown = {
+  profile_completeness: number;
+  authorization: number;
+  technical: number;
+  context_signals: number;
+  quality_ivt: number;
+  transparency: number;
+  commercial: number;
+  advertiser_fit: number;
+  delivery: number;
+  risk_deduction: number;
+};
+
+export type MediaTrustProfile = {
+  id: EntityId;
+  publisher_id: EntityId;
+  status: "draft" | "evaluated" | "confirmed" | "monitoring";
+  total_score: number;
+  trust_level: MediaTrustLevel;
+  score_breakdown: MediaTrustScoreBreakdown;
+  suggested_pool: TrustedSupplyPool;
+  confirmed_pool?: TrustedSupplyPool;
+  advertiser_fit_tags: string[];
+  recommendation_reasons: string[];
+  risk_warnings: string[];
+  owner_role: RoleCode;
+  next_action: string;
+  evaluated_at: string;
+  confirmed_at?: string;
+};
+
+export type MediaTrustScoreRecord = {
+  id: EntityId;
+  publisher_id: EntityId;
+  total_score: number;
+  trust_level: MediaTrustLevel;
+  score_breakdown: MediaTrustScoreBreakdown;
+  suggested_pool: TrustedSupplyPool;
+  reasons: string[];
+  risk_warnings: string[];
+  calculated_at: string;
+  calculated_by_role: RoleCode;
+};
+
+export type MediaSupplyPackage = {
+  id: EntityId;
+  publisher_id: EntityId;
+  package_name: string;
+  status: "draft" | "active" | "paused" | "retired";
+  pool: TrustedSupplyPool;
+  ad_formats: string[];
+  placement_types: string[];
+  geo: string;
+  inventory_scale: number;
+  floor_price?: number;
+  billing_model?: string;
+  advertiser_fit_tags: string[];
+  risk_notes: string[];
+  owner_role: RoleCode;
+  created_at: string;
+  updated_at: string;
+  activated_at?: string;
+};
+
+export type SupplyMatchRecommendation = {
+  advertiser_id: EntityId;
+  publisher_id: EntityId;
+  package_id: EntityId;
+  match_score: number;
+  recommendation_reasons: string[];
+  risk_warnings: string[];
+  suggested_budget_ratio: number;
 };
 
 export type MediaEcosystemTrack =
@@ -488,6 +579,9 @@ export type MediaWorkflowState = {
   publisherContractTerms: PublisherContractTerm[];
   integrationProjects: IntegrationProject[];
   commercialTests: CommercialTest[];
+  mediaTrustProfiles: MediaTrustProfile[];
+  mediaTrustScoreHistory: MediaTrustScoreRecord[];
+  mediaSupplyPackages: MediaSupplyPackage[];
   mediaEcosystemLeads: MediaEcosystemLead[];
   mediaOutreachActivities: MediaOutreachActivity[];
   trustedSupplyCandidates: TrustedSupplyCandidate[];

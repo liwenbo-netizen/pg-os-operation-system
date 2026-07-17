@@ -261,6 +261,31 @@ describe("workbenchService phase 10", () => {
     });
   });
 
+  it("derives CM-5E commercial validation and CM-5F trust qualification tasks", () => {
+    const snapshotContext = context();
+    const adopsSnapshot = workbenchService.getSnapshot(snapshotContext, authService.createMockUser("adops_manager"));
+    const mediaSnapshot = workbenchService.getSnapshot(snapshotContext, authService.createMockUser("media_manager"));
+
+    expect(adopsSnapshot.tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: expect.stringContaining("commercial validation"),
+          related_route: "/media/commercial-tests/:id",
+          source_object_id: "publisher-quzhi"
+        })
+      ])
+    );
+    expect(mediaSnapshot.tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: expect.stringContaining("Evaluate trusted supply"),
+          related_route: "/media/publishers/:id",
+          source_object_id: "publisher-233"
+        })
+      ])
+    );
+  });
+
   it("blocks unrelated roles from completing another role's task", () => {
     const user = authService.createMockUser("sales_manager");
     const state = createInitialWorkbenchWorkflowState();

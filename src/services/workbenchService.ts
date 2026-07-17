@@ -18,6 +18,7 @@ import { auditService } from "./auditService";
 import { mediaEcosystemHandoffActivityEvent } from "./chinaMediaEcosystemService";
 import { fixtureRepository } from "./fixtures";
 import { rbacService } from "./rbacService";
+import { trustedSupplyNetworkService } from "./trustedSupplyNetworkService";
 
 type WorkbenchResult = {
   state: WorkbenchWorkflowState;
@@ -356,6 +357,124 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
       return [handoffTask, integrationTask];
     });
 
+  const commercialValidationTasks = context.mediaState.publishers
+    .filter(
+      (publisher) =>
+        publisher.technical_live_status === "technical_live_passed" &&
+        publisher.commercial_test_status !== "test_passed"
+    )
+    .map<WorkbenchTask>((publisher) => {
+      const test = context.mediaState.commercialTests.find((item) => item.publisher_id === publisher.id);
+      return {
+        id: test?.id ?? createDerivedTaskId("commercial-validation", publisher.id),
+        title: `${test ? "Complete" : "Plan"} commercial validation: ${publisher.name}`,
+        module: "Media",
+        owner_role: test?.owner_role ?? "adops_manager",
+        related_route: "/media/commercial-tests/:id",
+        priority: "P0",
+        status: test?.status === "test_failed" ? "blocked" : "open",
+        blocker: test?.status === "test_failed" ? "The latest controlled commercial test failed." : undefined,
+        next_action: test?.next_action ?? "Create the controlled commercial test plan and assign an owner.",
+        source_object_type: "publisher",
+        source_object_id: publisher.id
+      };
+    });
+
+  const trustQualificationTasks = context.mediaState.publishers
+    .filter(
+      (publisher) =>
+        publisher.technical_live_status === "technical_live_passed" &&
+        publisher.commercial_test_status === "test_passed"
+    )
+    .flatMap<WorkbenchTask>((publisher) => {
+      const profile = context.mediaState.mediaTrustProfiles.find((item) => item.publisher_id === publisher.id);
+      const packages = context.mediaState.mediaSupplyPackages.filter((item) => item.publisher_id === publisher.id);
+      const quality = trustedSupplyNetworkService.getQualitySnapshot(context.mediaState, publisher.id);
+      const tasks: WorkbenchTask[] = [];
+
+      if (!profile) {
+        tasks.push({
+          id: createDerivedTaskId("trust-evaluation", publisher.id),
+          title: `Evaluate trusted supply: ${publisher.name}`,
+          module: "Media",
+          owner_role: "media_manager",
+          related_route: "/media/publishers/:id",
+          priority: "P0",
+          status: "open",
+          next_action: "Calculate the explainable trust score and submit the suggested pool for confirmation.",
+          source_object_type: "publisher",
+          source_object_id: publisher.id
+        });
+        return tasks;
+      }
+
+      if (!profile.confirmed_pool) {
+        tasks.push({
+          id: profile.id,
+          title: `Confirm trusted supply pool: ${publisher.name}`,
+          module: "Media",
+          owner_role: "media_director",
+          related_route: "/media/publishers/:id",
+          priority: "P0",
+          status: "open",
+          next_action: `Review score ${profile.total_score} (${profile.trust_level}) and confirm or reject the ${profile.suggested_pool} pool suggestion.`,
+          source_object_type: "publisher",
+          source_object_id: publisher.id
+        });
+      } else if (["core", "test"].includes(profile.confirmed_pool) && packages.length === 0) {
+        tasks.push({
+          id: createDerivedTaskId("supply-package", publisher.id),
+          title: `Create controlled supply package: ${publisher.name}`,
+          module: "Media",
+          owner_role: "media_manager",
+          related_route: "/media/publishers/:id",
+          priority: "P1",
+          status: "open",
+          next_action: "Package verified inventory, formats, commercial model, fit tags, and risk notes.",
+          source_object_type: "publisher",
+          source_object_id: publisher.id
+        });
+      }
+
+      packages
+        .filter((item) => item.status === "draft")
+        .forEach((packageRecord) => {
+          tasks.push({
+            id: packageRecord.id,
+            title: `Activate supply package: ${packageRecord.package_name}`,
+            module: "Media",
+            owner_role: "media_director",
+            related_route: "/media/publishers/:id",
+            priority: "P1",
+            status: ["at_risk", "suspended"].includes(quality.status) ? "blocked" : "open",
+            blocker: ["at_risk", "suspended"].includes(quality.status)
+              ? "Quality monitoring blocks package activation."
+              : undefined,
+            next_action: "Review the confirmed pool, quality signals, and package fields before activation.",
+            source_object_type: "publisher",
+            source_object_id: publisher.id
+          });
+        });
+
+      if (["watch", "at_risk", "suspended"].includes(quality.status)) {
+        tasks.push({
+          id: createDerivedTaskId("supply-quality", publisher.id),
+          title: `Review trusted supply quality: ${publisher.name}`,
+          module: "Media",
+          owner_role: "data_analyst",
+          related_route: "/media/publishers/:id",
+          priority: quality.status === "watch" ? "P1" : "P0",
+          status: "open",
+          blocker: quality.status === "suspended" ? "Supply is suspended pending quality resolution." : undefined,
+          next_action: quality.nextAction,
+          source_object_type: "publisher",
+          source_object_id: publisher.id
+        });
+      }
+
+      return tasks;
+    });
+
   const sopTasks = context.guideState.sopCards
     .filter((sopCard) => sopCard.status === "draft")
     .map<WorkbenchTask>((sopCard) => ({
@@ -378,6 +497,8 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
     ...settlementTasks,
     ...contractTasks,
     ...onboardingTasks,
+    ...commercialValidationTasks,
+    ...trustQualificationTasks,
     ...sopTasks
   ];
 }

@@ -5,6 +5,7 @@ import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
 import { salesWorkflowService } from "../../services/salesWorkflowService";
+import { trustedSupplyNetworkService } from "../../services/trustedSupplyNetworkService";
 import type { AuditEvent, BusinessUser, EntityId, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
 import { resolveCreateOpportunityAdvertiserId } from "./salesExperiencePageModel";
@@ -62,7 +63,7 @@ export function SalesExperiencePage({
   onAuditEvent,
   onRouteChange
 }: SalesExperiencePageProps) {
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const [selectedOpportunityId, setSelectedOpportunityId] = useState<EntityId>("opportunity-daily-yoga-q3");
   const [selectedProposalId, setSelectedProposalId] = useState<EntityId>("proposal-daily-yoga");
   const [selectedCampaignId, setSelectedCampaignId] = useState<EntityId>("campaign-ready");
@@ -153,6 +154,7 @@ export function SalesExperiencePage({
         {page === "sales" && selectedOpportunity ? (
           <SalesManagerWorkbench
             state={state}
+            mediaState={mediaState}
             selectedOpportunityId={selectedOpportunity.id}
             onCreateOpportunity={() =>
               runAction("Create opportunity", () => {
@@ -180,6 +182,11 @@ export function SalesExperiencePage({
               })
             }
             onOpenProposal={() => onRouteChange("/proposals/:id/wizard")}
+            supplyMatchLabels={{
+              title: t("sales.supplyMatches"),
+              empty: t("sales.noSupplyMatches"),
+              suggestedBudget: t("sales.suggestedBudget")
+            }}
           />
         ) : null}
 
@@ -345,19 +352,26 @@ function SalesSelector({
 
 function SalesManagerWorkbench({
   state,
+  mediaState,
   selectedOpportunityId,
   onCreateOpportunity,
   onCreateProposal,
-  onOpenProposal
+  onOpenProposal,
+  supplyMatchLabels
 }: {
   state: SalesWorkflowState;
+  mediaState: MediaWorkflowState;
   selectedOpportunityId: EntityId;
   onCreateOpportunity: () => void;
   onCreateProposal: () => void;
   onOpenProposal: () => void;
+  supplyMatchLabels: { title: string; empty: string; suggestedBudget: string };
 }) {
   const opportunity = state.opportunities.find((candidate) => candidate.id === selectedOpportunityId);
   const advertiser = state.advertisers.find((candidate) => candidate.id === opportunity?.advertiser_id);
+  const recommendations = trustedSupplyNetworkService
+    .getMatchRecommendations(mediaState, state, advertiser?.id)
+    .slice(0, 3);
 
   return (
     <div className="space-y-4">
@@ -384,6 +398,34 @@ function SalesManagerWorkbench({
           <button className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700" type="button" onClick={onOpenProposal}>
             Continue wizard
           </button>
+        </div>
+      </article>
+
+      <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold text-slate-950">{supplyMatchLabels.title}</h2>
+          <StatusBadge tone={recommendations.length ? "success" : "neutral"}>{String(recommendations.length)}</StatusBadge>
+        </div>
+        <div className="mt-4 divide-y divide-slate-200 border-y border-slate-200">
+          {recommendations.map((recommendation) => {
+            const publisher = mediaState.publishers.find((item) => item.id === recommendation.publisher_id);
+            const packageRecord = mediaState.mediaSupplyPackages.find((item) => item.id === recommendation.package_id);
+            return (
+              <div key={`${recommendation.advertiser_id}-${recommendation.package_id}`} className="grid gap-3 py-4 md:grid-cols-[1fr_auto] md:items-center">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{publisher?.name ?? packageRecord?.package_name}</p>
+                  <p className="mt-1 text-xs text-slate-500">{packageRecord?.ad_formats.join(", ")} · {packageRecord?.geo}</p>
+                  <p className="mt-2 text-sm leading-5 text-slate-600">{recommendation.recommendation_reasons.slice(0, 2).join(" ")}</p>
+                  {recommendation.risk_warnings.length ? <p className="mt-2 text-xs text-amber-700">{recommendation.risk_warnings.join(" ")}</p> : null}
+                </div>
+                <div className="text-left md:text-right">
+                  <p className="text-lg font-semibold text-slate-950">{recommendation.match_score}</p>
+                  <p className="mt-1 text-xs text-slate-500">{supplyMatchLabels.suggestedBudget} {(recommendation.suggested_budget_ratio * 100).toFixed(0)}%</p>
+                </div>
+              </div>
+            );
+          })}
+          {recommendations.length === 0 ? <p className="py-4 text-sm text-slate-500">{supplyMatchLabels.empty}</p> : null}
         </div>
       </article>
     </div>

@@ -53,6 +53,7 @@
     "validate:phase37": "node scripts/validate-production-business-uat-signoff.mjs --config-only",
     "validate:phase40": "vitest run src/services/uatAcceptanceLedgerService.test.ts src/services/uatHistoryExportService.test.ts src/routes/routeGuards.test.ts",
     "validate:china-media": "vitest run src/services/chinaMediaEcosystemService.test.ts src/services/businessAuditCoverage.test.ts src/routes/routeGuards.test.ts",
+    "validate:trusted-supply": "vitest run src/services/trustedSupplyNetworkService.test.ts src/services/mediaWorkflowService.test.ts src/services/workbenchService.test.ts src/repositories/workflowRepository.test.ts src/services/businessAuditCoverage.test.ts src/lib/i18n.test.ts",
     "validate:china-media:seed": "vitest run scripts/validate-china-media-seed.test.mjs && node scripts/validate-china-media-seed.mjs",
     "generate:china-media:seed-sql": "vitest run scripts/generate-china-media-seed-sql.test.mjs && node scripts/generate-china-media-seed-sql.mjs",
     "smoke:production": "node scripts/validate-production-deployment-smoke.mjs",

@@ -79,6 +79,9 @@ export function createInitialMediaWorkflowState(): MediaWorkflowState {
       evidence: project.evidence?.map((evidence) => ({ ...evidence })) ?? []
     })),
     commercialTests: fixtureRepository.commercialTests.map((test) => ({ ...test })),
+    mediaTrustProfiles: [],
+    mediaTrustScoreHistory: [],
+    mediaSupplyPackages: [],
     mediaEcosystemLeads: fixtureRepository.mediaEcosystemLeads.map((lead) => ({
       ...lead,
       score_breakdown: { ...lead.score_breakdown }
@@ -723,11 +726,23 @@ export class MediaWorkflowService {
       publisher_id: publisherId,
       test_name: "Commercial readiness test",
       status: "testing",
+      owner_user_id: user.id,
+      owner_role: user.activeRole,
+      start_date: new Date().toISOString().slice(0, 10),
       target_budget: 500,
+      currency: "CNY",
       spend: 0,
       fill_rate: 0,
       clear_rate: 0,
-      ivt_rate: 0
+      ivt_rate: 0,
+      test_plan: {
+        inventory_scope: "Primary verified inventory",
+        min_fill_rate: 0.5,
+        min_clear_rate: 0.6,
+        max_ivt_rate: 0.03,
+        notes: "Validate stable delivery, traffic quality, and commercial operability."
+      },
+      next_action: "Run controlled traffic and record delivery metrics."
     };
     const nextState = updatePublisher(
       {
@@ -786,6 +801,12 @@ export class MediaWorkflowService {
                 fill_rate: candidate.fill_rate || 0.62,
                 clear_rate: candidate.clear_rate || 0.72,
                 ivt_rate: candidate.ivt_rate || 0.018,
+                end_date: new Date().toISOString().slice(0, 10),
+                reviewed_at: new Date().toISOString(),
+                next_action:
+                  outcome === "test_passed"
+                    ? "Evaluate trusted supply qualification and confirm the operating pool."
+                    : "Resolve quality or commercial blockers before retesting.",
                 result_summary: outcome === "test_passed" ? "Commercial test passed." : "Commercial test failed."
               }
             : candidate
