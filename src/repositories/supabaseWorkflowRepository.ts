@@ -58,6 +58,13 @@ export type SupabaseLike = {
 };
 
 type Row = Record<string, unknown>;
+
+const publisherWriteRoles = new Set<RoleCode>([
+  "media_director",
+  "media_manager",
+  "integration_manager",
+  "operations_director"
+]);
 type LoadedRows = Record<string, Row[] | null>;
 type AuditFieldConfig = {
   actorUserId?: true;
@@ -1508,6 +1515,21 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
     );
 
     for (const table of tableRows) {
+      if (
+        table.table === "publishers" &&
+        context?.actor &&
+        !publisherWriteRoles.has(context.actor.activeRole)
+      ) {
+        table.rows.forEach((row) =>
+          skippedWrites.push({
+            table: table.table,
+            id: typeof row.id === "string" ? row.id : undefined,
+            reason: "Publisher readiness is synchronized from the permitted domain record by a database trigger."
+          })
+        );
+        continue;
+      }
+
       const rows = prepareRows(table.table, table.rows, table.uuidFields, skippedWrites).map((row) =>
         applyActorFields(table.table, row, actorUserId)
       );

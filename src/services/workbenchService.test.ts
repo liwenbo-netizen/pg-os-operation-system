@@ -6,6 +6,7 @@ import { createInitialMediaWorkflowState } from "./mediaWorkflowService";
 import { chinaMediaEcosystemService } from "./chinaMediaEcosystemService";
 import { createInitialSalesWorkflowState } from "./salesWorkflowService";
 import { createInitialGuideWorkflowState } from "./sopService";
+import { trustedSupplyNetworkService } from "./trustedSupplyNetworkService";
 import { createInitialWorkbenchWorkflowState, workbenchService } from "./workbenchService";
 
 function context() {
@@ -281,6 +282,43 @@ describe("workbenchService phase 10", () => {
           title: expect.stringContaining("Evaluate trusted supply"),
           related_route: "/media/publishers/:id",
           source_object_id: "publisher-233"
+        })
+      ])
+    );
+  });
+
+  it("derives the CM-5H quality task from the passed test record while publisher status sync is pending", () => {
+    const snapshotContext = context();
+    snapshotContext.mediaState = {
+      ...snapshotContext.mediaState,
+      commercialTests: snapshotContext.mediaState.commercialTests.map((test) =>
+        test.publisher_id === "publisher-quzhi"
+          ? { ...test, status: "test_passed", fill_rate: 0.62, clear_rate: 0.72, ivt_rate: 0.018 }
+          : test
+      )
+    };
+    snapshotContext.mediaState = trustedSupplyNetworkService.evaluatePublisher(
+      snapshotContext.mediaState,
+      authService.createMockUser("media_manager"),
+      "publisher-quzhi"
+    ).state;
+
+    expect(
+      snapshotContext.mediaState.publishers.find((publisher) => publisher.id === "publisher-quzhi")
+        ?.commercial_test_status
+    ).toBe("testing");
+
+    const dataAnalystSnapshot = workbenchService.getSnapshot(
+      snapshotContext,
+      authService.createMockUser("data_analyst")
+    );
+
+    expect(dataAnalystSnapshot.tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: "Review trusted supply quality: QuZhi Campus",
+          owner_role: "data_analyst",
+          related_route: "/media/publishers/:id"
         })
       ])
     );

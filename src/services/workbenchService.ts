@@ -384,7 +384,10 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
     .filter(
       (publisher) =>
         publisher.technical_live_status === "technical_live_passed" &&
-        publisher.commercial_test_status === "test_passed"
+        (publisher.commercial_test_status === "test_passed" ||
+          context.mediaState.commercialTests.some(
+            (test) => test.publisher_id === publisher.id && test.status === "test_passed"
+          ))
     )
     .flatMap<WorkbenchTask>((publisher) => {
       const profile = context.mediaState.mediaTrustProfiles.find((item) => item.publisher_id === publisher.id);

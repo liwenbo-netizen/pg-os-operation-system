@@ -31,8 +31,9 @@ Run these files in order in the Supabase SQL Editor:
 1. `supabase/migrations/202607170001_commercial_validation_handoff.sql`
 2. `supabase/migrations/202607170002_trusted_supply_qualification.sql`
 3. `supabase/migrations/202607170003_trusted_supply_packages.sql`
+4. `supabase/migrations/202607170004_commercial_test_publisher_status_sync.sql`
 
-All three migrations are idempotent at the table, column, policy, index, and trigger level.
+All four migrations are idempotent at the table, column, policy, index, and trigger level.
 
 ## Automated validation
 

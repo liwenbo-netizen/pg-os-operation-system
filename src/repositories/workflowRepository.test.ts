@@ -693,6 +693,54 @@ describe("workflow repositories", () => {
     expect(fakeSupabase.writes.advertisers).toBeUndefined();
   });
 
+  it("lets the commercial-test trigger synchronize publisher readiness for AdOps", async () => {
+    const publisherId = uuid(64);
+    const testId = uuid(65);
+    const fakeSupabase = new FakeSupabase({
+      publishers: [
+        {
+          id: publisherId,
+          name: "Commercial Sync Publisher",
+          technical_live_status: "technical_live_passed",
+          commercial_test_status: "testing",
+          sales_scale_status: "limited_sellable",
+          risk_level: "medium"
+        }
+      ],
+      commercial_tests: [
+        {
+          id: testId,
+          publisher_id: publisherId,
+          test_name: "Controlled test",
+          status: "testing",
+          metrics: {}
+        }
+      ]
+    });
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const { snapshot } = await repository.loadSnapshot();
+
+    snapshot.mediaState.publishers[0].commercial_test_status = "test_passed";
+    snapshot.mediaState.commercialTests[0].status = "test_passed";
+
+    const result = await repository.saveSnapshot(snapshot, {
+      actor: { id: uuid(66), activeRole: "adops_manager" }
+    });
+
+    expect(result.savedTables).toContain("commercial_tests");
+    expect(result.savedTables).not.toContain("publishers");
+    expect(fakeSupabase.writes.publishers).toBeUndefined();
+    expect(result.skippedWrites).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          table: "publishers",
+          id: publisherId,
+          reason: expect.stringContaining("database trigger")
+        })
+      ])
+    );
+  });
+
   it("round-trips CM-5D integration evidence, blocker, and readiness fields", async () => {
     const publisherId = uuid(64);
     const projectId = uuid(65);
