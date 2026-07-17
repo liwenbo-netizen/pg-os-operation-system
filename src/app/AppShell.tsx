@@ -60,8 +60,12 @@ type AppShellProps = {
 };
 
 type RepositoryDiagnosticsPanelProps = {
-  detail: string;
   diagnostics: WarningDiagnostic[];
+  repositoryStatus?: AppShellProps["repositoryStatus"];
+  authSessionStatus?: AppShellProps["authSessionStatus"];
+  locale: AppLocale;
+  onLocaleChange: (locale: AppLocale) => void;
+  onSignOut: () => void;
   onClose: () => void;
 };
 
@@ -111,28 +115,56 @@ function getRouteIcon(route: AppRoute): LucideIcon {
   return Settings2;
 }
 
-function RepositoryDiagnosticsPanel({ detail, diagnostics, onClose }: RepositoryDiagnosticsPanelProps) {
+function RepositoryDiagnosticsPanel({
+  diagnostics,
+  repositoryStatus,
+  authSessionStatus,
+  locale,
+  onLocaleChange,
+  onSignOut,
+  onClose
+}: RepositoryDiagnosticsPanelProps) {
   const { t } = useLocale();
+  const warningCount = (repositoryStatus?.warningCount ?? 0) + (authSessionStatus?.warningCount ?? 0);
 
   return (
     <section
-      className="absolute right-0 top-12 z-30 w-[680px] max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white shadow-xl"
+      className="fixed inset-x-4 top-[68px] z-50 max-h-[calc(100vh-5.5rem)] overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-12 sm:w-[520px] sm:max-w-[calc(100vw-2rem)]"
       role="dialog"
-      aria-label={t("diagnostics.title")}
+      aria-label={t("shell.systemStatus")}
     >
       <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-4 py-3">
         <div>
-          <p className="text-sm font-semibold text-slate-950">{t("diagnostics.title")}</p>
-          <p className="mt-1 text-xs text-slate-500">{detail}</p>
+          <p className="text-sm font-semibold text-slate-950">{t("shell.systemStatus")}</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {warningCount > 0 ? t("shell.statusAttention") : t("shell.statusHealthy")}
+          </p>
         </div>
         <button
           className="inline-flex size-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
           type="button"
           onClick={onClose}
-          aria-label={t("diagnostics.close")}
+          aria-label={t("shell.closeSystemStatus")}
         >
           <X className="size-4" aria-hidden="true" />
         </button>
+      </div>
+
+      <div className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2">
+        <SystemStatusItem
+          icon={ShieldCheck}
+          label={t("shell.authSession")}
+          value={authSessionStatus?.label ?? t("shell.mockAuth")}
+          detail={authSessionStatus?.detail}
+          warningCount={authSessionStatus?.warningCount ?? 0}
+        />
+        <SystemStatusItem
+          icon={Database}
+          label={t("shell.repository")}
+          value={repositoryStatus?.label ?? t("shell.fixtureData")}
+          detail={repositoryStatus?.detail}
+          warningCount={repositoryStatus?.warningCount ?? 0}
+        />
       </div>
 
       {diagnostics.length > 0 ? (
@@ -196,7 +228,76 @@ function RepositoryDiagnosticsPanel({ detail, diagnostics, onClose }: Repository
           </div>
         </div>
       )}
+
+      <div className="border-t border-slate-200 p-4">
+        <p className="text-xs font-semibold text-slate-700">{t("shell.accountControls")}</p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <label className="flex h-10 flex-1 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm text-slate-700">
+            <Languages className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
+            <span className="sr-only">{t("shell.language")}</span>
+            <select
+              className="min-w-0 flex-1 bg-transparent outline-none"
+              value={locale}
+              onChange={(event) => onLocaleChange(event.target.value as AppLocale)}
+            >
+              <option value="zh-CN">中文</option>
+              <option value="en-US">English</option>
+            </select>
+          </label>
+          <button
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            type="button"
+            onClick={onSignOut}
+          >
+            <LogOut className="size-4" aria-hidden="true" />
+            {t("shell.signOut")}
+          </button>
+        </div>
+      </div>
     </section>
+  );
+}
+
+function SystemStatusItem({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  warningCount
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  detail?: string;
+  warningCount: number;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Icon className="size-4 shrink-0 text-blue-600" aria-hidden="true" />
+          <p className="truncate text-xs font-semibold text-slate-700">{label}</p>
+        </div>
+        <StatusDot warningCount={warningCount} />
+      </div>
+      <p className="mt-2 truncate text-sm font-semibold text-slate-950">{value}</p>
+      {detail ? <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{detail}</p> : null}
+    </div>
+  );
+}
+
+function StatusDot({ warningCount }: { warningCount: number }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex min-w-5 items-center justify-center rounded border px-1.5 py-0.5 text-[11px] font-semibold",
+        warningCount > 0
+          ? "border-amber-200 bg-amber-50 text-amber-700"
+          : "border-emerald-200 bg-emerald-50 text-emerald-700"
+      )}
+    >
+      {warningCount > 0 ? warningCount : "OK"}
+    </span>
   );
 }
 
@@ -217,6 +318,7 @@ export function AppShell({
   const [navigationQuery, setNavigationQuery] = useState("");
   const { locale, setLocale, t } = useLocale();
   const repositoryDiagnostics = repositoryStatus?.diagnostics ?? [];
+  const systemWarningCount = (repositoryStatus?.warningCount ?? 0) + (authSessionStatus?.warningCount ?? 0);
   const activeRoute = routes.find((route) => route.path === activePath) ?? routes[0];
   const navigationGroups = useMemo(
     () => groupRoutesForNavigation(routes, navigationQuery, locale),
@@ -244,7 +346,7 @@ export function AppShell({
   };
 
   return (
-    <div className="min-h-screen bg-pgos-bg text-pgos-text">
+    <div className="min-h-screen max-w-full overflow-x-hidden bg-pgos-bg text-pgos-text">
       {isNavigationOpen ? (
         <button
           className="fixed inset-0 z-30 bg-slate-950/30 lg:hidden"
@@ -360,33 +462,13 @@ export function AppShell({
                 </p>
               </div>
             </div>
-            <label className="mt-2 flex h-10 items-center gap-2 rounded-lg px-3 text-sm text-slate-600 hover:bg-slate-50 sm:hidden">
-              <Languages className="size-4 text-blue-600" aria-hidden="true" />
-              <span className="sr-only">{t("shell.language")}</span>
-              <select
-                className="min-w-0 flex-1 bg-transparent outline-none"
-                value={locale}
-                onChange={(event) => setLocale(event.target.value as typeof locale)}
-              >
-                <option value="zh-CN">中文</option>
-                <option value="en-US">English</option>
-              </select>
-            </label>
-            <button
-              className="mt-1 flex h-10 w-full items-center gap-2 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-950 sm:hidden"
-              type="button"
-              onClick={onSignOut}
-            >
-              <LogOut className="size-4 text-slate-500" aria-hidden="true" />
-              {t("shell.signOut")}
-            </button>
           </div>
         </div>
       </aside>
 
       <div className="min-w-0 lg:pl-[280px]">
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-          <div className="flex h-[72px] items-center justify-between gap-3 px-4 sm:px-6">
+          <div className="flex h-[64px] min-w-0 items-center justify-between gap-2 px-3 sm:h-[72px] sm:gap-3 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               <button
                 className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 lg:hidden"
@@ -396,7 +478,7 @@ export function AppShell({
               >
                 <Menu className="size-5" aria-hidden="true" />
               </button>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-slate-950">
                   {activeRoute ? getRouteDisplayTitle(activeRoute, locale) : "PG OS"}
                 </p>
@@ -406,13 +488,13 @@ export function AppShell({
               </div>
             </div>
 
-            <div className="flex min-w-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <label className="sr-only" htmlFor="role-select">
                 {t("shell.switchRole")}
               </label>
               <select
                 id="role-select"
-                className="h-10 w-[120px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 sm:w-auto sm:max-w-[210px]"
+                className="h-10 w-[112px] max-w-[34vw] truncate rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700 sm:w-auto sm:max-w-[210px] sm:px-3"
                 value={activeRole}
                 onChange={(event) => onRoleChange(event.target.value as RoleCode)}
               >
@@ -423,76 +505,41 @@ export function AppShell({
                 ))}
               </select>
 
-              <label className="sr-only" htmlFor="language-select">
-                {t("shell.language")}
-              </label>
-              <div className="hidden h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 sm:flex">
-                <Languages className="size-4 text-blue-600" aria-hidden="true" />
-                <select
-                  id="language-select"
-                  className="min-w-0 bg-transparent text-sm text-slate-700 outline-none"
-                  value={locale}
-                  onChange={(event) => setLocale(event.target.value as typeof locale)}
-                >
-                  <option value="zh-CN">中文</option>
-                  <option value="en-US">English</option>
-                </select>
-              </div>
-
-              <div
-                className="hidden h-10 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 xl:flex"
-                title={authSessionStatus?.detail}
-              >
-                <ShieldCheck className="size-4 text-blue-600" aria-hidden="true" />
-                <span>{authSessionStatus?.label ?? t("shell.mockAuth")}</span>
-                {authSessionStatus && authSessionStatus.warningCount > 0 ? (
-                  <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
-                    {authSessionStatus.warningCount}
-                  </span>
-                ) : null}
-              </div>
-
               <div className="relative">
                 <button
                   className={cn(
-                    "flex h-10 items-center gap-2 rounded-lg border px-3 text-sm transition",
-                    repositoryStatus && repositoryStatus.warningCount > 0
+                    "flex size-10 items-center justify-center gap-2 rounded-lg border text-sm transition sm:w-auto sm:px-3",
+                    systemWarningCount > 0
                       ? "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
                       : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                   )}
                   type="button"
-                  title={repositoryStatus?.detail}
-                  aria-label={repositoryStatus?.label ?? t("shell.fixtureData")}
+                  title={t("shell.systemStatus")}
+                  aria-label={t("shell.systemStatus")}
                   aria-expanded={isRepositoryPanelOpen}
                   aria-haspopup="dialog"
                   onClick={() => setIsRepositoryPanelOpen((isOpen) => !isOpen)}
                 >
-                  <Database className="size-4 text-blue-600" aria-hidden="true" />
-                  <span className="hidden 2xl:inline">{repositoryStatus?.label ?? t("shell.fixtureData")}</span>
-                  {repositoryStatus && repositoryStatus.warningCount > 0 ? (
+                  <ShieldCheck className="size-4 text-blue-600" aria-hidden="true" />
+                  <span className="hidden sm:inline">{t("shell.systemStatus")}</span>
+                  {systemWarningCount > 0 ? (
                     <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700">
-                      {repositoryStatus.warningCount}
+                      {systemWarningCount}
                     </span>
                   ) : null}
                 </button>
                 {isRepositoryPanelOpen ? (
                   <RepositoryDiagnosticsPanel
-                    detail={repositoryStatus?.detail ?? t("shell.fixtureData")}
                     diagnostics={repositoryDiagnostics}
+                    repositoryStatus={repositoryStatus}
+                    authSessionStatus={authSessionStatus}
+                    locale={locale}
+                    onLocaleChange={setLocale}
+                    onSignOut={onSignOut}
                     onClose={() => setIsRepositoryPanelOpen(false)}
                   />
                 ) : null}
               </div>
-
-              <button
-                className="hidden size-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 sm:inline-flex"
-                type="button"
-                onClick={onSignOut}
-                aria-label={t("shell.signOut")}
-                title={t("shell.signOut")}
-              >
-                <LogOut className="size-4" aria-hidden="true" />
-              </button>
             </div>
           </div>
 
@@ -514,7 +561,7 @@ export function AppShell({
                   </button>
                 ) : null}
                 <div className="flex items-center gap-2 text-xs text-blue-700">
-                  <span className="hidden font-medium text-slate-500 md:inline">{t("shell.recommendedAction")}</span>
+                  <span className="hidden font-medium text-slate-500 md:inline">{t("shell.pagePurpose")}</span>
                   <span className="font-semibold">{getRoutePrimaryAction(activeRoute, locale)}</span>
                   <ArrowRight className="size-3.5 shrink-0" aria-hidden="true" />
                 </div>
@@ -523,7 +570,7 @@ export function AppShell({
           ) : null}
         </header>
 
-        <main id="page-content" className="mx-auto w-full max-w-[1680px] p-4 sm:p-6 lg:p-8">
+        <main id="page-content" className="mx-auto min-w-0 max-w-[1680px] p-4 sm:p-6 lg:p-8">
           {children}
         </main>
       </div>

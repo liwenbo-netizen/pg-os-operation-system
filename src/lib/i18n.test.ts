@@ -13,6 +13,9 @@ describe("PG OS localization", () => {
     expect(translate("zh-CN", "media.activeFilters", { count: 2 })).toBe("已启用 2 个筛选条件");
     expect(translate("en-US", "media.activeFilters", { count: 2 })).toBe("2 active filter(s)");
     expect(translate("zh-CN", "shell.supabaseAuth")).toBe("Supabase 登录");
+    expect(translate("zh-CN", "shell.pagePurpose")).toBe("页面职责");
+    expect(translate("zh-CN", "workbench.noTasksTitle")).toBe("当前任务已清空");
+    expect(translate("zh-CN", "workbench.eventCount", { count: 3 })).toBe("范围内共 3 条事件");
   });
 
   it("localizes role and route display names while preserving stable codes and paths", () => {
