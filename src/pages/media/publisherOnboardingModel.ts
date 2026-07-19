@@ -1,5 +1,12 @@
 import type { PublisherOnboardingInput } from "../../services/mediaWorkflowService";
 import { formatUtcPlus8Date } from "../../lib/time";
+import type {
+  IntegrationProject,
+  Publisher,
+  PublisherAdSlot,
+  PublisherContact,
+  PublisherContractTerm
+} from "../../types/domain";
 
 export type PublisherOnboardingStep = "identity" | "traffic" | "inventory" | "commercial";
 
@@ -71,6 +78,57 @@ export function createPublisherOnboardingDraft(today = formatUtcPlus8Date()): Pu
     settlementCycle: "Monthly",
     paymentTerms: "Net 30",
     revenueSharePercent: ""
+  };
+}
+
+export function createPublisherOnboardingDraftFromSnapshot(snapshot: {
+  publisher?: Publisher;
+  contacts: PublisherContact[];
+  adSlots: PublisherAdSlot[];
+  contractTerms: PublisherContractTerm[];
+  integrationProjects: IntegrationProject[];
+}): PublisherOnboardingDraft {
+  const draft = createPublisherOnboardingDraft();
+  const publisher = snapshot.publisher;
+  if (!publisher) return draft;
+
+  const contact = snapshot.contacts.find((item) => item.is_primary) ?? snapshot.contacts[0];
+  const slot = snapshot.adSlots[0];
+  const term = snapshot.contractTerms[0];
+  const project = snapshot.integrationProjects[0];
+
+  return {
+    ...draft,
+    name: publisher.name,
+    legalEntity: publisher.legal_entity ?? "",
+    region: publisher.region ?? draft.region,
+    mediaType: publisher.media_type ?? draft.mediaType,
+    propertyName: publisher.metadata?.property_name ?? "",
+    propertyIdentifierType: publisher.metadata?.property_identifier_type ?? draft.propertyIdentifierType,
+    propertyIdentifier: publisher.metadata?.property_identifier ?? "",
+    integrationType: project?.integration_type ?? publisher.integration_type ?? draft.integrationType,
+    dailyActiveUsers: publisher.daily_active_users === undefined ? "" : String(publisher.daily_active_users),
+    monthlyActiveUsers:
+      publisher.metadata?.monthly_active_users === undefined ? "" : String(publisher.metadata.monthly_active_users),
+    dailyRequests: publisher.daily_requests === undefined ? "" : String(publisher.daily_requests),
+    trafficDataAsOf: publisher.metadata?.traffic_data_as_of ?? draft.trafficDataAsOf,
+    trafficSource: publisher.metadata?.traffic_source ?? draft.trafficSource,
+    slotName: slot?.slot_name ?? "",
+    adFormat: slot?.ad_format ?? draft.adFormat,
+    placementType: slot?.placement_type ?? draft.placementType,
+    creativeSpec: slot?.creative_spec ?? "",
+    slotDailyRequests: slot?.daily_requests === undefined ? "" : String(slot.daily_requests),
+    floorPrice: slot?.floor_price === undefined ? "" : String(slot.floor_price),
+    currency: slot?.currency ?? term?.currency ?? draft.currency,
+    contactName: contact?.name ?? "",
+    contactRoleTitle: contact?.role_title ?? draft.contactRoleTitle,
+    contactEmail: contact?.email ?? "",
+    contactPhone: contact?.phone ?? "",
+    contractType: term?.contract_type ?? draft.contractType,
+    billingModel: term?.billing_model ?? draft.billingModel,
+    settlementCycle: term?.settlement_cycle ?? draft.settlementCycle,
+    paymentTerms: term?.payment_terms ?? draft.paymentTerms,
+    revenueSharePercent: term?.revenue_share === undefined ? "" : String(term.revenue_share * 100)
   };
 }
 

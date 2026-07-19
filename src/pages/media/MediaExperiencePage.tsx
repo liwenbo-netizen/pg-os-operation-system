@@ -10,6 +10,7 @@ import {
   History,
   LayoutList,
   Map,
+  Pencil,
   Plus,
   Search,
   Send,
@@ -85,6 +86,10 @@ import {
   type MediaDirectorApprovalTarget
 } from "./mediaDirectorCommandCenterModel";
 import { PublisherOnboardingWizard } from "./PublisherOnboardingWizard";
+import {
+  createPublisherOnboardingDraftFromSnapshot,
+  type PublisherOnboardingDraft
+} from "./publisherOnboardingModel";
 
 type MediaExperiencePageProps = {
   route: AppRoute;
@@ -285,6 +290,8 @@ export function MediaExperiencePage({
   const [selectedPublisherId, setSelectedPublisherId] = useState<EntityId>("publisher-new-ctv");
   const [message, setMessage] = useState<ActionMessage | null>(null);
   const [publisherOnboardingOpen, setPublisherOnboardingOpen] = useState(false);
+  const [publisherEditorOpen, setPublisherEditorOpen] = useState(false);
+  const [publisherEditorDraft, setPublisherEditorDraft] = useState<PublisherOnboardingDraft>();
 
   const summary = mediaWorkflowService.getSummary(state);
   const ecosystemSummary = chinaMediaEcosystemService.getSummary(state);
@@ -308,6 +315,12 @@ export function MediaExperiencePage({
     setMessage({ title, guard: result.guard });
   }
 
+  function onboardingSubmitMessage(guard: GuardResult) {
+    if (guard.reason_code === "PUBLISHER_NAME_DUPLICATE") return t("media.duplicateName");
+    if (guard.reason_code === "PUBLISHER_IDENTIFIER_DUPLICATE") return t("media.duplicateIdentifier");
+    return guard.message;
+  }
+
   function submitPublisherOnboarding(input: PublisherOnboardingInput) {
     const result = mediaWorkflowService.createPublisherOnboarding(state, user, input);
     onStateChange(result.state);
@@ -320,7 +333,32 @@ export function MediaExperiencePage({
       onRouteChange("/media/publishers/:id", result.publisherId);
     }
 
-    return result.guard.allowed;
+    return { allowed: result.guard.allowed, message: onboardingSubmitMessage(result.guard) };
+  }
+
+  function openPublisherEditor() {
+    if (!selectedSnapshot?.publisher) return;
+    setPublisherEditorDraft(createPublisherOnboardingDraftFromSnapshot(selectedSnapshot));
+    setPublisherEditorOpen(true);
+  }
+
+  function submitPublisherUpdate(input: PublisherOnboardingInput) {
+    if (!selectedSnapshot?.publisher) {
+      return { allowed: false, message: t("media.publisherNotFound") };
+    }
+
+    const result = mediaWorkflowService.updatePublisherOnboarding(
+      state,
+      user,
+      selectedSnapshot.publisher.id,
+      input
+    );
+    onStateChange(result.state);
+    const auditEvents = result.auditEvents ?? (result.auditEvent ? [result.auditEvent] : []);
+    auditEvents.forEach(onAuditEvent);
+    setMessage({ title: t("media.onboardingEditTitle"), guard: result.guard });
+
+    return { allowed: result.guard.allowed, message: onboardingSubmitMessage(result.guard) };
   }
 
   const page = useMemo(() => {
@@ -455,6 +493,7 @@ export function MediaExperiencePage({
             snapshot={selectedSnapshot}
             trustedSnapshot={trustedSupplyNetworkService.getSnapshot(state, selectedSnapshot.publisher!.id)}
             ownerRole={user.activeRole}
+            onEditProfile={openPublisherEditor}
             onAddSlot={() =>
               runAction(t("media.addAdSlot"), () =>
                 mediaWorkflowService.addAdSlot(state, user, selectedSnapshot.publisher!.id, {
@@ -556,6 +595,13 @@ export function MediaExperiencePage({
         onClose={() => setPublisherOnboardingOpen(false)}
         onSubmit={submitPublisherOnboarding}
       />
+      <PublisherOnboardingWizard
+        open={publisherEditorOpen}
+        mode="edit"
+        initialDraft={publisherEditorDraft}
+        onClose={() => setPublisherEditorOpen(false)}
+        onSubmit={submitPublisherUpdate}
+      />
     </section>
   );
 }
@@ -566,6 +612,9 @@ function GuardNotice({ message }: { message: ActionMessage }) {
   const guardMessages: Record<string, string> = {
     PUBLISHER_CREATED: locale === "zh-CN" ? "媒体已创建，并已初始化技术集成项目。" : message.guard.message,
     PUBLISHER_ONBOARDING_CREATED: locale === "zh-CN" ? "媒体准入包已创建，包含媒体资产、流量、广告位、联系人、商务条款和技术项目。" : message.guard.message,
+    PUBLISHER_ONBOARDING_UPDATED: locale === "zh-CN" ? "媒体准入资料已更新，并保持与技术集成项目的关联。" : message.guard.message,
+    PUBLISHER_NAME_DUPLICATE: t("media.duplicateName"),
+    PUBLISHER_IDENTIFIER_DUPLICATE: t("media.duplicateIdentifier"),
     AD_SLOT_CREATED: locale === "zh-CN" ? "媒体广告位已新增。" : message.guard.message,
     CONTRACT_TERM_CREATED: locale === "zh-CN" ? "媒体商务条款已新增。" : message.guard.message,
     TRUST_SCORE_EVALUATED: locale === "zh-CN" ? "可信供给评分已完成，仍需人工确认运营池。" : message.guard.message,
@@ -2012,6 +2061,7 @@ function Publisher360({
   snapshot,
   trustedSnapshot,
   ownerRole,
+  onEditProfile,
   onAddSlot,
   onAddTerm,
   onOpenIntegration,
@@ -2024,6 +2074,7 @@ function Publisher360({
   snapshot: ReturnType<typeof mediaWorkflowService.getPublisherSnapshot>;
   trustedSnapshot: ReturnType<typeof trustedSupplyNetworkService.getSnapshot>;
   ownerRole: BusinessUser["activeRole"];
+  onEditProfile: () => void;
   onAddSlot: () => void;
   onAddTerm: () => void;
   onOpenIntegration: () => void;
@@ -2043,6 +2094,7 @@ function Publisher360({
 
   const readinessInput = {
     publisher,
+    contacts: snapshot.contacts,
     adSlots: snapshot.adSlots,
     contractTerms: snapshot.contractTerms,
     trustProfile: trustedSnapshot.profile,
@@ -2068,6 +2120,7 @@ function Publisher360({
     pending: t("media.statePending")
   };
   const actionLabels: Record<PublisherPrimaryAction, string> = {
+    editProfile: t("media.editProfile"),
     addSlot: t("media.addAdSlot"),
     addTerm: t("media.addCommercialTerms"),
     openIntegration: t("media.openIntegrationWizard"),
@@ -2079,6 +2132,10 @@ function Publisher360({
   };
 
   function runPrimaryAction(action: PublisherPrimaryAction) {
+    if (action === "editProfile") {
+      onEditProfile();
+      return;
+    }
     if (action === "addSlot") {
       onAddSlot();
       return;
@@ -2122,10 +2179,30 @@ function Publisher360({
               {publisher.region} / {publisher.media_type} / {publisher.integration_type}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <StatusBadge tone={toneForStatus(publisher.technical_live_status)}>{getPublisherStatusLabel(publisher.technical_live_status, locale)}</StatusBadge>
-            <StatusBadge tone={toneForStatus(publisher.commercial_test_status)}>{getPublisherStatusLabel(publisher.commercial_test_status, locale)}</StatusBadge>
-            <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{getPublisherStatusLabel(publisher.sales_scale_status, locale)}</StatusBadge>
+          <div className="flex flex-col items-end gap-3">
+            <div className="flex flex-wrap justify-end gap-2">
+              <StatusBadge tone={toneForStatus(publisher.technical_live_status)}>{getPublisherStatusLabel(publisher.technical_live_status, locale)}</StatusBadge>
+              <StatusBadge tone={toneForStatus(publisher.commercial_test_status)}>{getPublisherStatusLabel(publisher.commercial_test_status, locale)}</StatusBadge>
+              <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{getPublisherStatusLabel(publisher.sales_scale_status, locale)}</StatusBadge>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                type="button"
+                onClick={onEditProfile}
+              >
+                <Pencil className="size-4" aria-hidden="true" />
+                {t("media.editProfile")}
+              </button>
+              <button
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700"
+                type="button"
+                onClick={onOpenIntegration}
+              >
+                <Wrench className="size-4" aria-hidden="true" />
+                {t("media.openIntegrationWizard")}
+              </button>
+            </div>
           </div>
         </div>
       </article>

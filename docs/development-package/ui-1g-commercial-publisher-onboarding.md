@@ -50,3 +50,19 @@ Audit coverage includes the underlying record events plus `publisher.onboarding.
 - Publisher count increased from 20 to 21 and repository health remained `Supabase synced` with zero warnings.
 - CEO Audit Events showed the main onboarding event, all child write events, and matching business events for publisher object `c09b8bca-d733-4225-bb4f-bedc0b12d82b`.
 - The UAT exposed a UTC date-boundary issue in the traffic evidence default. The wizard now derives its default calendar date in UTC+8 rather than slicing a UTC ISO timestamp.
+
+## Phase 2: profile governance and technical handoff
+
+Publisher 360 now supports a governed correction flow instead of treating onboarding data as immutable:
+
+- `Edit profile` reopens the four-step wizard with the existing publisher, primary contact, primary ad slot, initial commercial term, traffic evidence, and integration method prefilled.
+- Saving updates the existing record IDs and preserves the current technical, commercial, trusted-supply, and sales-readiness state.
+- Missing primary child records or an integration project are repaired as part of the same governed update package.
+- Successful updates emit `publisher.onboarding.update` plus publisher, contact, ad-slot, and contract-term update audit events and matching business events.
+- Publisher 360 exposes a direct technical-integration handoff. Media Manager can inspect the handoff page, while technical write actions remain capability-gated to roles with `integration.manage`.
+
+Duplicate governance runs before any child record is created or updated. Publisher names are compared case-insensitively with normalized whitespace. Package names, bundle IDs, domains, AppIDs, and other property identifiers are compared case-insensitively; web domains additionally ignore protocol, `www`, paths, query strings, and fragments. A duplicate returns `PUBLISHER_NAME_DUPLICATE` or `PUBLISHER_IDENTIFIER_DUPLICATE` without creating partial data.
+
+The current duplicate guard is enforced in the domain service used by both mock and Supabase workflows. A database unique index is intentionally deferred until legacy duplicate publisher records have been reviewed and normalized; applying one before that cleanup could block full-snapshot persistence for existing UAT data.
+
+Phase 2 verification covers duplicate zero-write behavior, update ID preservation, technical-project preservation, edit-draft hydration, complete profile readiness, route handoff, localized UI, desktop layout, and 390 px mobile layout.

@@ -133,7 +133,7 @@ export const routeDefinitions: AppRoute[] = [
     module: "Media",
     pageType: "Wizard",
     priority: "P0",
-    allowedRoles: ["integration_manager", "media_director", "operations_director"],
+    allowedRoles: ["integration_manager", "media_director", "media_manager", "operations_director"],
     service: "IntegrationService",
     guard: "canUpdatePublisherReadiness",
     uat: "UAT-003",

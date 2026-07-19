@@ -27,6 +27,41 @@ export const CORE_BUSINESS_AUDIT_ACTIONS: CoreBusinessAuditAction[] = [
     criticality: "P0"
   },
   {
+    action: "publisher.onboarding.update",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Publisher Profile Governance",
+    criticality: "P0"
+  },
+  {
+    action: "publisher.update",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Publisher Profile Governance",
+    criticality: "P0"
+  },
+  {
+    action: "publisher_contact.update",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Publisher Profile Governance",
+    criticality: "P1"
+  },
+  {
+    action: "publisher_ad_slot.update",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Publisher Profile Governance",
+    criticality: "P1"
+  },
+  {
+    action: "publisher_contract_term.update",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Publisher Profile Governance",
+    criticality: "P1"
+  },
+  {
     action: "publisher_contact.create",
     objectType: "publisher",
     module: "Media",

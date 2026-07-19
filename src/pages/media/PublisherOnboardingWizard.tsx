@@ -16,8 +16,10 @@ import {
 
 type PublisherOnboardingWizardProps = {
   open: boolean;
+  mode?: "create" | "edit";
+  initialDraft?: PublisherOnboardingDraft;
   onClose: () => void;
-  onSubmit: (input: PublisherOnboardingInput) => boolean;
+  onSubmit: (input: PublisherOnboardingInput) => { allowed: boolean; message?: string };
 };
 
 type LocalizedOption = {
@@ -103,12 +105,20 @@ const paymentOptions: LocalizedOption[] = [
   { value: "Net 60", en: "Net 60", zh: "月结 60 天" }
 ];
 
-export function PublisherOnboardingWizard({ open, onClose, onSubmit }: PublisherOnboardingWizardProps) {
+export function PublisherOnboardingWizard({
+  open,
+  mode = "create",
+  initialDraft,
+  onClose,
+  onSubmit
+}: PublisherOnboardingWizardProps) {
   const { locale, t } = useLocale();
   const [draft, setDraft] = useState<PublisherOnboardingDraft>(() => createPublisherOnboardingDraft());
   const [stepIndex, setStepIndex] = useState(0);
   const [errors, setErrors] = useState<PublisherOnboardingErrors>({});
+  const [submitError, setSubmitError] = useState<string>();
   const currentStep = publisherOnboardingSteps[stepIndex];
+  const editMode = mode === "edit";
   const stepLabels: Record<PublisherOnboardingStep, string> = {
     identity: t("media.onboardingIdentity"),
     traffic: t("media.onboardingTraffic"),
@@ -118,10 +128,11 @@ export function PublisherOnboardingWizard({ open, onClose, onSubmit }: Publisher
 
   useEffect(() => {
     if (!open) return;
-    setDraft(createPublisherOnboardingDraft());
+    setDraft(initialDraft ? { ...initialDraft } : createPublisherOnboardingDraft());
     setStepIndex(0);
     setErrors({});
-  }, [open]);
+    setSubmitError(undefined);
+  }, [initialDraft, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -136,6 +147,7 @@ export function PublisherOnboardingWizard({ open, onClose, onSubmit }: Publisher
 
   function setField(field: PublisherOnboardingField, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
+    setSubmitError(undefined);
     if (errors[field]) {
       setErrors((current) => ({ ...current, [field]: undefined }));
     }
@@ -159,9 +171,12 @@ export function PublisherOnboardingWizard({ open, onClose, onSubmit }: Publisher
       return;
     }
 
-    if (onSubmit(toPublisherOnboardingInput(draft))) {
+    const result = onSubmit(toPublisherOnboardingInput(draft));
+    if (result.allowed) {
       onClose();
+      return;
     }
+    setSubmitError(result.message ?? t("media.onboardingSubmitError"));
   }
 
   function errorText(field: PublisherOnboardingField) {
@@ -186,9 +201,11 @@ export function PublisherOnboardingWizard({ open, onClose, onSubmit }: Publisher
         <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
           <div>
             <h2 id="publisher-onboarding-title" className="text-xl font-semibold text-slate-950">
-              {t("media.onboardingTitle")}
+              {editMode ? t("media.onboardingEditTitle") : t("media.onboardingTitle")}
             </h2>
-            <p className="mt-1 text-sm leading-6 text-slate-500">{t("media.onboardingDescription")}</p>
+            <p className="mt-1 text-sm leading-6 text-slate-500">
+              {editMode ? t("media.onboardingEditDescription") : t("media.onboardingDescription")}
+            </p>
           </div>
           <button
             className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
@@ -304,12 +321,18 @@ export function PublisherOnboardingWizard({ open, onClose, onSubmit }: Publisher
               <ArrowLeft className="size-4" aria-hidden="true" />
               {t("media.onboardingBack")}
             </button>
-            <p className="hidden text-xs text-slate-500 sm:block">{t("media.onboardingStepCount", { current: stepIndex + 1, total: publisherOnboardingSteps.length })}</p>
+            <div className="min-w-0 flex-1 text-center">
+              {submitError ? (
+                <p className="text-sm font-medium text-rose-700" role="alert">{submitError}</p>
+              ) : (
+                <p className="hidden text-xs text-slate-500 sm:block">{t("media.onboardingStepCount", { current: stepIndex + 1, total: publisherOnboardingSteps.length })}</p>
+              )}
+            </div>
             <button className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700" type="submit">
               {stepIndex === publisherOnboardingSteps.length - 1 ? (
                 <>
                   <Check className="size-4" aria-hidden="true" />
-                  {t("media.onboardingCreate")}
+                  {editMode ? t("media.onboardingSave") : t("media.onboardingCreate")}
                 </>
               ) : (
                 <>

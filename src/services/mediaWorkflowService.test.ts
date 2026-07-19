@@ -1,8 +1,53 @@
 import { describe, expect, it } from "vitest";
 import { authService } from "./authService";
-import { createInitialMediaWorkflowState, mediaWorkflowService } from "./mediaWorkflowService";
+import {
+  createInitialMediaWorkflowState,
+  mediaWorkflowService,
+  type PublisherOnboardingInput
+} from "./mediaWorkflowService";
 
 const user = authService.createMockUser.bind(authService);
+
+function completeOnboardingInput(suffix: string): PublisherOnboardingInput {
+  return {
+    publisher: {
+      name: `Publisher ${suffix}`,
+      legalEntity: `Publisher ${suffix} Technology Co., Ltd.`,
+      region: "CN",
+      mediaType: "App",
+      propertyName: `Property ${suffix}`,
+      propertyIdentifierType: "android_package",
+      propertyIdentifier: `com.example.${suffix.toLowerCase()}`,
+      integrationType: "SDK",
+      dailyActiveUsers: 120000,
+      monthlyActiveUsers: 800000,
+      dailyRequests: 900000,
+      trafficDataAsOf: "2026-07-20",
+      trafficSource: "first_party_analytics"
+    },
+    contact: {
+      name: "Li Ming",
+      roleTitle: "Business Development",
+      email: "li.ming@example.com"
+    },
+    adSlot: {
+      slotName: "Home Feed Native",
+      adFormat: "Native",
+      placementType: "Feed",
+      dailyRequests: 300000,
+      floorPrice: 12.5,
+      currency: "CNY"
+    },
+    contractTerm: {
+      contractType: "Framework",
+      billingModel: "CPM",
+      settlementCycle: "Monthly",
+      paymentTerms: "Net 30",
+      revenueShare: 0.65,
+      currency: "CNY"
+    }
+  };
+}
 
 describe("MediaWorkflowService P0 mainline", () => {
   it("creates a complete commercial publisher onboarding package", () => {
@@ -90,6 +135,109 @@ describe("MediaWorkflowService P0 mainline", () => {
     expect(result.state.publisherAdSlots).toHaveLength(state.publisherAdSlots.length);
   });
 
+  it("blocks duplicate publisher names and property identifiers before partial writes", () => {
+    const state = createInitialMediaWorkflowState();
+    const first = mediaWorkflowService.createPublisherOnboarding(state, user("media_manager"), completeOnboardingInput("Alpha"));
+    const duplicateNameInput = completeOnboardingInput("Beta");
+    duplicateNameInput.publisher.name = "  PUBLISHER   ALPHA ";
+    const duplicateName = mediaWorkflowService.createPublisherOnboarding(
+      first.state,
+      user("media_manager"),
+      duplicateNameInput
+    );
+
+    expect(duplicateName.guard).toMatchObject({ allowed: false, reason_code: "PUBLISHER_NAME_DUPLICATE" });
+    expect(duplicateName.state.publishers).toHaveLength(first.state.publishers.length);
+    expect(duplicateName.state.publisherContacts).toHaveLength(first.state.publisherContacts.length);
+
+    const duplicateIdentifierInput = completeOnboardingInput("Gamma");
+    duplicateIdentifierInput.publisher.propertyIdentifier = "COM.EXAMPLE.ALPHA";
+    const duplicateIdentifier = mediaWorkflowService.createPublisherOnboarding(
+      first.state,
+      user("media_manager"),
+      duplicateIdentifierInput
+    );
+
+    expect(duplicateIdentifier.guard).toMatchObject({
+      allowed: false,
+      reason_code: "PUBLISHER_IDENTIFIER_DUPLICATE"
+    });
+    expect(duplicateIdentifier.state.publisherAdSlots).toHaveLength(first.state.publisherAdSlots.length);
+    expect(duplicateIdentifier.state.publisherContractTerms).toHaveLength(first.state.publisherContractTerms.length);
+  });
+
+  it("updates a governed onboarding package without replacing record identities or technical handoff", () => {
+    const state = createInitialMediaWorkflowState();
+    const created = mediaWorkflowService.createPublisherOnboarding(
+      state,
+      user("media_manager"),
+      completeOnboardingInput("Editable")
+    );
+    const publisherId = created.publisherId!;
+    const before = mediaWorkflowService.getPublisherSnapshot(created.state, publisherId);
+    const updatedInput = completeOnboardingInput("Editable");
+    updatedInput.publisher.name = "Publisher Editable Updated";
+    updatedInput.publisher.dailyActiveUsers = 240000;
+    updatedInput.publisher.integrationType = "OpenRTB";
+    updatedInput.contact.name = "Wang Lin";
+    updatedInput.adSlot.floorPrice = 18;
+    updatedInput.contractTerm.paymentTerms = "Net 45";
+
+    const updated = mediaWorkflowService.updatePublisherOnboarding(
+      created.state,
+      user("media_manager"),
+      publisherId,
+      updatedInput
+    );
+    const after = mediaWorkflowService.getPublisherSnapshot(updated.state, publisherId);
+
+    expect(updated.guard).toMatchObject({ allowed: true, reason_code: "PUBLISHER_ONBOARDING_UPDATED" });
+    expect(updated.state.publishers).toHaveLength(created.state.publishers.length);
+    expect(updated.state.publisherContacts).toHaveLength(created.state.publisherContacts.length);
+    expect(updated.state.publisherAdSlots).toHaveLength(created.state.publisherAdSlots.length);
+    expect(updated.state.publisherContractTerms).toHaveLength(created.state.publisherContractTerms.length);
+    expect(after.publisher).toMatchObject({
+      id: publisherId,
+      name: "Publisher Editable Updated",
+      daily_active_users: 240000,
+      integration_type: "OpenRTB"
+    });
+    expect(after.contacts[0]).toMatchObject({ id: before.contacts[0].id, name: "Wang Lin" });
+    expect(after.adSlots[0]).toMatchObject({ id: before.adSlots[0].id, floor_price: 18 });
+    expect(after.contractTerms[0]).toMatchObject({ id: before.contractTerms[0].id, payment_terms: "Net 45" });
+    expect(after.integrationProjects[0]).toMatchObject({
+      id: before.integrationProjects[0].id,
+      integration_type: "OpenRTB"
+    });
+    expect(updated.state.auditEvents.slice(0, 5).map((event) => event.action)).toEqual([
+      "publisher.onboarding.update",
+      "publisher_contract_term.update",
+      "publisher_ad_slot.update",
+      "publisher_contact.update",
+      "publisher.update"
+    ]);
+  });
+
+  it("blocks profile updates that collide with another publisher identifier", () => {
+    const state = createInitialMediaWorkflowState();
+    const first = mediaWorkflowService.createPublisherOnboarding(state, user("media_manager"), completeOnboardingInput("First"));
+    const second = mediaWorkflowService.createPublisherOnboarding(first.state, user("media_manager"), completeOnboardingInput("Second"));
+    const collidingInput = completeOnboardingInput("Second");
+    collidingInput.publisher.propertyIdentifier = "com.example.first";
+
+    const result = mediaWorkflowService.updatePublisherOnboarding(
+      second.state,
+      user("media_manager"),
+      second.publisherId!,
+      collidingInput
+    );
+
+    expect(result.guard).toMatchObject({ allowed: false, reason_code: "PUBLISHER_IDENTIFIER_DUPLICATE" });
+    expect(result.state.publishers.find((publisher) => publisher.id === second.publisherId)?.metadata?.property_identifier).toBe(
+      "com.example.second"
+    );
+  });
+
   it("creates publisher only for media roles with publisher.manage", () => {
     const state = createInitialMediaWorkflowState();
     const blocked = mediaWorkflowService.createPublisher(state, user("audit_viewer"), {
@@ -105,7 +253,7 @@ describe("MediaWorkflowService P0 mainline", () => {
     });
 
     const allowed = mediaWorkflowService.createPublisher(state, user("media_manager"), {
-      name: "Demo Audio Network",
+      name: "New Demo Audio Network",
       region: "CN",
       mediaType: "App",
       integrationType: "SDK"
@@ -116,7 +264,7 @@ describe("MediaWorkflowService P0 mainline", () => {
       reason_code: "PUBLISHER_CREATED"
     });
     expect(allowed.state.publishers[0]).toMatchObject({
-      name: "Demo Audio Network",
+      name: "New Demo Audio Network",
       technical_live_status: "draft",
       commercial_test_status: "not_started",
       sales_scale_status: "not_allowed"

@@ -78,6 +78,14 @@ export type PublisherOnboardingInput = {
   contractTerm: ContractTermInput;
 };
 
+export type PublisherDuplicateKind = "name" | "property_identifier";
+
+export type PublisherDuplicate = {
+  kind: PublisherDuplicateKind;
+  publisherId: EntityId;
+  publisherName: string;
+};
+
 type TechnicalEvidenceInput = {
   evidenceType: IntegrationEvidenceType;
   title: string;
@@ -191,6 +199,84 @@ function findPublisher(state: MediaWorkflowState, publisherId: EntityId) {
   return state.publishers.find((publisher) => publisher.id === publisherId);
 }
 
+function normalizePublisherName(value?: string) {
+  return value?.trim().replace(/\s+/g, " ").toLocaleLowerCase() ?? "";
+}
+
+function normalizePropertyIdentifier(value?: string, identifierType?: string) {
+  const normalized = value?.trim().toLocaleLowerCase() ?? "";
+  if (identifierType !== "web_domain") return normalized;
+
+  return normalized
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/[/?#].*$/, "");
+}
+
+function findPublisherDuplicate(
+  state: MediaWorkflowState,
+  input: Pick<CreatePublisherInput, "name" | "propertyIdentifier" | "propertyIdentifierType">,
+  excludePublisherId?: EntityId
+): PublisherDuplicate | undefined {
+  const candidateName = normalizePublisherName(input.name);
+  const candidateIdentifier = normalizePropertyIdentifier(input.propertyIdentifier, input.propertyIdentifierType);
+
+  for (const publisher of state.publishers) {
+    if (publisher.id === excludePublisherId) continue;
+
+    if (candidateIdentifier) {
+      const existingIdentifier = normalizePropertyIdentifier(
+        publisher.metadata?.property_identifier,
+        publisher.metadata?.property_identifier_type
+      );
+      if (candidateIdentifier === existingIdentifier) {
+        return { kind: "property_identifier", publisherId: publisher.id, publisherName: publisher.name };
+      }
+    }
+
+    if (candidateName && candidateName === normalizePublisherName(publisher.name)) {
+      return { kind: "name", publisherId: publisher.id, publisherName: publisher.name };
+    }
+  }
+
+  return undefined;
+}
+
+function onboardingInputIsComplete(input: PublisherOnboardingInput) {
+  const requiredText = [
+    input.publisher.name,
+    input.publisher.legalEntity,
+    input.publisher.propertyName,
+    input.publisher.propertyIdentifier,
+    input.publisher.trafficDataAsOf,
+    input.publisher.trafficSource,
+    input.contact.name,
+    input.contact.roleTitle,
+    input.adSlot.slotName,
+    input.adSlot.adFormat,
+    input.adSlot.placementType,
+    input.contractTerm.billingModel,
+    input.contractTerm.settlementCycle,
+    input.contractTerm.paymentTerms
+  ];
+
+  return (
+    requiredText.every((value) => Boolean(value?.trim())) &&
+    (input.publisher.dailyActiveUsers ?? 0) > 0 &&
+    (input.publisher.dailyRequests ?? 0) > 0 &&
+    (input.adSlot.dailyRequests ?? 0) > 0
+  );
+}
+
+function duplicateGuard(duplicate: PublisherDuplicate) {
+  return createBlocked(
+    duplicate.kind === "property_identifier"
+      ? `This media property identifier already belongs to ${duplicate.publisherName}.`
+      : `A publisher named ${duplicate.publisherName} already exists.`,
+    duplicate.kind === "property_identifier" ? "PUBLISHER_IDENTIFIER_DUPLICATE" : "PUBLISHER_NAME_DUPLICATE"
+  );
+}
+
 function updatePublisher(
   state: MediaWorkflowState,
   publisherId: EntityId,
@@ -252,6 +338,14 @@ function nextMissingEvidence(project: IntegrationProject) {
 }
 
 export class MediaWorkflowService {
+  getPublisherDuplicate(
+    state: MediaWorkflowState,
+    input: Pick<CreatePublisherInput, "name" | "propertyIdentifier" | "propertyIdentifierType">,
+    excludePublisherId?: EntityId
+  ) {
+    return findPublisherDuplicate(state, input, excludePublisherId);
+  }
+
   getPublisherSnapshot(state: MediaWorkflowState, publisherId: EntityId) {
     return {
       publisher: findPublisher(state, publisherId),
@@ -324,6 +418,12 @@ export class MediaWorkflowService {
     if (!rlsService.canWriteTable(user, "publishers") || !rbacService.hasCapability(user, "publisher.manage")) {
       const guard = createBlocked("Current role cannot create publishers.", "PUBLISHER_CREATE_FORBIDDEN", "media_manager");
       return { state: appendEvents(state, user, "publisher.create", undefined, guard), guard };
+    }
+
+    const duplicate = findPublisherDuplicate(state, input);
+    if (duplicate) {
+      const guard = duplicateGuard(duplicate);
+      return { state: appendEvents(state, user, "publisher.create", duplicate.publisherId, guard), guard };
     }
 
     const id = crypto.randomUUID();
@@ -530,33 +630,19 @@ export class MediaWorkflowService {
       return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
     }
 
-    const requiredText = [
-      input.publisher.name,
-      input.publisher.legalEntity,
-      input.publisher.propertyName,
-      input.publisher.propertyIdentifier,
-      input.publisher.trafficDataAsOf,
-      input.publisher.trafficSource,
-      input.contact.name,
-      input.contact.roleTitle,
-      input.adSlot.slotName,
-      input.adSlot.adFormat,
-      input.adSlot.placementType,
-      input.contractTerm.billingModel,
-      input.contractTerm.settlementCycle,
-      input.contractTerm.paymentTerms
-    ];
-    const validScale =
-      (input.publisher.dailyActiveUsers ?? 0) > 0 &&
-      (input.publisher.dailyRequests ?? 0) > 0 &&
-      (input.adSlot.dailyRequests ?? 0) > 0;
-
-    if (requiredText.some((value) => !value?.trim()) || !validScale) {
+    if (!onboardingInputIsComplete(input)) {
       const guard = createBlocked(
         "Publisher onboarding requires complete identity, traffic, inventory, contact, and commercial data.",
         "PUBLISHER_ONBOARDING_INVALID"
       );
       const eventState = appendEvents(state, user, "publisher.onboarding.create", undefined, guard);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    const duplicate = findPublisherDuplicate(state, input.publisher);
+    if (duplicate) {
+      const guard = duplicateGuard(duplicate);
+      const eventState = appendEvents(state, user, "publisher.onboarding.create", duplicate.publisherId, guard);
       return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
     }
 
@@ -600,6 +686,230 @@ export class MediaWorkflowService {
       guard,
       auditEvent: eventState.auditEvents[0],
       auditEvents,
+      businessEvent,
+      publisherId
+    };
+  }
+
+  updatePublisherOnboarding(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    publisherId: EntityId,
+    input: PublisherOnboardingInput
+  ): WorkflowResult {
+    const publisher = findPublisher(state, publisherId);
+    if (!publisher) {
+      const guard = createBlocked("Publisher record was not found.", "NOT_FOUND");
+      const eventState = appendEvents(state, user, "publisher.onboarding.update", publisherId, guard);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    const canUpdateAllRecords =
+      rlsService.canWriteTable(user, "publishers") &&
+      rlsService.canWriteTable(user, "publisher_contacts") &&
+      rlsService.canWriteTable(user, "publisher_ad_slots") &&
+      rlsService.canWriteTable(user, "publisher_contract_terms") &&
+      rlsService.canWriteTable(user, "integration_projects") &&
+      rbacService.hasCapability(user, "publisher.manage");
+
+    if (!canUpdateAllRecords) {
+      const guard = createBlocked(
+        "Current role cannot update a complete publisher onboarding package.",
+        "PUBLISHER_ONBOARDING_UPDATE_FORBIDDEN",
+        "media_manager"
+      );
+      const eventState = appendEvents(state, user, "publisher.onboarding.update", publisherId, guard);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    if (!onboardingInputIsComplete(input)) {
+      const guard = createBlocked(
+        "Publisher onboarding requires complete identity, traffic, inventory, contact, and commercial data.",
+        "PUBLISHER_ONBOARDING_INVALID"
+      );
+      const eventState = appendEvents(state, user, "publisher.onboarding.update", publisherId, guard);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    const duplicate = findPublisherDuplicate(state, input.publisher, publisherId);
+    if (duplicate) {
+      const guard = duplicateGuard(duplicate);
+      const eventState = appendEvents(state, user, "publisher.onboarding.update", publisherId, guard);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    const currentContact =
+      state.publisherContacts.find((contact) => contact.publisher_id === publisherId && contact.is_primary) ??
+      state.publisherContacts.find((contact) => contact.publisher_id === publisherId);
+    const currentSlot = state.publisherAdSlots.find((slot) => slot.publisher_id === publisherId);
+    const currentTerm = state.publisherContractTerms.find((term) => term.publisher_id === publisherId);
+    const currentProject = findIntegrationProject(state, publisherId);
+    const contactId = currentContact?.id ?? crypto.randomUUID();
+    const slotId = currentSlot?.id ?? crypto.randomUUID();
+    const termId = currentTerm?.id ?? crypto.randomUUID();
+    const projectId = currentProject?.id ?? crypto.randomUUID();
+
+    let nextState: MediaWorkflowState = {
+      ...state,
+      publishers: state.publishers.map((item) =>
+        item.id === publisherId
+          ? {
+              ...item,
+              name: input.publisher.name,
+              legal_entity: input.publisher.legalEntity,
+              region: input.publisher.region,
+              media_type: input.publisher.mediaType,
+              integration_type: input.publisher.integrationType,
+              daily_active_users: input.publisher.dailyActiveUsers,
+              daily_requests: input.publisher.dailyRequests,
+              metadata: {
+                ...item.metadata,
+                property_name: input.publisher.propertyName,
+                property_identifier_type: input.publisher.propertyIdentifierType,
+                property_identifier: input.publisher.propertyIdentifier,
+                monthly_active_users: input.publisher.monthlyActiveUsers,
+                traffic_data_as_of: input.publisher.trafficDataAsOf,
+                traffic_source: input.publisher.trafficSource
+              }
+            }
+          : item
+      ),
+      publisherContacts: currentContact
+        ? state.publisherContacts.map((contact) =>
+            contact.id === contactId
+              ? {
+                  ...contact,
+                  name: input.contact.name,
+                  role_title: input.contact.roleTitle,
+                  email: input.contact.email,
+                  phone: input.contact.phone,
+                  is_primary: true
+                }
+              : contact
+          )
+        : [
+            {
+              id: contactId,
+              publisher_id: publisherId,
+              name: input.contact.name,
+              role_title: input.contact.roleTitle,
+              email: input.contact.email,
+              phone: input.contact.phone,
+              is_primary: true
+            },
+            ...state.publisherContacts
+          ],
+      publisherAdSlots: currentSlot
+        ? state.publisherAdSlots.map((slot) =>
+            slot.id === slotId
+              ? {
+                  ...slot,
+                  slot_name: input.adSlot.slotName,
+                  ad_format: input.adSlot.adFormat,
+                  placement_type: input.adSlot.placementType,
+                  floor_price: input.adSlot.floorPrice,
+                  currency: input.adSlot.currency ?? "CNY",
+                  daily_requests: input.adSlot.dailyRequests,
+                  creative_spec: input.adSlot.creativeSpec
+                }
+              : slot
+          )
+        : [
+            {
+              id: slotId,
+              publisher_id: publisherId,
+              slot_name: input.adSlot.slotName,
+              ad_format: input.adSlot.adFormat,
+              placement_type: input.adSlot.placementType,
+              floor_price: input.adSlot.floorPrice,
+              currency: input.adSlot.currency ?? "CNY",
+              daily_requests: input.adSlot.dailyRequests,
+              creative_spec: input.adSlot.creativeSpec,
+              status: "active"
+            },
+            ...state.publisherAdSlots
+          ],
+      publisherContractTerms: currentTerm
+        ? state.publisherContractTerms.map((term) =>
+            term.id === termId
+              ? {
+                  ...term,
+                  contract_type: input.contractTerm.contractType,
+                  billing_model: input.contractTerm.billingModel,
+                  settlement_cycle: input.contractTerm.settlementCycle,
+                  payment_terms: input.contractTerm.paymentTerms,
+                  revenue_share: input.contractTerm.revenueShare,
+                  currency: input.contractTerm.currency ?? "CNY"
+                }
+              : term
+          )
+        : [
+            {
+              id: termId,
+              publisher_id: publisherId,
+              contract_type: input.contractTerm.contractType,
+              billing_model: input.contractTerm.billingModel,
+              settlement_cycle: input.contractTerm.settlementCycle,
+              payment_terms: input.contractTerm.paymentTerms,
+              revenue_share: input.contractTerm.revenueShare,
+              currency: input.contractTerm.currency ?? "CNY"
+            },
+            ...state.publisherContractTerms
+          ],
+      integrationProjects: currentProject
+        ? state.integrationProjects.map((project) =>
+            project.id === projectId
+              ? { ...project, integration_type: input.publisher.integrationType }
+              : project
+          )
+        : [
+            {
+              id: projectId,
+              publisher_id: publisherId,
+              integration_type: input.publisher.integrationType,
+              status: "pending_integration",
+              checklist: {},
+              notes: "Created while completing publisher profile governance.",
+              evidence: [],
+              next_action: "Start technical execution and record connection configuration evidence."
+            },
+            ...state.integrationProjects
+          ]
+    };
+
+    const recordUpdates = [
+      { action: "publisher.update", eventCode: "publisher.updated" },
+      { action: "publisher_contact.update", eventCode: "publisher.contact_updated" },
+      { action: "publisher_ad_slot.update", eventCode: "publisher.ad_slot_updated" },
+      { action: "publisher_contract_term.update", eventCode: "publisher.contract_term_updated" }
+    ];
+    const recordGuard = createAllowed("Publisher onboarding record updated.", "PUBLISHER_PROFILE_UPDATED");
+    for (const update of recordUpdates) {
+      nextState = appendEvents(
+        nextState,
+        user,
+        update.action,
+        publisherId,
+        recordGuard,
+        createBusinessEvent(update.eventCode, publisherId, user.activeRole)
+      );
+    }
+
+    const guard = createAllowed(
+      "Publisher onboarding package updated and remains connected to technical integration.",
+      "PUBLISHER_ONBOARDING_UPDATED"
+    );
+    const businessEvent = createBusinessEvent("publisher.onboarding_updated", publisherId, user.activeRole, {
+      integrationProjectId: projectId,
+      propertyIdentifierType: input.publisher.propertyIdentifierType
+    });
+    const eventState = appendEvents(nextState, user, "publisher.onboarding.update", publisherId, guard, businessEvent);
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      auditEvents: eventState.auditEvents.slice(0, recordUpdates.length + 1),
       businessEvent,
       publisherId
     };

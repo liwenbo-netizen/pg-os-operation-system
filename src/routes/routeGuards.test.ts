@@ -24,6 +24,13 @@ describe("canViewRoute", () => {
     });
   });
 
+  it("allows media managers to hand a Publisher 360 record into technical integration", () => {
+    expect(canViewRoute("media_manager", "/media/integration-wizard/:id")).toMatchObject({
+      allowed: true,
+      reason_code: "ROUTE_ALLOWED"
+    });
+  });
+
   it("does not give system admin business approval routes by default", () => {
     expect(canViewRoute("system_admin", "/media/director-command-center")).toMatchObject({
       allowed: false,

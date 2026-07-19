@@ -4,12 +4,14 @@ import type {
   MediaTrustProfile,
   Publisher,
   PublisherAdSlot,
+  PublisherContact,
   PublisherContractTerm
 } from "../../types/domain";
 
 export type PublisherWorkspaceView = "readiness" | "trusted" | "evidence";
 
 export type PublisherPrimaryAction =
+  | "editProfile"
   | "addSlot"
   | "addTerm"
   | "openIntegration"
@@ -29,14 +31,30 @@ export type PublisherReadinessStep = {
 
 type PublisherReadinessInput = {
   publisher: Publisher;
+  contacts: PublisherContact[];
   adSlots: PublisherAdSlot[];
   contractTerms: PublisherContractTerm[];
   trustProfile?: MediaTrustProfile;
   packages: MediaSupplyPackage[];
 };
 
+function hasPublisherIdentityAndTraffic(input: PublisherReadinessInput) {
+  const publisher = input.publisher;
+  return Boolean(
+    publisher.name.trim() &&
+      publisher.legal_entity?.trim() &&
+      publisher.metadata?.property_name?.trim() &&
+      publisher.metadata?.property_identifier?.trim() &&
+      publisher.daily_active_users &&
+      publisher.daily_requests &&
+      input.contacts.length > 0
+  );
+}
+
 export function getPublisherReadinessSteps(input: PublisherReadinessInput): PublisherReadinessStep[] {
-  const profileComplete = input.adSlots.length > 0 && input.contractTerms.length > 0;
+  const publisher = input.publisher;
+  const profileComplete =
+    hasPublisherIdentityAndTraffic(input) && input.adSlots.length > 0 && input.contractTerms.length > 0;
   const technicalState: PublisherReadinessState =
     input.publisher.technical_live_status === "technical_live_passed"
       ? "complete"
@@ -74,6 +92,10 @@ export function getPublisherReadinessSteps(input: PublisherReadinessInput): Publ
 }
 
 export function getPublisherPrimaryAction(input: PublisherReadinessInput): PublisherPrimaryAction | undefined {
+  if (!hasPublisherIdentityAndTraffic(input)) {
+    return "editProfile";
+  }
+
   if (input.adSlots.length === 0) {
     return "addSlot";
   }

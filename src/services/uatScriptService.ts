@@ -101,7 +101,15 @@ export const productionUatScripts: UatScript[] = [
     loginAccount: "media_manager@poly-gamma.com",
     targetRoute: "/media/manager-workbench",
     objective: "Confirm Media Manager can create a commercially usable publisher onboarding package and produce traceable Media audit evidence.",
-    auditEvents: ["publisher.onboarding.create", "publisher.create", "publisher_contact.create", "publisher_ad_slot.create", "publisher_contract_term.create"],
+    auditEvents: [
+      "publisher.onboarding.create",
+      "publisher.create",
+      "publisher_contact.create",
+      "publisher_ad_slot.create",
+      "publisher_contract_term.create",
+      "publisher.onboarding.update",
+      "publisher.update"
+    ],
     businessActions: [
       {
         domain: "Media",
@@ -126,6 +134,16 @@ export const productionUatScripts: UatScript[] = [
         route: "/media/publishers/:id",
         expectedAuditEvent: "publisher_contract_term.create",
         dataQualityChecks: ["Terms include contract type, billing model, settlement cycle, payment terms, and revenue share."]
+      },
+      {
+        domain: "Media",
+        action: "Correct publisher onboarding profile",
+        route: "/media/publishers/:id",
+        expectedAuditEvent: "publisher.onboarding.update",
+        dataQualityChecks: [
+          "Publisher, contact, primary ad slot, commercial term, and integration project retain their record identities.",
+          "A duplicate publisher name or property identifier is rejected before any child record changes."
+        ]
       }
     ],
     dataQualityChecks: [
@@ -136,6 +154,8 @@ export const productionUatScripts: UatScript[] = [
     evidence: [
       "Publisher count increases",
       "Asset identifier, traffic evidence, contact, ad slot, and commercial terms are visible on Publisher 360",
+      "Profile correction keeps technical handoff intact and emits publisher.onboarding.update",
+      "Duplicate media identity is rejected without partial writes",
       "Supabase warning count remains zero or actionable",
       "publisher.onboarding.create and child record writes appear in audit events"
     ],
@@ -158,6 +178,13 @@ export const productionUatScripts: UatScript[] = [
         businessAction: "Verify publisher onboarding package",
         dataQualityCheck: "Package or domain identifier, DAU, daily requests, ad format, placement, contact, billing model, and payment terms are visible.",
         expectedResult: "Publisher 360 shows the complete onboarding context and advances profile foundation readiness."
+      },
+      {
+        id: "media-edit-profile",
+        action: "Click Edit profile, change a governed traffic or contact field, save, and reopen the record.",
+        businessAction: "Correct publisher onboarding profile",
+        dataQualityCheck: "The publisher record id and technical integration project remain unchanged after correction.",
+        expectedResult: "Publisher 360 shows the corrected value and keeps the technical integration handoff available."
       },
       {
         id: "media-warning-check",
