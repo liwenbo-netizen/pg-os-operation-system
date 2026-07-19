@@ -536,6 +536,7 @@ export function App() {
           guideState={guideWorkflowState}
           onStateChange={setWorkbenchWorkflowState}
           onOpenTask={handleOpenWorkbenchTask}
+          onOpenContext={handleRouteChange}
           onAuditEvent={handleWorkflowAuditEvent}
         />
       ) : activeRoute.path.startsWith("/media/") ? (
@@ -558,6 +559,7 @@ export function App() {
           user={activeUser}
           state={salesWorkflowState}
           mediaState={mediaWorkflowState}
+          selectedObjectId={activeObjectId}
           onStateChange={setSalesWorkflowState}
           onAuditEvent={handleWorkflowAuditEvent}
           onRouteChange={handleRouteChange}

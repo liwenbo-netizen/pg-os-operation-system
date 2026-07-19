@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { BadgeDollarSign, Plus, ShieldAlert } from "lucide-react";
 import { GuidedEmptyState, MetricStrip, NextActionBar, OperatingPageHeader } from "../../components/OperatingPage";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -25,9 +25,10 @@ type SalesExperiencePageProps = {
   user: BusinessUser;
   state: SalesWorkflowState;
   mediaState: MediaWorkflowState;
+  selectedObjectId?: EntityId;
   onStateChange: (state: SalesWorkflowState) => void;
   onAuditEvent: (event: AuditEvent) => void;
-  onRouteChange: (path: string) => void;
+  onRouteChange: (path: string, objectId?: EntityId) => void;
 };
 
 type ActionMessage = {
@@ -67,6 +68,7 @@ export function SalesExperiencePage({
   user,
   state,
   mediaState,
+  selectedObjectId,
   onStateChange,
   onAuditEvent,
   onRouteChange
@@ -81,6 +83,22 @@ export function SalesExperiencePage({
   const selectedOpportunity = state.opportunities.find((opportunity) => opportunity.id === selectedOpportunityId) ?? state.opportunities[0];
   const selectedProposal = state.proposals.find((proposal) => proposal.id === selectedProposalId) ?? state.proposals[0];
   const selectedCampaign = state.campaigns.find((campaign) => campaign.id === selectedCampaignId) ?? state.campaigns[0];
+
+  useEffect(() => {
+    if (!selectedObjectId) {
+      return;
+    }
+
+    if (state.opportunities.some((item) => item.id === selectedObjectId)) {
+      setSelectedOpportunityId(selectedObjectId);
+    }
+    if (state.proposals.some((item) => item.id === selectedObjectId)) {
+      setSelectedProposalId(selectedObjectId);
+    }
+    if (state.campaigns.some((item) => item.id === selectedObjectId)) {
+      setSelectedCampaignId(selectedObjectId);
+    }
+  }, [selectedObjectId, state.campaigns, state.opportunities, state.proposals]);
 
   const page = useMemo(() => {
     if (route.path === "/proposals/:id/wizard") {
@@ -169,8 +187,8 @@ export function SalesExperiencePage({
           onOpportunitySelect={setSelectedOpportunityId}
           onProposalSelect={setSelectedProposalId}
           onCampaignSelect={setSelectedCampaignId}
-          onOpenProposal={() => onRouteChange("/proposals/:id/wizard")}
-          onOpenCampaign={() => onRouteChange("/campaigns/:id/wizard")}
+          onOpenProposal={() => onRouteChange("/proposals/:id/wizard", selectedProposal?.id)}
+          onOpenCampaign={() => onRouteChange("/campaigns/:id/wizard", selectedCampaign?.id)}
         />
 
         {page === "sales" && selectedOpportunity ? (
@@ -189,7 +207,7 @@ export function SalesExperiencePage({
                 return result;
               })
             }
-            onOpenProposal={() => onRouteChange("/proposals/:id/wizard")}
+            onOpenProposal={() => onRouteChange("/proposals/:id/wizard", selectedProposal?.id)}
             supplyMatchLabels={{
               title: t("sales.supplyMatches"),
               empty: t("sales.noSupplyMatches"),
@@ -234,7 +252,7 @@ export function SalesExperiencePage({
                 return result;
               })
             }
-            onOpenCampaign={() => onRouteChange("/campaigns/:id/wizard")}
+            onOpenCampaign={() => onRouteChange("/campaigns/:id/wizard", selectedCampaign?.id)}
           />
         ) : null}
 

@@ -24,6 +24,7 @@ import {
   Wrench
 } from "lucide-react";
 import { GuidedEmptyState, MetricStrip, NextActionBar, OperatingPageHeader } from "../../components/OperatingPage";
+import { BusinessStagePath } from "../../components/BusinessStagePath";
 import { StatusBadge } from "../../components/StatusBadge";
 import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
@@ -74,6 +75,11 @@ import {
   type PublisherReadinessState,
   type PublisherWorkspaceView
 } from "./publisherReadinessPageModel";
+import {
+  getMediaDirectorDecision,
+  getMediaDirectorReadinessSteps,
+  type MediaDirectorApprovalTarget
+} from "./mediaDirectorCommandCenterModel";
 
 type MediaExperiencePageProps = {
   route: AppRoute;
@@ -329,33 +335,33 @@ export function MediaExperiencePage({
           role={getRoleDisplayName(role.code, locale)}
         />
       ) : (
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
-              <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
-            </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{t("media.mainlineDescription")}</p>
-          </div>
-          <button
-            className="inline-flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
-            type="button"
-            onClick={() =>
-              runAction(t("media.createPublisher"), () =>
-                mediaWorkflowService.createPublisher(state, user, {
-                  name: "Demo Audio Network",
-                  region: "CN",
-                  mediaType: "App",
-                  integrationType: "SDK"
-                })
-              )
-            }
-          >
-            <Plus className="size-4" aria-hidden="true" />
-            {t("media.newPublisher")}
-          </button>
-        </header>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <OperatingPageHeader
+            title={getRouteDisplayTitle(route, locale)}
+            description={page === "director" ? t("media.directorDescription") : t("media.mainlineDescription")}
+            pageType={getRoutePageType(route, locale)}
+            role={getRoleDisplayName(role.code, locale)}
+          />
+          {page === "manager" ? (
+            <button
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
+              type="button"
+              onClick={() =>
+                runAction(t("media.createPublisher"), () =>
+                  mediaWorkflowService.createPublisher(state, user, {
+                    name: "Demo Audio Network",
+                    region: "CN",
+                    mediaType: "App",
+                    integrationType: "SDK"
+                  })
+                )
+              }
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              {t("media.newPublisher")}
+            </button>
+          ) : null}
+        </div>
       )}
 
       {page === "ecosystem" ? (
@@ -421,7 +427,8 @@ export function MediaExperiencePage({
 
         {page === "director" ? (
           <MediaDirectorCommandCenter
-            queue={queue}
+            snapshot={selectedSnapshot}
+            onOpen360={() => selectedPublisher && onRouteChange("/media/publishers/:id", selectedPublisher.id)}
             onApprove={(publisherId, targetStatus) =>
               runAction(t("media.approveSalesReadiness"), () =>
                 mediaWorkflowService.approveSalesReadiness(state, user, publisherId, targetStatus)
@@ -1808,8 +1815,9 @@ function PublisherSelector({
         </button>
       ))}
       <button
-        className="h-10 w-full rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50"
+        className="h-10 w-full rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
         type="button"
+        disabled={!selectedPublisherId}
         onClick={onOpen360}
       >
         {t("media.open360")}
@@ -1870,38 +1878,113 @@ function MediaManagerWorkbench({
 }
 
 function MediaDirectorCommandCenter({
-  queue,
+  snapshot,
+  onOpen360,
   onApprove
 }: {
-  queue: ReturnType<typeof mediaWorkflowService.getReadinessQueue>;
-  onApprove: (publisherId: EntityId, targetStatus: "limited_sellable" | "proposal_selectable" | "scale_ready") => void;
+  snapshot?: ReturnType<typeof mediaWorkflowService.getPublisherSnapshot>;
+  onOpen360: () => void;
+  onApprove: (publisherId: EntityId, targetStatus: MediaDirectorApprovalTarget) => void;
 }) {
   const { locale, t } = useLocale();
+  const publisher = snapshot?.publisher;
+
+  if (!snapshot || !publisher) {
+    return (
+      <GuidedEmptyState
+        title={t("media.publisherNotFound")}
+        description={t("media.publisherQueueDescription")}
+        ownerLabel={t("workbench.owner")}
+        owner={getRoleDisplayName("media_director", locale)}
+      />
+    );
+  }
+
+  const blocker = snapshot.diagnosticCases.find(
+    (item) => item.is_blocking_sales_scale && !["closed", "rejected"].includes(item.status)
+  );
+  const blockerCount = snapshot.diagnosticCases.filter(
+    (item) => item.is_blocking_sales_scale && !["closed", "rejected"].includes(item.status)
+  ).length;
+  const decision = getMediaDirectorDecision(publisher.sales_scale_status, blockerCount);
+  const actionLabels = {
+    approveLimited: t("media.approveLimited"),
+    approveProposal: t("media.approveProposal"),
+    approveScale: t("media.approveScale"),
+    resolveBlocker: t("media.resolveReadinessBlocker"),
+    monitor: t("media.monitorQuality")
+  };
+  const stages = getMediaDirectorReadinessSteps(publisher.sales_scale_status, blockerCount).map((step) => ({
+    ...step,
+    label:
+      step.key === "limited"
+        ? t("media.limitedSellable")
+        : step.key === "proposal"
+          ? t("media.proposalSelectable")
+          : t("media.scaleReady")
+  }));
 
   return (
-    <div className="space-y-4">
-      {queue.map(({ publisher, openBlockingCases }) => (
-        <article key={publisher.id} className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-lg font-semibold text-slate-950">{publisher.name}</p>
-              <p className="mt-1 text-sm text-slate-500">{t("media.blockingCases", { count: openBlockingCases })}</p>
-            </div>
+    <div className="min-w-0 space-y-5">
+      <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xl font-semibold text-slate-950">{publisher.name}</p>
+            <p className="mt-1 text-sm text-slate-500">
+              {publisher.region} / {publisher.media_type} / {publisher.integration_type}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <StatusBadge tone={toneForStatus(publisher.technical_live_status)}>{getPublisherStatusLabel(publisher.technical_live_status, locale)}</StatusBadge>
+            <StatusBadge tone={toneForStatus(publisher.commercial_test_status)}>{getPublisherStatusLabel(publisher.commercial_test_status, locale)}</StatusBadge>
             <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{getPublisherStatusLabel(publisher.sales_scale_status, locale)}</StatusBadge>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700" type="button" onClick={() => onApprove(publisher.id, "limited_sellable")}>
-              {t("media.limitedSellable")}
-            </button>
-            <button className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700" type="button" onClick={() => onApprove(publisher.id, "proposal_selectable")}>
-              {t("media.proposalSelectable")}
-            </button>
-            <button className="h-10 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white" type="button" onClick={() => onApprove(publisher.id, "scale_ready")}>
-              {t("media.scaleReady")}
-            </button>
-          </div>
-        </article>
-      ))}
+        </div>
+      </article>
+
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <NextActionBar
+          heading={t("media.directorDecision")}
+          status={decision.state === "complete" ? t("common.complete") : decision.state === "blocked" ? t("common.blocked") : t("common.inProgress")}
+          statusTone={decision.state === "complete" ? "success" : decision.state === "blocked" ? "danger" : "info"}
+          nextActionLabel={t("workbench.nextAction")}
+          nextAction={actionLabels[decision.action]}
+          ownerLabel={t("workbench.owner")}
+          owner={getRoleDisplayName("media_director", locale)}
+          blockerLabel={t("workbench.blocker")}
+          blocker={blocker?.current_blocker}
+          dueDateLabel={t("workbench.dueDate")}
+          dueDate={snapshot.integrationProjects[0]?.go_live_date ?? t("workbench.noDueDate")}
+          actionLabel={decision.target ? actionLabels[decision.action] : t("media.open360")}
+          onAction={decision.target ? () => onApprove(publisher.id, decision.target!) : onOpen360}
+        />
+      </div>
+
+      <BusinessStagePath
+        title={t("media.directorApprovalPath")}
+        stages={stages}
+        stateLabels={{
+          complete: t("common.complete"),
+          active: t("common.inProgress"),
+          blocked: t("common.blocked"),
+          pending: t("common.pending")
+        }}
+      />
+
+      <section className="grid border-y border-slate-200 bg-white sm:grid-cols-3 sm:divide-x sm:divide-slate-200">
+        <DirectorSignal label={t("media.blockers")} value={String(blockerCount)} />
+        <DirectorSignal label={t("media.adSlots")} value={String(snapshot.adSlots.length)} />
+        <DirectorSignal label={t("media.commercialTerms")} value={String(snapshot.contractTerms.length)} />
+      </section>
+    </div>
+  );
+}
+
+function DirectorSignal({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 px-4 py-3">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-1 text-xl font-semibold text-slate-950">{value}</p>
     </div>
   );
 }

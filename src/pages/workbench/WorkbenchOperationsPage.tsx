@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { BarChart3, CheckCircle2, ClipboardList, ShieldAlert, Target } from "lucide-react";
+import { ArrowUpRight, BarChart3, CheckCircle2, ClipboardList, GitBranch, ShieldAlert, Target } from "lucide-react";
 import {
   GuidedEmptyState,
   MetricStrip,
@@ -10,6 +10,7 @@ import {
 import { StatusBadge } from "../../components/StatusBadge";
 import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
+import { canViewRoute } from "../../routes/routeGuards";
 import { workbenchService } from "../../services/workbenchService";
 import type {
   AuditEvent,
@@ -25,6 +26,13 @@ import type {
 import type { GuardResult } from "../../types/guards";
 import { getRoleDisplayName, getRouteDisplayTitle, getRoutePageType, useLocale } from "../../lib/i18n";
 import { getWorkbenchMetricValues, getWorkbenchTaskAction } from "./workbenchPageModel";
+import {
+  getWorkbenchHandoffContext,
+  getWorkbenchModuleSummaries,
+  type WorkbenchHandoffContext,
+  type WorkbenchHandoffKind,
+  type WorkbenchHandoffNode
+} from "./workbenchHandoffModel";
 
 type WorkbenchOperationsPageProps = {
   route: AppRoute;
@@ -38,6 +46,7 @@ type WorkbenchOperationsPageProps = {
   guideState: GuideWorkflowState;
   onStateChange: (state: WorkbenchWorkflowState) => void;
   onOpenTask: (task: WorkbenchTask) => void;
+  onOpenContext: (path: string, objectId?: string) => void;
   onAuditEvent: (event: AuditEvent) => void;
 };
 
@@ -78,6 +87,7 @@ export function WorkbenchOperationsPage({
   guideState,
   onStateChange,
   onOpenTask,
+  onOpenContext,
   onAuditEvent
 }: WorkbenchOperationsPageProps) {
   const { locale, t } = useLocale();
@@ -99,6 +109,10 @@ export function WorkbenchOperationsPage({
     [contractState, financeState, guideState, mediaState, salesState, state, user]
   );
   const selectedTask = snapshot.tasks.find((task) => task.id === selectedTaskId) ?? snapshot.tasks[0];
+  const selectedContext = selectedTask
+    ? getWorkbenchHandoffContext(selectedTask, { mediaState, salesState, financeState, contractState })
+    : undefined;
+  const moduleSummaries = getWorkbenchModuleSummaries(snapshot.tasks);
   const primaryOkr = snapshot.okrs[0];
   const taskAction = getWorkbenchTaskAction(selectedTask);
   const metricValues = getWorkbenchMetricValues(snapshot.summary);
@@ -181,6 +195,14 @@ export function WorkbenchOperationsPage({
 
       {message ? <GuardNotice message={message} /> : null}
 
+      {route.path === "/ceo/dashboard" ? (
+        <ExecutiveHandoffOverview
+          summaries={moduleSummaries}
+          selectedTaskId={selectedTask?.id}
+          onSelectTask={setSelectedTaskId}
+        />
+      ) : null}
+
       <WorkspaceLayout
         queue={
           <TaskQueue
@@ -227,6 +249,14 @@ export function WorkbenchOperationsPage({
               />
             )}
           </Panel>
+
+          {selectedContext ? (
+            <HandoffContextPanel
+              context={selectedContext}
+              role={role.code}
+              onOpen={onOpenContext}
+            />
+          ) : null}
 
           <Panel title={t("workbench.okrProgress")} icon={<Target className="size-5 text-blue-600" aria-hidden="true" />}>
             <div className="grid gap-3 lg:grid-cols-2">
@@ -346,6 +376,17 @@ function TaskQueue({
     done: t("workbench.statusDone"),
     blocked: t("workbench.statusBlocked")
   };
+  const moduleLabels: Record<WorkbenchTask["module"], string> = {
+    Media: t("workbench.moduleMedia"),
+    Sales: t("workbench.moduleSales"),
+    Campaigns: t("workbench.moduleCampaigns"),
+    Diagnostics: t("workbench.moduleDiagnostics"),
+    Finance: t("workbench.moduleFinance"),
+    Contracts: t("workbench.moduleContracts"),
+    Guide: t("workbench.moduleGuide"),
+    Admin: t("workbench.moduleAdmin"),
+    Workbench: t("workbench.moduleWorkbench")
+  };
 
   return (
     <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
@@ -372,7 +413,7 @@ function TaskQueue({
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span>{getRoleDisplayName(task.owner_role, locale)}</span>
               <span aria-hidden="true">/</span>
-              <span>{task.module}</span>
+              <span>{moduleLabels[task.module]}</span>
               <StatusBadge tone={taskTone[task.status]}>{taskStatusLabels[task.status]}</StatusBadge>
             </div>
           </button>
@@ -380,6 +421,161 @@ function TaskQueue({
         {tasks.length === 0 ? <p className="p-2 text-sm leading-6 text-slate-500">{emptyText}</p> : null}
       </div>
     </section>
+  );
+}
+
+function ExecutiveHandoffOverview({
+  summaries,
+  selectedTaskId,
+  onSelectTask
+}: {
+  summaries: ReturnType<typeof getWorkbenchModuleSummaries>;
+  selectedTaskId?: string;
+  onSelectTask: (taskId: string) => void;
+}) {
+  const { t } = useLocale();
+  const moduleLabels: Record<WorkbenchTask["module"], string> = {
+    Media: t("workbench.moduleMedia"),
+    Sales: t("workbench.moduleSales"),
+    Campaigns: t("workbench.moduleCampaigns"),
+    Diagnostics: t("workbench.moduleDiagnostics"),
+    Finance: t("workbench.moduleFinance"),
+    Contracts: t("workbench.moduleContracts"),
+    Guide: t("workbench.moduleGuide"),
+    Admin: t("workbench.moduleAdmin"),
+    Workbench: t("workbench.moduleWorkbench")
+  };
+
+  return (
+    <section className="overflow-hidden rounded-lg border border-slate-200 bg-white" aria-labelledby="executive-handoff-heading">
+      <div className="border-b border-slate-200 px-4 py-3 sm:px-5">
+        <h2 id="executive-handoff-heading" className="text-sm font-semibold text-slate-950">{t("workbench.executiveHandoffs")}</h2>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{t("workbench.executiveHandoffsDescription")}</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[680px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs font-medium text-slate-500">
+            <tr>
+              <th className="px-4 py-3">{t("workbench.module")}</th>
+              <th className="px-4 py-3">{t("workbench.activeTasks")}</th>
+              <th className="px-4 py-3">{t("workbench.p0")}</th>
+              <th className="px-4 py-3">{t("workbench.blocked")}</th>
+              <th className="px-4 py-3">{t("workbench.nextQueueItem")}</th>
+              <th className="px-4 py-3 text-right">{t("workbench.review")}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            {summaries.map((summary) => (
+              <tr key={summary.module} className={selectedTaskId === summary.nextTask?.id ? "bg-blue-50" : undefined}>
+                <td className="px-4 py-3 font-semibold text-slate-900">{moduleLabels[summary.module]}</td>
+                <td className="px-4 py-3 text-slate-700">{summary.total}</td>
+                <td className="px-4 py-3 text-rose-700">{summary.p0}</td>
+                <td className="px-4 py-3 text-amber-700">{summary.blocked}</td>
+                <td className="max-w-sm px-4 py-3 text-slate-700">{summary.nextTask?.title ?? "-"}</td>
+                <td className="px-4 py-3 text-right">
+                  {summary.nextTask ? (
+                    <button
+                      className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 font-semibold text-slate-700 hover:bg-slate-50"
+                      type="button"
+                      onClick={() => onSelectTask(summary.nextTask!.id)}
+                    >
+                      {t("workbench.review")}
+                      <ArrowUpRight className="size-4" aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+            {summaries.length === 0 ? (
+              <tr>
+                <td className="px-4 py-6 text-center text-sm text-slate-500" colSpan={6}>{t("workbench.noTasksQueue")}</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function HandoffContextPanel({
+  context,
+  role,
+  onOpen
+}: {
+  context: WorkbenchHandoffContext;
+  role: RoleDefinition["code"];
+  onOpen: (path: string, objectId?: string) => void;
+}) {
+  const { t } = useLocale();
+  const columns = [
+    { key: "upstream", title: t("workbench.upstream"), nodes: context.upstream },
+    { key: "current", title: t("workbench.currentRecord"), nodes: [context.current] },
+    { key: "downstream", title: t("workbench.downstream"), nodes: context.downstream }
+  ] as const;
+
+  return (
+    <Panel title={t("workbench.handoffContext")} icon={<GitBranch className="size-5 text-blue-600" aria-hidden="true" />}>
+      <p className="mb-4 text-sm leading-6 text-slate-600">{t("workbench.handoffContextDescription")}</p>
+      <div className="grid border-y border-slate-200 md:grid-cols-3 md:divide-x md:divide-slate-200">
+        {columns.map((column) => (
+          <div key={column.key} className="min-w-0 border-t border-slate-200 px-3 py-4 first:border-t-0 md:border-t-0">
+            <p className="text-xs font-semibold uppercase text-slate-500">{column.title}</p>
+            <div className="mt-3 space-y-3">
+              {column.nodes.map((item) => (
+                <HandoffNode key={item.key} item={item} role={role} onOpen={onOpen} />
+              ))}
+              {column.nodes.length === 0 ? <p className="text-sm leading-6 text-slate-400">{t("workbench.noLinkedRecords")}</p> : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+function HandoffNode({
+  item,
+  role,
+  onOpen
+}: {
+  item: WorkbenchHandoffNode;
+  role: RoleDefinition["code"];
+  onOpen: (path: string, objectId?: string) => void;
+}) {
+  const { t } = useLocale();
+  const kindLabels: Record<WorkbenchHandoffKind, string> = {
+    advertiser: t("workbench.objectAdvertiser"),
+    opportunity: t("workbench.objectOpportunity"),
+    proposal: t("workbench.objectProposal"),
+    campaign: t("workbench.objectCampaign"),
+    publisher: t("workbench.objectPublisher"),
+    ecosystemLead: t("workbench.objectEcosystemLead"),
+    trustedCandidate: t("workbench.objectTrustedCandidate"),
+    integration: t("workbench.objectIntegration"),
+    diagnostic: t("workbench.objectDiagnostic"),
+    settlement: t("workbench.objectSettlement"),
+    contract: t("workbench.objectContract"),
+    task: t("workbench.objectTask")
+  };
+  const canOpen = Boolean(item.route && canViewRoute(role, item.route).allowed);
+
+  return (
+    <div className="min-w-0">
+      <p className="text-xs text-slate-500">{kindLabels[item.kind]}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-slate-900">{item.label}</p>
+      {item.route ? (
+        <button
+          className="mt-2 inline-flex h-8 items-center gap-1 text-xs font-semibold text-blue-700 disabled:cursor-not-allowed disabled:text-slate-400"
+          type="button"
+          disabled={!canOpen}
+          onClick={() => onOpen(item.route!, item.objectId)}
+        >
+          {canOpen ? t("workbench.openRecord") : t("workbench.routeRestricted")}
+          {canOpen ? <ArrowUpRight className="size-3.5" aria-hidden="true" /> : null}
+        </button>
+      ) : null}
+    </div>
   );
 }
 

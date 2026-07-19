@@ -22,7 +22,7 @@ export function BusinessStagePath({
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-card" aria-label={title}>
       <h2 className="text-base font-semibold text-slate-950">{title}</h2>
-      <ol className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <ol className="mt-4 grid gap-3 sm:grid-cols-2 xl:auto-cols-fr xl:grid-flow-col xl:grid-cols-none">
         {stages.map((stage, index) => {
           const Icon = stage.state === "complete" ? Check : stage.state === "blocked" ? ShieldAlert : Circle;
           return (
