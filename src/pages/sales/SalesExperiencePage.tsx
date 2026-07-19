@@ -1,15 +1,23 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { BadgeDollarSign, CheckCircle2, Plus, Send, ShieldAlert } from "lucide-react";
+import { BadgeDollarSign, Plus, ShieldAlert } from "lucide-react";
+import { GuidedEmptyState, MetricStrip, NextActionBar, OperatingPageHeader } from "../../components/OperatingPage";
 import { StatusBadge } from "../../components/StatusBadge";
-import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
 import { salesWorkflowService } from "../../services/salesWorkflowService";
 import { trustedSupplyNetworkService } from "../../services/trustedSupplyNetworkService";
 import type { AuditEvent, BusinessUser, EntityId, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
-import { resolveCreateOpportunityAdvertiserId } from "./salesExperiencePageModel";
+import {
+  getCampaignPrimaryAction,
+  getOpportunityPrimaryAction,
+  getProposalPrimaryAction,
+  getSalesStatusLabel,
+  resolveCreateOpportunityAdvertiserId
+} from "./salesExperiencePageModel";
 import { getRoleDisplayName, getRouteDisplayTitle, getRoutePageType, useLocale } from "../../lib/i18n";
+import { getPublisherStatusLabel } from "../media/publisherReadinessPageModel";
+import { getBusinessGuardMessage } from "../businessGuardMessage";
 
 type SalesExperiencePageProps = {
   route: AppRoute;
@@ -95,44 +103,58 @@ export function SalesExperiencePage({
     setMessage({ title, guard: result.guard });
   }
 
+  function createAdvertiser() {
+    runAction(t("sales.newAdvertiser"), () =>
+      salesWorkflowService.createAdvertiser(state, user, {
+        name: "Demo Fitness Brand",
+        industry: "Wellness",
+        region: "CN"
+      })
+    );
+  }
+
+  function createOpportunity() {
+    runAction(t("sales.createOpportunity"), () => {
+      const result = salesWorkflowService.createOpportunity(state, user, {
+        advertiserId: resolveCreateOpportunityAdvertiserId(state) ?? "",
+        name: "Daily Yoga Retention Push",
+        expectedBudget: 16000,
+        painPoints: ["Need quality App supply", "Avoid blocked readiness"]
+      });
+      const opportunityId = result.guard.allowed ? result.state.opportunities[0]?.id : undefined;
+      if (opportunityId) setSelectedOpportunityId(opportunityId);
+      return result;
+    });
+  }
+
   return (
     <section className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
-            <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
-          </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Phase 5 mainline: advertiser, opportunity, Proposal media validation, Campaign launch guard, and approval handoff.
-          </p>
-        </div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <OperatingPageHeader
+          title={getRouteDisplayTitle(route, locale)}
+          description={t("sales.description")}
+          pageType={getRoutePageType(route, locale)}
+          role={getRoleDisplayName(role.code, locale)}
+        />
         <button
           className="inline-flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
           type="button"
-          onClick={() =>
-            runAction("Create advertiser", () =>
-              salesWorkflowService.createAdvertiser(state, user, {
-                name: "Demo Fitness Brand",
-                industry: "Wellness",
-                region: "CN"
-              })
-            )
-          }
+          onClick={createAdvertiser}
         >
           <Plus className="size-4" aria-hidden="true" />
-          New advertiser
+          {t("sales.newAdvertiser")}
         </button>
-      </header>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <SummaryCard label="Advertisers" value={String(summary.advertisers)} />
-        <SummaryCard label="Opportunities" value={String(summary.opportunities)} />
-        <SummaryCard label="Proposals" value={String(summary.proposalDrafts)} tone="warning" />
-        <SummaryCard label="Campaigns" value={String(summary.campaigns)} />
-        <SummaryCard label="Blocked media" value={String(summary.blockedMedia)} tone="danger" />
       </div>
+
+      <MetricStrip
+        label={getRouteDisplayTitle(route, locale)}
+        items={[
+          { label: t("sales.advertisers"), value: String(summary.advertisers) },
+          { label: t("sales.opportunities"), value: String(summary.opportunities) },
+          { label: t("sales.proposals"), value: String(summary.proposalDrafts), tone: "warning" },
+          { label: t("sales.blockedMedia"), value: String(summary.blockedMedia), tone: "danger" }
+        ]}
+      />
 
       {message ? <GuardNotice message={message} /> : null}
 
@@ -156,23 +178,9 @@ export function SalesExperiencePage({
             state={state}
             mediaState={mediaState}
             selectedOpportunityId={selectedOpportunity.id}
-            onCreateOpportunity={() =>
-              runAction("Create opportunity", () => {
-                const result = salesWorkflowService.createOpportunity(state, user, {
-                  advertiserId: resolveCreateOpportunityAdvertiserId(state) ?? "",
-                  name: "Daily Yoga Retention Push",
-                  expectedBudget: 16000,
-                  painPoints: ["Need quality App supply", "Avoid blocked readiness"]
-                });
-                const opportunityId = result.guard.allowed ? result.state.opportunities[0]?.id : undefined;
-                if (opportunityId) {
-                  setSelectedOpportunityId(opportunityId);
-                }
-                return result;
-              })
-            }
+            onCreateOpportunity={createOpportunity}
             onCreateProposal={() =>
-              runAction("Create proposal", () => {
+              runAction(t("sales.createProposal"), () => {
                 const result = salesWorkflowService.createProposalFromOpportunity(state, user, selectedOpportunity.id);
                 const proposalId = result.state.proposals[0]?.id;
                 if (proposalId) {
@@ -190,23 +198,34 @@ export function SalesExperiencePage({
           />
         ) : null}
 
+        {page === "sales" && !selectedOpportunity ? (
+          <GuidedEmptyState
+            title={state.advertisers.length ? t("sales.noOpportunity") : t("sales.unknownAdvertiser")}
+            description={state.advertisers.length ? t("sales.createOpportunity") : t("sales.newAdvertiser")}
+            ownerLabel={t("workbench.owner")}
+            owner={getRoleDisplayName("sales_manager", locale)}
+            actionLabel={state.advertisers.length ? t("sales.createOpportunity") : t("sales.newAdvertiser")}
+            onAction={state.advertisers.length ? createOpportunity : createAdvertiser}
+          />
+        ) : null}
+
         {page === "proposal" && selectedProposal ? (
           <ProposalWizard
             state={state}
             mediaState={mediaState}
             proposalId={selectedProposal.id}
             onSelectPublisher={(publisherId, budget) =>
-              runAction("Select publisher for proposal", () =>
+              runAction(t("sales.validateMedia"), () =>
                 salesWorkflowService.selectPublisherForProposal(state, mediaState, user, selectedProposal.id, publisherId, budget)
               )
             }
             onApprove={() =>
-              runAction("Approve proposal", () =>
+              runAction(t("sales.approveProposal"), () =>
                 salesWorkflowService.approveProposal(state, mediaState, user, selectedProposal.id)
               )
             }
             onCreateCampaign={() =>
-              runAction("Create campaign", () => {
+              runAction(t("sales.createCampaign"), () => {
                 const result = salesWorkflowService.createCampaignFromProposal(state, user, selectedProposal.id);
                 const campaignId = result.state.campaigns[0]?.id;
                 if (campaignId) {
@@ -225,17 +244,17 @@ export function SalesExperiencePage({
             mediaState={mediaState}
             campaignId={selectedCampaign.id}
             onAllocate={(publisherId, budget) =>
-              runAction("Allocate publisher to campaign", () =>
+              runAction(t("sales.runLaunchGuard"), () =>
                 salesWorkflowService.addPublisherToCampaign(state, mediaState, user, selectedCampaign.id, publisherId, budget)
               )
             }
             onChecklist={() =>
-              runAction("Complete launch checklist", () =>
+              runAction(t("sales.completeChecklist"), () =>
                 salesWorkflowService.markLaunchChecklistPassed(state, user, selectedCampaign.id)
               )
             }
             onApprove={() =>
-              runAction("Approve campaign launch", () =>
+              runAction(t("sales.approveLaunch"), () =>
                 salesWorkflowService.approveCampaignLaunch(state, mediaState, user, selectedCampaign.id)
               )
             }
@@ -247,6 +266,7 @@ export function SalesExperiencePage({
 }
 
 function GuardNotice({ message }: { message: ActionMessage }) {
+  const { locale, t } = useLocale();
   const tone = message.guard.allowed ? (message.guard.severity === "warning" ? "warning" : "success") : "danger";
 
   return (
@@ -258,9 +278,9 @@ function GuardNotice({ message }: { message: ActionMessage }) {
             <p className="text-sm font-semibold text-slate-900">{message.title}</p>
             <StatusBadge tone={tone}>{message.guard.reason_code}</StatusBadge>
           </div>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{message.guard.message}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{getBusinessGuardMessage(message.guard.reason_code, message.guard.message, locale)}</p>
           {message.guard.required_approval_role ? (
-            <p className="mt-1 text-sm text-slate-500">Required owner: {message.guard.required_approval_role}</p>
+            <p className="mt-1 text-sm text-slate-500">{t("workbench.owner")}: {getRoleDisplayName(message.guard.required_approval_role as BusinessUser["activeRole"], locale)}</p>
           ) : null}
         </div>
       </div>
@@ -293,9 +313,10 @@ function SalesSelector({
   onOpenProposal: () => void;
   onOpenCampaign: () => void;
 }) {
+  const { locale, t } = useLocale();
   return (
     <aside className="space-y-3">
-      <SelectorPanel title="Opportunities">
+      <SelectorPanel title={t("sales.opportunityQueue")}>
         {opportunities.map((opportunity) => (
           <button
             key={opportunity.id}
@@ -306,11 +327,11 @@ function SalesSelector({
             onClick={() => onOpportunitySelect(opportunity.id)}
           >
             <p className="font-semibold text-slate-900">{opportunity.name}</p>
-            <p className="mt-1 text-xs text-slate-500">${opportunity.expected_budget.toLocaleString()} / {opportunity.stage}</p>
+            <p className="mt-1 text-xs text-slate-500">${opportunity.expected_budget.toLocaleString()} / {getSalesStatusLabel(opportunity.stage, locale)}</p>
           </button>
         ))}
       </SelectorPanel>
-      <SelectorPanel title="Proposals">
+      <SelectorPanel title={t("sales.proposalQueue")}>
         {proposals.map((proposal) => (
           <button
             key={proposal.id}
@@ -321,14 +342,14 @@ function SalesSelector({
             onClick={() => onProposalSelect(proposal.id)}
           >
             <p className="font-semibold text-slate-900">{proposal.name}</p>
-            <p className="mt-1 text-xs text-slate-500">{proposal.status}</p>
+            <p className="mt-1 text-xs text-slate-500">{getSalesStatusLabel(proposal.status, locale)}</p>
           </button>
         ))}
         <button className="mt-2 h-9 w-full rounded-lg border border-slate-200 text-sm font-semibold text-slate-700" type="button" onClick={onOpenProposal}>
-          Open proposal wizard
+          {t("sales.openProposal")}
         </button>
       </SelectorPanel>
-      <SelectorPanel title="Campaigns">
+      <SelectorPanel title={t("sales.campaignQueue")}>
         {campaigns.map((campaign) => (
           <button
             key={campaign.id}
@@ -339,11 +360,11 @@ function SalesSelector({
             onClick={() => onCampaignSelect(campaign.id)}
           >
             <p className="font-semibold text-slate-900">{campaign.name}</p>
-            <p className="mt-1 text-xs text-slate-500">{campaign.status}</p>
+            <p className="mt-1 text-xs text-slate-500">{getSalesStatusLabel(campaign.status, locale)}</p>
           </button>
         ))}
         <button className="mt-2 h-9 w-full rounded-lg border border-slate-200 text-sm font-semibold text-slate-700" type="button" onClick={onOpenCampaign}>
-          Open campaign wizard
+          {t("sales.openCampaign")}
         </button>
       </SelectorPanel>
     </aside>
@@ -367,38 +388,51 @@ function SalesManagerWorkbench({
   onOpenProposal: () => void;
   supplyMatchLabels: { title: string; empty: string; suggestedBudget: string };
 }) {
+  const { locale, t } = useLocale();
   const opportunity = state.opportunities.find((candidate) => candidate.id === selectedOpportunityId);
   const advertiser = state.advertisers.find((candidate) => candidate.id === opportunity?.advertiser_id);
+  const primaryAction = opportunity ? getOpportunityPrimaryAction(opportunity, state.proposals) : undefined;
+  const primaryActionLabel = primaryAction === "createProposal" ? t("sales.createProposal") : t("sales.continueProposal");
   const recommendations = trustedSupplyNetworkService
     .getMatchRecommendations(mediaState, state, advertiser?.id)
     .slice(0, 3);
 
   return (
     <div className="space-y-4">
+      <NextActionBar
+        heading={t("sales.opportunityDecision")}
+        status={t("common.inProgress")}
+        statusTone="info"
+        nextActionLabel={t("workbench.nextAction")}
+        nextAction={primaryActionLabel}
+        ownerLabel={t("workbench.owner")}
+        owner={getRoleDisplayName("sales_manager", locale)}
+        blockerLabel={t("workbench.blocker")}
+        dueDateLabel={t("finance.dueDate")}
+        dueDate={t("common.noDueDate")}
+        actionLabel={primaryActionLabel}
+        onAction={primaryAction === "createProposal" ? onCreateProposal : onOpenProposal}
+      />
+
       <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xl font-semibold text-slate-950">{opportunity?.name ?? "No opportunity selected"}</p>
-            <p className="mt-1 text-sm text-slate-500">{advertiser?.name ?? "Unknown advertiser"}</p>
+            <p className="text-xl font-semibold text-slate-950">{opportunity?.name ?? t("sales.noOpportunity")}</p>
+            <p className="mt-1 text-sm text-slate-500">{advertiser?.name ?? t("sales.unknownAdvertiser")}</p>
           </div>
           <BadgeDollarSign className="size-6 text-blue-600" aria-hidden="true" />
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <Metric label="Expected budget" value={`$${(opportunity?.expected_budget ?? 0).toLocaleString()}`} />
-          <Metric label="Stage" value={opportunity?.stage ?? "-"} />
-          <Metric label="Pain points" value={String(opportunity?.pain_points.length ?? 0)} />
+          <Metric label={t("sales.expectedBudget")} value={`$${(opportunity?.expected_budget ?? 0).toLocaleString()}`} />
+          <Metric label={t("sales.stage")} value={opportunity ? getSalesStatusLabel(opportunity.stage, locale) : "-"} />
+          <Metric label={t("sales.painPoints")} value={String(opportunity?.pain_points.length ?? 0)} />
         </div>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <button className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700" type="button" onClick={onCreateOpportunity}>
-            Create opportunity
+        <details className="mt-5 border-t border-slate-200 pt-4">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-700">{t("sales.additionalControls")}</summary>
+          <button className="mt-3 h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700" type="button" onClick={onCreateOpportunity}>
+            {t("sales.createOpportunity")}
           </button>
-          <button className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white" type="button" onClick={onCreateProposal}>
-            Create Proposal
-          </button>
-          <button className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700" type="button" onClick={onOpenProposal}>
-            Continue wizard
-          </button>
-        </div>
+        </details>
       </article>
 
       <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
@@ -449,28 +483,60 @@ function ProposalWizard({
   onCreateCampaign: () => void;
   onOpenCampaign: () => void;
 }) {
+  const { locale, t } = useLocale();
   const proposal = state.proposals.find((candidate) => candidate.id === proposalId);
   const selections = state.proposalMediaSelections.filter((selection) => selection.proposal_id === proposalId);
+  const primaryAction = proposal ? getProposalPrimaryAction(proposal, selections, state.campaigns) : undefined;
+  const primaryActionLabels = {
+    selectMedia: t("sales.selectMedia"),
+    approveProposal: t("sales.approveProposal"),
+    createCampaign: t("sales.createCampaign"),
+    openCampaign: t("sales.continueCampaign")
+  };
+  const primaryActionLabel = primaryAction ? primaryActionLabels[primaryAction] : t("sales.noAction");
+  const primaryActionHandler =
+    primaryAction === "approveProposal"
+      ? onApprove
+      : primaryAction === "createCampaign"
+        ? onCreateCampaign
+        : primaryAction === "openCampaign"
+          ? onOpenCampaign
+          : undefined;
 
   return (
     <div className="space-y-4">
+      <NextActionBar
+        heading={t("sales.proposalDecision")}
+        status={proposal ? getSalesStatusLabel(proposal.status, locale) : t("common.pending")}
+        statusTone={proposal?.status === "approved_to_send" || proposal?.status === "won" ? "success" : "info"}
+        nextActionLabel={t("workbench.nextAction")}
+        nextAction={primaryActionLabel}
+        ownerLabel={t("workbench.owner")}
+        owner={getRoleDisplayName("sales_manager", locale)}
+        blockerLabel={t("workbench.blocker")}
+        dueDateLabel={t("finance.dueDate")}
+        dueDate={t("common.noDueDate")}
+        actionLabel={primaryActionHandler ? primaryActionLabel : undefined}
+        onAction={primaryActionHandler}
+      />
+
       <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xl font-semibold text-slate-950">{proposal?.name ?? "Proposal"}</p>
-            <p className="mt-1 text-sm text-slate-500">Budget ${(proposal?.budget ?? 0).toLocaleString()}</p>
+            <p className="mt-1 text-sm text-slate-500">{t("sales.budget")} ${(proposal?.budget ?? 0).toLocaleString()}</p>
           </div>
-          <StatusBadge tone={statusTone[proposal?.status ?? "draft"]}>{proposal?.status ?? "draft"}</StatusBadge>
+          <StatusBadge tone={statusTone[proposal?.status ?? "draft"]}>{getSalesStatusLabel(proposal?.status ?? "draft", locale)}</StatusBadge>
         </div>
         <div className="mt-5 grid gap-3 lg:grid-cols-3">
           {mediaState.publishers.map((publisher) => (
             <div key={publisher.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-semibold text-slate-900">{publisher.name}</p>
               <p className="mt-2 text-xs leading-5 text-slate-500">
-                {publisher.technical_live_status} / {publisher.commercial_test_status} / {publisher.sales_scale_status}
+                {getPublisherStatusLabel(publisher.technical_live_status, locale)} / {getPublisherStatusLabel(publisher.commercial_test_status, locale)} / {getPublisherStatusLabel(publisher.sales_scale_status, locale)}
               </p>
               <button className="mt-3 h-9 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white" type="button" onClick={() => onSelectPublisher(publisher.id, 6000)}>
-                Validate media
+                {t("sales.validateMedia")}
               </button>
             </div>
           ))}
@@ -478,7 +544,7 @@ function ProposalWizard({
       </article>
 
       <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
-        <p className="text-base font-semibold text-slate-950">Media validation summary</p>
+        <p className="text-base font-semibold text-slate-950">{t("sales.mediaValidationSummary")}</p>
         <div className="mt-4 space-y-2">
           {selections.map((selection) => {
             const publisher = mediaState.publishers.find((candidate) => candidate.id === selection.publisher_id);
@@ -486,24 +552,13 @@ function ProposalWizard({
               <div key={selection.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
                 <span className="font-medium text-slate-800">{publisher?.name ?? selection.publisher_id}</span>
                 <div className="flex items-center gap-2">
-                  <StatusBadge tone={guardTone[selection.guard_status]}>{selection.guard_reason ?? selection.guard_status}</StatusBadge>
+                  <StatusBadge tone={guardTone[selection.guard_status]}>{selection.guard_reason ?? getSalesStatusLabel(selection.guard_status, locale)}</StatusBadge>
                   <span className="text-slate-500">${selection.planned_budget.toLocaleString()}</span>
                 </div>
               </div>
             );
           })}
-          {selections.length === 0 ? <p className="text-sm text-slate-500">No media has been validated yet.</p> : null}
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <button className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white" type="button" onClick={onApprove}>
-            Approve Proposal
-          </button>
-          <button className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700" type="button" onClick={onCreateCampaign}>
-            Create Campaign
-          </button>
-          <button className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700" type="button" onClick={onOpenCampaign}>
-            Open Campaign
-          </button>
+          {selections.length === 0 ? <p className="text-sm text-slate-500">{t("sales.noMediaValidated")}</p> : null}
         </div>
       </article>
     </div>
@@ -525,28 +580,52 @@ function CampaignWizard({
   onChecklist: () => void;
   onApprove: () => void;
 }) {
+  const { locale, t } = useLocale();
   const campaign = state.campaigns.find((candidate) => candidate.id === campaignId);
   const allocations = state.campaignMediaAllocations.filter((allocation) => allocation.campaign_id === campaignId);
+  const primaryAction = campaign ? getCampaignPrimaryAction(campaign, allocations.length) : undefined;
+  const primaryActionLabels = {
+    allocateMedia: t("sales.allocateMedia"),
+    completeChecklist: t("sales.completeChecklist"),
+    approveLaunch: t("sales.approveLaunch")
+  };
+  const primaryActionLabel = primaryAction ? primaryActionLabels[primaryAction] : t("sales.noAction");
+  const primaryActionHandler = primaryAction === "completeChecklist" ? onChecklist : primaryAction === "approveLaunch" ? onApprove : undefined;
 
   return (
     <div className="space-y-4">
+      <NextActionBar
+        heading={t("sales.campaignDecision")}
+        status={campaign ? getSalesStatusLabel(campaign.status, locale) : t("common.pending")}
+        statusTone={campaign?.status === "live" || campaign?.status === "completed" ? "success" : campaign?.status === "blocked" ? "danger" : "info"}
+        nextActionLabel={t("workbench.nextAction")}
+        nextAction={primaryActionLabel}
+        ownerLabel={t("workbench.owner")}
+        owner={getRoleDisplayName("sales_manager", locale)}
+        blockerLabel={t("workbench.blocker")}
+        dueDateLabel={t("finance.dueDate")}
+        dueDate={t("common.noDueDate")}
+        actionLabel={primaryActionHandler ? primaryActionLabel : undefined}
+        onAction={primaryActionHandler}
+      />
+
       <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xl font-semibold text-slate-950">{campaign?.name ?? "Campaign"}</p>
-            <p className="mt-1 text-sm text-slate-500">Launch checklist: {campaign?.launchChecklistPassed ? "passed" : "open"}</p>
+            <p className="mt-1 text-sm text-slate-500">{t("sales.launchChecklist")}: {campaign?.launchChecklistPassed ? t("sales.passed") : t("sales.open")}</p>
           </div>
-          <StatusBadge tone={statusTone[campaign?.status ?? "draft"]}>{campaign?.status ?? "draft"}</StatusBadge>
+          <StatusBadge tone={statusTone[campaign?.status ?? "draft"]}>{getSalesStatusLabel(campaign?.status ?? "draft", locale)}</StatusBadge>
         </div>
         <div className="mt-5 grid gap-3 lg:grid-cols-3">
           {mediaState.publishers.map((publisher) => (
             <div key={publisher.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <p className="text-sm font-semibold text-slate-900">{publisher.name}</p>
               <p className="mt-2 text-xs leading-5 text-slate-500">
-                {publisher.commercial_test_status} / {publisher.sales_scale_status}
+                {getPublisherStatusLabel(publisher.commercial_test_status, locale)} / {getPublisherStatusLabel(publisher.sales_scale_status, locale)}
               </p>
               <button className="mt-3 h-9 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white" type="button" onClick={() => onAllocate(publisher.id, 8000)}>
-                Run launch guard
+                {t("sales.runLaunchGuard")}
               </button>
             </div>
           ))}
@@ -554,7 +633,7 @@ function CampaignWizard({
       </article>
 
       <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
-        <p className="text-base font-semibold text-slate-950">Launch allocations</p>
+        <p className="text-base font-semibold text-slate-950">{t("sales.launchAllocations")}</p>
         <div className="mt-4 space-y-2">
           {allocations.map((allocation) => {
             const publisher = mediaState.publishers.find((candidate) => candidate.id === allocation.publisher_id);
@@ -562,23 +641,13 @@ function CampaignWizard({
               <div key={allocation.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
                 <span className="font-medium text-slate-800">{publisher?.name ?? allocation.publisher_id}</span>
                 <div className="flex items-center gap-2">
-                  <StatusBadge tone={guardTone[allocation.guard_status]}>{allocation.guard_reason ?? allocation.guard_status}</StatusBadge>
+                  <StatusBadge tone={guardTone[allocation.guard_status]}>{allocation.guard_reason ?? getSalesStatusLabel(allocation.guard_status, locale)}</StatusBadge>
                   <span className="text-slate-500">${allocation.allocation_budget.toLocaleString()}</span>
                 </div>
               </div>
             );
           })}
-          {allocations.length === 0 ? <p className="text-sm text-slate-500">No launch guard result yet.</p> : null}
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <button className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700" type="button" onClick={onChecklist}>
-            <CheckCircle2 className="size-4" aria-hidden="true" />
-            Complete checklist
-          </button>
-          <button className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white" type="button" onClick={onApprove}>
-            <Send className="size-4" aria-hidden="true" />
-            Approve launch
-          </button>
+          {allocations.length === 0 ? <p className="text-sm text-slate-500">{t("sales.noLaunchResult")}</p> : null}
         </div>
       </article>
     </div>

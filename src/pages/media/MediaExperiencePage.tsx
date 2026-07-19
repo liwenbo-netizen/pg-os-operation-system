@@ -1,20 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
+  BarChart3,
   CheckCircle2,
+  ChevronDown,
+  ClipboardCheck,
   ExternalLink,
   Handshake,
+  History,
+  LayoutList,
   Map,
   Plus,
   Search,
   Send,
+  ShieldCheck,
   ShieldAlert,
+  SlidersHorizontal,
   Target,
   TestTube2,
   TrendingUp,
+  type LucideIcon,
   UserCheck,
   Wrench
 } from "lucide-react";
+import { GuidedEmptyState, MetricStrip, NextActionBar, OperatingPageHeader } from "../../components/OperatingPage";
 import { StatusBadge } from "../../components/StatusBadge";
 import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
@@ -43,6 +52,28 @@ import type {
 } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
 import { getRoleDisplayName, getRouteDisplayTitle, getRoutePageType, useLocale } from "../../lib/i18n";
+import {
+  getEcosystemBlockerLabel,
+  getEcosystemCandidateStatusLabel,
+  getEcosystemDataQualityLabel,
+  getEcosystemGapCopy,
+  getEcosystemPrimaryAction,
+  getEcosystemQueueCopy,
+  getEcosystemStageLabel,
+  getEcosystemTrackLabel,
+  getEcosystemVerificationLabel,
+  type EcosystemPrimaryAction,
+  type EcosystemWorkspaceView
+} from "./mediaEcosystemPageModel";
+import {
+  getPublisherPrimaryAction,
+  getPublisherReadinessSteps,
+  getPublisherRiskLabel,
+  getPublisherStatusLabel,
+  type PublisherPrimaryAction,
+  type PublisherReadinessState,
+  type PublisherWorkspaceView
+} from "./publisherReadinessPageModel";
 
 type MediaExperiencePageProps = {
   route: AppRoute;
@@ -142,36 +173,24 @@ const ecosystemStageOptions: Array<"ALL" | MediaExpansionStage> = [
   "REJECTED"
 ];
 
-const ecosystemPriorityOptions = [
-  { value: "ALL", label: "All scores" },
-  { value: "HIGH", label: "70+" },
-  { value: "WATCH", label: "1-69" },
-  { value: "UNSCORED", label: "Unscored" }
-] as const;
+const ecosystemPriorityOptions = ["ALL", "HIGH", "WATCH", "UNSCORED"] as const;
 
-type EcosystemPriorityFilter = (typeof ecosystemPriorityOptions)[number]["value"];
+type EcosystemPriorityFilter = (typeof ecosystemPriorityOptions)[number];
 
 const ecosystemOwnerOptions = [
-  { value: "ALL", label: "All owners" },
-  { value: "NO_USER_OWNER", label: "No user owner" },
-  { value: "MINE", label: "My leads" },
-  { value: "MEDIA_MANAGER_ROLE", label: "Media manager" },
-  { value: "MEDIA_DIRECTOR_ROLE", label: "Media director" },
-  { value: "OPERATIONS_DIRECTOR_ROLE", label: "Operations director" }
+  "ALL",
+  "NO_USER_OWNER",
+  "MINE",
+  "MEDIA_MANAGER_ROLE",
+  "MEDIA_DIRECTOR_ROLE",
+  "OPERATIONS_DIRECTOR_ROLE"
 ] as const;
 
-type EcosystemOwnerFilter = (typeof ecosystemOwnerOptions)[number]["value"];
+type EcosystemOwnerFilter = (typeof ecosystemOwnerOptions)[number];
 
-const ecosystemReviewOptions = [
-  { value: "ALL", label: "All review states" },
-  { value: "REVIEW_REQUIRED", label: "Review required" },
-  { value: "SEED_ONLY", label: "Seed only" },
-  { value: "MANUAL_REVIEWED", label: "Manual reviewed" },
-  { value: "UNVERIFIED", label: "Unverified" },
-  { value: "VERIFIED", label: "Verified" }
-] as const;
+const ecosystemReviewOptions = ["ALL", "REVIEW_REQUIRED", "SEED_ONLY", "MANUAL_REVIEWED", "UNVERIFIED", "VERIFIED"] as const;
 
-type EcosystemReviewFilter = (typeof ecosystemReviewOptions)[number]["value"];
+type EcosystemReviewFilter = (typeof ecosystemReviewOptions)[number];
 
 const ecosystemListPageSize = 24;
 
@@ -302,25 +321,28 @@ export function MediaExperiencePage({
 
   return (
     <section className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
-            <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
+      {page === "ecosystem" ? (
+        <OperatingPageHeader
+          title={getRouteDisplayTitle(route, locale)}
+          description={t("media.ecosystemDescription")}
+          pageType={getRoutePageType(route, locale)}
+          role={getRoleDisplayName(role.code, locale)}
+        />
+      ) : (
+        <header className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3">
+              <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
+              <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
+            </div>
+            <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{t("media.mainlineDescription")}</p>
           </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            {page === "ecosystem"
-              ? t("media.ecosystemDescription")
-              : t("media.mainlineDescription")}
-          </p>
-        </div>
-        {page === "ecosystem" ? null : (
           <button
             className="inline-flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
             type="button"
             onClick={() =>
-              runAction("Create publisher", () =>
+              runAction(t("media.createPublisher"), () =>
                 mediaWorkflowService.createPublisher(state, user, {
                   name: "Demo Audio Network",
                   region: "CN",
@@ -333,18 +355,19 @@ export function MediaExperiencePage({
             <Plus className="size-4" aria-hidden="true" />
             {t("media.newPublisher")}
           </button>
-        )}
-      </header>
+        </header>
+      )}
 
       {page === "ecosystem" ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <SummaryCard label={t("media.mappedLeads")} value={String(ecosystemSummary.totalLeads)} />
-          <SummaryCard label={t("media.activeLeads")} value={String(ecosystemSummary.activeLeads)} tone="success" />
-          <SummaryCard label={t("media.priority70")} value={String(ecosystemSummary.highPriority)} tone="warning" />
-          <SummaryCard label={t("media.outreachPipeline")} value={String(ecosystemSummary.outreachPipeline)} />
-          <SummaryCard label={t("media.gateEligible")} value={String(ecosystemSummary.eligibleForTrustedSupply)} tone="success" />
-          <SummaryCard label={t("media.trustedCandidates")} value={String(ecosystemSummary.trustedCandidates)} tone="warning" />
-        </div>
+        <MetricStrip
+          label={getRouteDisplayTitle(route, locale)}
+          items={[
+            { label: t("media.activeLeads"), value: String(ecosystemSummary.activeLeads), tone: "success" },
+            { label: t("media.priority70"), value: String(ecosystemSummary.highPriority), tone: "warning" },
+            { label: t("media.gateEligible"), value: String(ecosystemSummary.eligibleForTrustedSupply), tone: "success" },
+            { label: t("media.trustedCandidates"), value: String(ecosystemSummary.trustedCandidates), tone: "warning" }
+          ]}
+        />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
           <SummaryCard label={t("media.publishers")} value={String(summary.total)} />
@@ -383,7 +406,7 @@ export function MediaExperiencePage({
               onRouteChange("/media/publishers/:id", publisherId);
             }}
             onAddSlot={(publisherId) =>
-              runAction("Add ad slot", () =>
+              runAction(t("media.addAdSlot"), () =>
                 mediaWorkflowService.addAdSlot(state, user, publisherId, {
                   slotName: "Rewarded Video",
                   adFormat: "Video",
@@ -400,7 +423,7 @@ export function MediaExperiencePage({
           <MediaDirectorCommandCenter
             queue={queue}
             onApprove={(publisherId, targetStatus) =>
-              runAction("Approve sales readiness", () =>
+              runAction(t("media.approveSalesReadiness"), () =>
                 mediaWorkflowService.approveSalesReadiness(state, user, publisherId, targetStatus)
               )
             }
@@ -411,8 +434,9 @@ export function MediaExperiencePage({
           <Publisher360
             snapshot={selectedSnapshot}
             trustedSnapshot={trustedSupplyNetworkService.getSnapshot(state, selectedSnapshot.publisher!.id)}
+            ownerRole={user.activeRole}
             onAddSlot={() =>
-              runAction("Add ad slot", () =>
+              runAction(t("media.addAdSlot"), () =>
                 mediaWorkflowService.addAdSlot(state, user, selectedSnapshot.publisher!.id, {
                   slotName: "In-feed Display",
                   adFormat: "Display",
@@ -423,7 +447,7 @@ export function MediaExperiencePage({
               )
             }
             onAddTerm={() =>
-              runAction("Add commercial terms", () =>
+              runAction(t("media.addCommercialTerms"), () =>
                 mediaWorkflowService.addContractTerm(state, user, selectedSnapshot.publisher!.id, {
                   contractType: "Framework",
                   billingModel: "CPM",
@@ -495,11 +519,11 @@ export function MediaExperiencePage({
             publisher={selectedPublisher}
             tests={state.commercialTests.filter((test) => test.publisher_id === selectedPublisher.id)}
             onCreateTest={() =>
-              runAction("Create commercial test", () => mediaWorkflowService.createCommercialTest(state, user, selectedPublisher.id))
+              runAction(t("media.createCommercialTest"), () => mediaWorkflowService.createCommercialTest(state, user, selectedPublisher.id))
             }
             onPassLatestTest={() => {
               const latest = state.commercialTests.find((test) => test.publisher_id === selectedPublisher.id);
-              runAction("Submit commercial test conclusion", () =>
+              runAction(t("media.submitCommercialConclusion"), () =>
                 mediaWorkflowService.submitCommercialTestConclusion(state, user, latest?.id ?? "missing-test", "test_passed")
               );
             }}
@@ -512,7 +536,17 @@ export function MediaExperiencePage({
 }
 
 function GuardNotice({ message }: { message: ActionMessage }) {
+  const { locale, t } = useLocale();
   const tone = message.guard.allowed ? (message.guard.severity === "warning" ? "warning" : "success") : "danger";
+  const guardMessages: Record<string, string> = {
+    PUBLISHER_CREATED: locale === "zh-CN" ? "媒体已创建，并已初始化技术集成项目。" : message.guard.message,
+    AD_SLOT_CREATED: locale === "zh-CN" ? "媒体广告位已新增。" : message.guard.message,
+    CONTRACT_TERM_CREATED: locale === "zh-CN" ? "媒体商务条款已新增。" : message.guard.message,
+    TRUST_SCORE_EVALUATED: locale === "zh-CN" ? "可信供给评分已完成，仍需人工确认运营池。" : message.guard.message,
+    TRUST_POOL_CONFIRMED: locale === "zh-CN" ? "可信供给运营池已确认，但不会自动批准规模化销售。" : message.guard.message,
+    SUPPLY_PACKAGE_CREATED: locale === "zh-CN" ? "受控供给包已按草稿状态创建。" : message.guard.message,
+    SUPPLY_PACKAGE_ACTIVATED: locale === "zh-CN" ? "供给包已激活，可用于受控销售推荐。" : message.guard.message
+  };
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-card">
@@ -523,9 +557,9 @@ function GuardNotice({ message }: { message: ActionMessage }) {
             <p className="text-sm font-semibold text-slate-900">{message.title}</p>
             <StatusBadge tone={tone}>{message.guard.reason_code}</StatusBadge>
           </div>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{message.guard.message}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{guardMessages[message.guard.reason_code] ?? message.guard.message}</p>
           {message.guard.required_approval_role ? (
-            <p className="mt-1 text-sm text-slate-500">Required owner: {message.guard.required_approval_role}</p>
+            <p className="mt-1 text-sm text-slate-500">{t("workbench.owner")}: {getRoleDisplayName(message.guard.required_approval_role as BusinessUser["activeRole"], locale)}</p>
           ) : null}
         </div>
       </div>
@@ -546,7 +580,10 @@ function ChinaMediaEcosystemWorkspace({
   onRunAction: (title: string, action: () => MediaActionResult) => void;
   onRouteChange: (path: string, objectId?: EntityId) => void;
 }) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
+  const [workspaceView, setWorkspaceView] = useState<EcosystemWorkspaceView>("operations");
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [batchControlsOpen, setBatchControlsOpen] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState<EntityId>(state.mediaEcosystemLeads[0]?.id ?? "");
   const [searchQuery, setSearchQuery] = useState("");
   const [queueFilter, setQueueFilter] = useState<MediaEcosystemOperationalQueueKey>("ALL");
@@ -574,7 +611,13 @@ function ChinaMediaEcosystemWorkspace({
       [...state.mediaEcosystemLeads]
         .sort((left, right) => right.priority_score - left.priority_score || left.media_name.localeCompare(right.media_name))
         .filter((lead) => {
-          const searchableText = [lead.media_name, lead.company_name, lead.next_action, mediaEcosystemTrackLabels[lead.track]]
+          const searchableText = [
+            lead.media_name,
+            lead.company_name,
+            lead.next_action,
+            mediaEcosystemTrackLabels[lead.track],
+            getEcosystemTrackLabel(lead.track, locale)
+          ]
             .filter(Boolean)
             .join(" ")
             .toLowerCase();
@@ -590,7 +633,7 @@ function ChinaMediaEcosystemWorkspace({
             (confidenceFilter === "ALL" || lead.seed_confidence === confidenceFilter)
           );
         }),
-    [confidenceFilter, normalizedSearchQuery, ownerFilter, priorityFilter, queueFilter, reviewFilter, stageFilter, state.mediaEcosystemLeads, trackFilter, user]
+    [confidenceFilter, locale, normalizedSearchQuery, ownerFilter, priorityFilter, queueFilter, reviewFilter, stageFilter, state.mediaEcosystemLeads, trackFilter, user]
   );
   const visibleLeads = filteredLeads.slice(0, visibleLeadCount);
   const visibleLeadIds = visibleLeads.map((lead) => lead.id);
@@ -608,10 +651,48 @@ function ChinaMediaEcosystemWorkspace({
   const handoff = selectedCandidate
     ? chinaMediaEcosystemService.getOnboardingHandoff(state, selectedCandidate.id)
     : undefined;
+  const primaryAction = getEcosystemPrimaryAction(selectedLead, selectedCandidate, Boolean(handoff?.confirmed));
   const selectedActivities = selectedLead
     ? state.mediaOutreachActivities.filter((activity) => activity.lead_id === selectedLead.id).slice(0, 5)
     : [];
   const activeQueue = operationalQueues.find((queue) => queue.key === queueFilter) ?? operationalQueues[0];
+  const activeQueueCopy = getEcosystemQueueCopy(activeQueue?.key ?? "ALL", locale);
+  const actionLabels: Record<EcosystemPrimaryAction, string> = {
+    claimOwner: t("media.claimOwner"),
+    markReviewed: t("media.markReviewed"),
+    priorityScreen: t("media.priorityScreen"),
+    recordContact: t("media.recordContact"),
+    qualify: t("media.qualify"),
+    approveGate: t("media.approveGate"),
+    trustedCandidate: t("media.trustedCandidate"),
+    startReadiness: t("media.startReadiness"),
+    techReview: t("media.techReview"),
+    commercialReview: t("media.commercialReview"),
+    onboardingProject: t("media.onboardingProject"),
+    confirmHandoff: t("media.confirmHandoff")
+  };
+  const priorityFilterLabels: Record<EcosystemPriorityFilter, string> = {
+    ALL: t("media.allScores"),
+    HIGH: t("media.scoreHigh"),
+    WATCH: t("media.scoreWatch"),
+    UNSCORED: t("media.unscored")
+  };
+  const ownerFilterLabels: Record<EcosystemOwnerFilter, string> = {
+    ALL: t("media.allOwners"),
+    NO_USER_OWNER: t("media.noUserOwner"),
+    MINE: t("media.myLeads"),
+    MEDIA_MANAGER_ROLE: t("media.mediaManager"),
+    MEDIA_DIRECTOR_ROLE: t("media.mediaDirector"),
+    OPERATIONS_DIRECTOR_ROLE: t("media.operationsDirector")
+  };
+  const reviewFilterLabels: Record<EcosystemReviewFilter, string> = {
+    ALL: t("media.allReviewStates"),
+    REVIEW_REQUIRED: t("media.reviewRequired"),
+    SEED_ONLY: t("media.seedOnly"),
+    MANUAL_REVIEWED: t("media.manualReviewed"),
+    UNVERIFIED: t("media.unverified"),
+    VERIFIED: t("media.verified")
+  };
   const activeFilterCount = [
     queueFilter !== "ALL",
     trackFilter !== "ALL",
@@ -653,6 +734,9 @@ function ChinaMediaEcosystemWorkspace({
   }
 
   function toggleBatchLead(leadId: EntityId) {
+    if (!selectedBatchLeadIds.includes(leadId)) {
+      setBatchControlsOpen(true);
+    }
     setSelectedBatchLeadIds((currentIds) =>
       currentIds.includes(leadId)
         ? currentIds.filter((id) => id !== leadId)
@@ -663,6 +747,7 @@ function ChinaMediaEcosystemWorkspace({
   }
 
   function selectVisibleBatchLeads() {
+    setBatchControlsOpen(true);
     setSelectedBatchLeadIds(visibleLeadIds.slice(0, mediaEcosystemBatchOperationLimit));
   }
 
@@ -671,21 +756,121 @@ function ChinaMediaEcosystemWorkspace({
     setSelectedBatchLeadIds([]);
   }
 
+  function runPrimaryAction(action: EcosystemPrimaryAction) {
+    if (!selectedLead) {
+      return;
+    }
+
+    if (action === "claimOwner") {
+      onRunAction(actionLabels[action], () => chinaMediaEcosystemService.claimLeadOwner(state, user, selectedLead.id));
+      return;
+    }
+
+    if (action === "markReviewed") {
+      onRunAction(actionLabels[action], () => chinaMediaEcosystemService.markManualReviewed(state, user, selectedLead.id));
+      return;
+    }
+
+    if (action === "priorityScreen") {
+      onRunAction(actionLabels[action], () => chinaMediaEcosystemService.scoreLeadPriority(state, user, selectedLead.id));
+      return;
+    }
+
+    if (action === "recordContact") {
+      onRunAction(actionLabels[action], () => chinaMediaEcosystemService.recordContacted(state, user, selectedLead.id));
+      return;
+    }
+
+    if (action === "qualify") {
+      onRunAction(actionLabels[action], () => chinaMediaEcosystemService.qualifyBusinessReadiness(state, user, selectedLead.id));
+      return;
+    }
+
+    if (action === "approveGate") {
+      onRunAction(actionLabels[action], () => chinaMediaEcosystemService.approveTrustedSupplyGate(state, user, selectedLead.id));
+      return;
+    }
+
+    if (action === "trustedCandidate") {
+      onRunAction(actionLabels[action], () => chinaMediaEcosystemService.createTrustedSupplyCandidate(state, user, selectedLead.id));
+      return;
+    }
+
+    if (!selectedCandidate) {
+      return;
+    }
+
+    if (action === "startReadiness") {
+      onRunAction(actionLabels[action], () => chinaMediaEcosystemService.startCandidateReadiness(state, user, selectedCandidate.id));
+      return;
+    }
+
+    if (action === "techReview") {
+      onRunAction(actionLabels[action], () => chinaMediaEcosystemService.completeCandidateTechnicalReview(state, user, selectedCandidate.id));
+      return;
+    }
+
+    if (action === "commercialReview") {
+      onRunAction(actionLabels[action], () => chinaMediaEcosystemService.completeCandidateCommercialReview(state, user, selectedCandidate.id));
+      return;
+    }
+
+    if (action === "onboardingProject") {
+      onRunAction(actionLabels[action], () => chinaMediaEcosystemService.createOnboardingProject(state, user, selectedCandidate.id));
+      return;
+    }
+
+    onRunAction(actionLabels[action], () => chinaMediaEcosystemService.confirmOnboardingHandoff(state, user, selectedCandidate.id));
+  }
+
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
+      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="inline-flex w-full rounded-lg border border-slate-200 bg-slate-100 p-1 sm:w-auto" role="tablist">
+          <button
+            className={`inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition sm:flex-none ${
+              workspaceView === "operations" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+            }`}
+            type="button"
+            role="tab"
+            aria-selected={workspaceView === "operations"}
+            onClick={() => setWorkspaceView("operations")}
+          >
+            <LayoutList className="size-4" aria-hidden="true" />
+            {t("media.operationsView")}
+          </button>
+          <button
+            className={`inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition sm:flex-none ${
+              workspaceView === "insights" ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+            }`}
+            type="button"
+            role="tab"
+            aria-selected={workspaceView === "insights"}
+            onClick={() => setWorkspaceView("insights")}
+          >
+            <BarChart3 className="size-4" aria-hidden="true" />
+            {t("media.insightsView")}
+          </button>
+        </div>
+        <p className="text-sm leading-6 text-slate-500">
+          {workspaceView === "operations" ? t("media.operationsViewDescription") : t("media.insightsViewDescription")}
+        </p>
+      </div>
+
+      {workspaceView === "operations" ? (
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-card">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-slate-950">{t("media.operationalQueues")}</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-500">{activeQueue?.nextAction}</p>
+            <p className="mt-1 text-sm leading-6 text-slate-500">{activeQueueCopy.nextAction}</p>
           </div>
           <StatusBadge tone={activeFilterCount > 0 ? "info" : "neutral"}>{t("media.activeFilters", { count: activeFilterCount })}</StatusBadge>
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
           {operationalQueues.map((queue) => (
             <button
               key={queue.key}
-              className={`rounded-lg border p-4 text-left transition ${
+              className={`flex min-w-40 items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition ${
                 queueFilter === queue.key ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-slate-50 hover:border-slate-300"
               }`}
               type="button"
@@ -694,16 +879,15 @@ function ChinaMediaEcosystemWorkspace({
                 setVisibleLeadCount(ecosystemListPageSize);
               }}
             >
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-semibold text-slate-900">{queue.label}</p>
-                <StatusBadge tone={queue.tone}>{String(queue.count)}</StatusBadge>
-              </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500">{queue.nextAction}</p>
+              <p className="text-sm font-semibold text-slate-900">{getEcosystemQueueCopy(queue.key, locale).label}</p>
+              <StatusBadge tone={queue.tone}>{String(queue.count)}</StatusBadge>
             </button>
           ))}
         </div>
       </section>
+      ) : null}
 
+      {workspaceView === "insights" ? (
       <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
         <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
           <div className="flex items-center gap-3">
@@ -714,17 +898,17 @@ function ChinaMediaEcosystemWorkspace({
             {trackOpportunities.map((track) => (
               <article key={track.track} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-semibold text-slate-900">{mediaEcosystemTrackLabels[track.track]}</p>
+                  <p className="text-sm font-semibold text-slate-900">{getEcosystemTrackLabel(track.track, locale)}</p>
                   <StatusBadge tone={track.gapLevel === "covered" ? "success" : track.gapLevel === "watch" ? "warning" : "danger"}>
-                    {track.gapLevel}
+                    {getEcosystemGapCopy(track.gapLevel, locale).label}
                   </StatusBadge>
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-slate-500">
-                  <MetricMini label="leads" value={String(track.leads)} />
-                  <MetricMini label="top" value={String(track.highestScore)} />
-                  <MetricMini label="candidate" value={String(track.trustedCandidates)} />
+                  <MetricMini label={t("media.leads")} value={String(track.leads)} />
+                  <MetricMini label={t("media.topScore")} value={String(track.highestScore)} />
+                  <MetricMini label={t("media.candidates")} value={String(track.trustedCandidates)} />
                 </div>
-                <p className="mt-3 text-xs leading-5 text-slate-500">{track.nextAction}</p>
+                <p className="mt-3 text-xs leading-5 text-slate-500">{getEcosystemGapCopy(track.gapLevel, locale).nextAction}</p>
               </article>
             ))}
           </div>
@@ -738,15 +922,17 @@ function ChinaMediaEcosystemWorkspace({
           <div className="mt-4 space-y-2">
             {pipeline.map((lane) => (
               <div key={lane.stage} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                <span className="break-all text-xs font-semibold text-slate-600">{lane.stage}</span>
+                <span className="text-xs font-semibold text-slate-600">{getEcosystemStageLabel(lane.stage, locale)}</span>
                 <span className="text-sm font-semibold text-slate-950">{lane.count}</span>
               </div>
             ))}
           </div>
         </section>
       </div>
+      ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
+      {workspaceView === "operations" ? (
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
         <aside className="space-y-3">
           <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-card">
             <div className="flex items-start justify-between gap-3">
@@ -781,7 +967,24 @@ function ChinaMediaEcosystemWorkspace({
                 }}
               />
             </label>
-            <div className="mt-3 grid gap-2">
+            <button
+              className="mt-3 flex h-10 w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              type="button"
+              aria-expanded={advancedFiltersOpen}
+              onClick={() => setAdvancedFiltersOpen((open) => !open)}
+            >
+              <span className="inline-flex items-center gap-2">
+                <SlidersHorizontal className="size-4" aria-hidden="true" />
+                {t("media.advancedFilters")}
+                {activeFilterCount > 0 ? <StatusBadge tone="info">{String(activeFilterCount)}</StatusBadge> : null}
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs text-slate-500">
+                {advancedFiltersOpen ? t("media.hideFilters") : t("media.showFilters")}
+                <ChevronDown className={`size-4 transition ${advancedFiltersOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+              </span>
+            </button>
+            {advancedFiltersOpen ? (
+            <div className="mt-2 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
               <select
                 className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700"
                 value={trackFilter}
@@ -791,9 +994,9 @@ function ChinaMediaEcosystemWorkspace({
                 }}
               >
                 <option value="ALL">{t("media.allTracks")}</option>
-                {Object.entries(mediaEcosystemTrackLabels).map(([track, label]) => (
+                {(Object.keys(mediaEcosystemTrackLabels) as MediaEcosystemTrack[]).map((track) => (
                   <option key={track} value={track}>
-                    {label}
+                    {getEcosystemTrackLabel(track, locale)}
                   </option>
                 ))}
               </select>
@@ -807,7 +1010,7 @@ function ChinaMediaEcosystemWorkspace({
               >
                 {ecosystemStageOptions.map((stage) => (
                   <option key={stage} value={stage}>
-                    {stage === "ALL" ? t("media.allStages") : stage}
+                    {stage === "ALL" ? t("media.allStages") : getEcosystemStageLabel(stage, locale)}
                   </option>
                 ))}
               </select>
@@ -820,8 +1023,8 @@ function ChinaMediaEcosystemWorkspace({
                 }}
               >
                 {ecosystemPriorityOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                  <option key={option} value={option}>
+                    {priorityFilterLabels[option]}
                   </option>
                 ))}
               </select>
@@ -834,8 +1037,8 @@ function ChinaMediaEcosystemWorkspace({
                 }}
               >
                 {ecosystemOwnerOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                  <option key={option} value={option}>
+                    {ownerFilterLabels[option]}
                   </option>
                 ))}
               </select>
@@ -848,8 +1051,8 @@ function ChinaMediaEcosystemWorkspace({
                 }}
               >
                 {ecosystemReviewOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                  <option key={option} value={option}>
+                    {reviewFilterLabels[option]}
                   </option>
                 ))}
               </select>
@@ -861,7 +1064,7 @@ function ChinaMediaEcosystemWorkspace({
                   setVisibleLeadCount(ecosystemListPageSize);
                 }}
               >
-                <option value="ALL">All seed confidence</option>
+                <option value="ALL">{t("media.allSeedConfidence")}</option>
                 {seedConfidenceOptions.map((confidence) => (
                   <option key={confidence} value={confidence}>
                     {confidence}
@@ -869,25 +1072,32 @@ function ChinaMediaEcosystemWorkspace({
                 ))}
               </select>
             </div>
+            ) : null}
             <div className="mt-3 flex flex-wrap gap-2">
               <StatusBadge tone={queueFilter === "ALL" ? "neutral" : "info"}>
-                {activeQueue?.label ?? "All opportunities"}
+                {activeQueueCopy.label}
               </StatusBadge>
-              {reviewFilter !== "ALL" ? <StatusBadge tone="warning">{reviewFilter}</StatusBadge> : null}
-              {ownerFilter !== "ALL" ? <StatusBadge tone="info">{ownerFilter}</StatusBadge> : null}
+              {reviewFilter !== "ALL" ? <StatusBadge tone="warning">{reviewFilterLabels[reviewFilter]}</StatusBadge> : null}
+              {ownerFilter !== "ALL" ? <StatusBadge tone="info">{ownerFilterLabels[ownerFilter]}</StatusBadge> : null}
             </div>
-            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Batch controls</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    {selectedBatchLeadIds.length} selected / max {mediaEcosystemBatchOperationLimit}
-                  </p>
-                </div>
+            <div className="mt-4 border-t border-slate-200 pt-3">
+              <button
+                className="flex w-full items-center justify-between gap-3 text-left"
+                type="button"
+                aria-expanded={batchControlsOpen}
+                onClick={() => setBatchControlsOpen((open) => !open)}
+              >
+                <span>
+                  <span className="block text-sm font-semibold text-slate-900">{t("media.batchControls")}</span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-500">
+                    {t("media.selectedMax", { selected: selectedBatchLeadIds.length, max: mediaEcosystemBatchOperationLimit })}
+                  </span>
+                </span>
                 <StatusBadge tone={selectedBatchLeadIds.length > 0 ? "info" : "neutral"}>
                   {String(selectedBatchLeadIds.length)}
                 </StatusBadge>
-              </div>
+              </button>
+              {batchControlsOpen ? (
               <div className="mt-3 grid gap-2">
                 <button
                   className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
@@ -895,7 +1105,7 @@ function ChinaMediaEcosystemWorkspace({
                   disabled={visibleLeadIds.length === 0}
                   onClick={selectVisibleBatchLeads}
                 >
-                  Select visible
+                  {t("media.selectVisible")}
                 </button>
                 <button
                   className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
@@ -903,7 +1113,7 @@ function ChinaMediaEcosystemWorkspace({
                   disabled={selectedBatchLeadIds.length === 0}
                   onClick={() => setSelectedBatchLeadIds([])}
                 >
-                  Clear selected
+                  {t("media.clearSelected")}
                 </button>
                 <button
                   className="h-9 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
@@ -915,7 +1125,7 @@ function ChinaMediaEcosystemWorkspace({
                     )
                   }
                 >
-                  Batch assign owner
+                  {t("media.batchAssignOwner")}
                 </button>
                 <button
                   className="h-9 rounded-lg bg-slate-900 px-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
@@ -927,12 +1137,11 @@ function ChinaMediaEcosystemWorkspace({
                     )
                   }
                 >
-                  Batch mark reviewed
+                  {t("media.batchMarkReviewed")}
                 </button>
+                <p className="text-xs leading-5 text-slate-500">{t("media.batchHint")}</p>
               </div>
-              <p className="mt-3 text-xs leading-5 text-slate-500">
-                Applies only to selected visible opportunities. Closed or already reviewed rows are skipped by guard rules.
-              </p>
+              ) : null}
             </div>
           </div>
           {visibleLeads.map((lead) => {
@@ -954,25 +1163,25 @@ function ChinaMediaEcosystemWorkspace({
                       checked={isBatchSelected}
                       onChange={() => toggleBatchLead(lead.id)}
                     />
-                    <span className="sr-only">Select {lead.media_name}</span>
+                    <span className="sr-only">{t("media.selectVisible")} {lead.media_name}</span>
                   </label>
                   <button className="min-w-0 flex-1 text-left" type="button" onClick={() => setSelectedLeadId(lead.id)}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">{lead.media_name}</p>
-                        <p className="mt-1 text-xs text-slate-500">{mediaEcosystemTrackLabels[lead.track]}</p>
+                        <p className="mt-1 text-xs text-slate-500">{getEcosystemTrackLabel(lead.track, locale)}</p>
                       </div>
                       <StatusBadge tone={lead.priority_score >= 70 ? "success" : lead.priority_score >= 50 ? "warning" : "danger"}>
                         {String(lead.priority_score)}
                       </StatusBadge>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <StatusBadge tone={toneForExpansionStage(lead.stage)}>{lead.stage}</StatusBadge>
+                      <StatusBadge tone={toneForExpansionStage(lead.stage)}>{getEcosystemStageLabel(lead.stage, locale)}</StatusBadge>
                       <StatusBadge tone={lead.data_quality_level === "SEED_ONLY" ? "warning" : "success"}>
-                        {lead.data_quality_level}
+                        {getEcosystemDataQualityLabel(lead.data_quality_level, locale)}
                       </StatusBadge>
                       <StatusBadge tone={lead.owner_user_id ? "success" : "warning"}>
-                        {lead.owner_user_id ? "user owner" : "no user owner"}
+                        {lead.owner_user_id ? t("media.userOwner") : t("media.noUserOwner")}
                       </StatusBadge>
                       <StatusBadge tone={lead.risk_level === "critical" || lead.risk_level === "high" ? "danger" : "neutral"}>
                         {lead.risk_level}
@@ -989,10 +1198,10 @@ function ChinaMediaEcosystemWorkspace({
               type="button"
               onClick={() => setVisibleLeadCount((count) => count + ecosystemListPageSize)}
             >
-              Show more
+              {t("media.showMore")}
             </button>
           ) : null}
-          {filteredLeads.length === 0 ? (
+          {filteredLeads.length === 0 && state.mediaEcosystemLeads.length > 0 ? (
             <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-card">
               {t("media.noMatching")}
             </div>
@@ -1006,20 +1215,25 @@ function ChinaMediaEcosystemWorkspace({
                 <div>
                   <p className="text-2xl font-semibold tracking-normal text-slate-950">{selectedLead.media_name}</p>
                   <p className="mt-1 text-sm text-slate-500">
-                    {selectedLead.region} / {mediaEcosystemTrackLabels[selectedLead.track]} / owner {selectedLead.owner_role}
+                    {selectedLead.region} / {getEcosystemTrackLabel(selectedLead.track, locale)} / {t("media.owner")} {getRoleDisplayName(selectedLead.owner_role, locale)}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <StatusBadge tone={toneForExpansionStage(selectedLead.stage)}>{selectedLead.stage}</StatusBadge>
+                  <StatusBadge tone={toneForExpansionStage(selectedLead.stage)}>{getEcosystemStageLabel(selectedLead.stage, locale)}</StatusBadge>
                   <StatusBadge tone={selectedLead.data_quality_level === "SEED_ONLY" ? "warning" : "success"}>
-                    {selectedLead.data_quality_level}
+                    {getEcosystemDataQualityLabel(selectedLead.data_quality_level, locale)}
                   </StatusBadge>
                   <StatusBadge tone={selectedLead.verification_status === "VERIFIED" ? "success" : "info"}>
-                    {selectedLead.verification_status}
+                    {getEcosystemVerificationLabel(selectedLead.verification_status, locale)}
                   </StatusBadge>
                   <StatusBadge tone={selectedLead.priority_score >= 70 ? "success" : "warning"}>
-                    {`score ${selectedLead.priority_score}`}
+                    {`${t("media.priorityScore")} ${selectedLead.priority_score}`}
                   </StatusBadge>
+                  {selectedCandidate ? (
+                    <StatusBadge tone={toneForCandidateStatus(selectedCandidate.status)}>
+                      {getEcosystemCandidateStatusLabel(selectedCandidate.status, locale)}
+                    </StatusBadge>
+                  ) : null}
                 </div>
               </div>
 
@@ -1030,12 +1244,32 @@ function ChinaMediaEcosystemWorkspace({
                 <SignalCheck label={t("media.feasibility")} checked={selectedLead.integration_feasibility !== "impossible"} />
               </div>
 
-              <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold tracking-normal text-slate-500">{t("media.nextAction")}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-700">{selectedLead.next_action}</p>
+              <div className="mt-5 overflow-hidden rounded-lg border border-slate-200">
+                <NextActionBar
+                  heading={t("media.currentDecision")}
+                  status={getEcosystemStageLabel(selectedLead.stage, locale)}
+                  statusTone={toneForExpansionStage(selectedLead.stage)}
+                  nextActionLabel={t("media.nextAction")}
+                  nextAction={primaryAction ? actionLabels[primaryAction] : t("media.noFurtherAction")}
+                  ownerLabel={t("media.owner")}
+                  owner={selectedLead.owner_user_id
+                    ? `${getRoleDisplayName(selectedLead.owner_role, locale)} / ${selectedLead.owner_user_id}`
+                    : `${getRoleDisplayName(selectedLead.owner_role, locale)} / ${t("media.notAssigned")}`}
+                  blockerLabel={t("media.blocker")}
+                  blocker={eligibility?.blockers[0] ? getEcosystemBlockerLabel(eligibility.blockers[0], locale) : undefined}
+                  dueDateLabel={t("media.dueDate")}
+                  dueDate={selectedLead.last_touch_at ?? t("media.notScheduled")}
+                  actionLabel={primaryAction ? actionLabels[primaryAction] : undefined}
+                  onAction={primaryAction ? () => runPrimaryAction(primaryAction) : undefined}
+                />
               </div>
 
-              <div className="mt-5 flex flex-wrap gap-2">
+              <details className="mt-4 rounded-lg border border-slate-200 bg-slate-50">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-slate-700">
+                  {t("media.moreActions")}
+                  <ChevronDown className="size-4" aria-hidden="true" />
+                </summary>
+                <div className="flex flex-wrap gap-2 border-t border-slate-200 bg-white p-4">
                 <button
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   type="button"
@@ -1205,7 +1439,8 @@ function ChinaMediaEcosystemWorkspace({
                   <Handshake className="size-4" aria-hidden="true" />
                   {t("media.confirmHandoff")}
                 </button>
-              </div>
+                </div>
+              </details>
             </article>
 
             <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
@@ -1214,7 +1449,7 @@ function ChinaMediaEcosystemWorkspace({
                 <ScoreBreakdownPanel
                   lead={selectedLead}
                   onApplyScore={(scoreBreakdown) =>
-                    onRunAction("Apply manual score", () =>
+                    onRunAction(t("media.applyScore"), () =>
                       chinaMediaEcosystemService.applyManualScore(state, user, selectedLead.id, scoreBreakdown)
                     )
                   }
@@ -1228,28 +1463,34 @@ function ChinaMediaEcosystemWorkspace({
             ) : null}
 
             <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
-              <h2 className="text-base font-semibold text-slate-950">Outreach trail</h2>
+              <h2 className="text-base font-semibold text-slate-950">{t("media.outreachTrail")}</h2>
               <div className="mt-4 space-y-2">
                 {selectedActivities.length > 0 ? (
                   selectedActivities.map((activity) => (
                     <div key={activity.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                       <p className="text-sm font-semibold text-slate-800">{activity.event}</p>
                       <p className="mt-1 text-xs text-slate-500">
-                        {activity.actor_role} / {activity.created_at}
+                        {getRoleDisplayName(activity.actor_role, locale)} / {activity.created_at}
                       </p>
                       {activity.notes ? <p className="mt-2 text-xs leading-5 text-slate-500">{activity.notes}</p> : null}
                     </div>
                   ))
                 ) : (
-                  <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500">No outreach activity yet.</p>
+                  <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-500">{t("media.noOutreach")}</p>
                 )}
               </div>
             </article>
           </section>
         ) : (
-          <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">{t("media.noLeads")}</article>
+          <GuidedEmptyState
+            title={t("media.noLeads")}
+            description={t("media.noLeadsDescription")}
+            ownerLabel={t("media.owner")}
+            owner={getRoleDisplayName(user.activeRole, locale)}
+          />
         )}
       </div>
+      ) : null}
     </div>
   );
 }
@@ -1277,24 +1518,28 @@ function SignalCheck({ label, checked }: { label: string; checked: boolean }) {
 }
 
 function SeedReviewPanel({ lead }: { lead: MediaEcosystemLead }) {
+  const { locale, t } = useLocale();
+
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
       <div className="flex items-start justify-between gap-4">
-        <h2 className="text-base font-semibold text-slate-950">Review operations</h2>
-        <StatusBadge tone={lead.data_quality_level === "SEED_ONLY" ? "warning" : "success"}>{lead.data_quality_level}</StatusBadge>
+        <h2 className="text-base font-semibold text-slate-950">{t("media.reviewOperations")}</h2>
+        <StatusBadge tone={lead.data_quality_level === "SEED_ONLY" ? "warning" : "success"}>
+          {getEcosystemDataQualityLabel(lead.data_quality_level, locale)}
+        </StatusBadge>
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <Metric label="Verification" value={lead.verification_status} />
-        <Metric label="Review required" value={lead.review_required ? "yes" : "no"} />
-        <Metric label="Owner role" value={lead.owner_role} />
+        <Metric label={t("media.verification")} value={getEcosystemVerificationLabel(lead.verification_status, locale)} />
+        <Metric label={t("media.reviewRequired")} value={lead.review_required ? t("media.yes") : t("media.no")} />
+        <Metric label={t("media.ownerRole")} value={getRoleDisplayName(lead.owner_role, locale)} />
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <Metric label="User owner" value={lead.owner_user_id ?? "not assigned"} />
-        <Metric label="Seed confidence" value={lead.seed_confidence ?? "-"} />
-        <Metric label="Source" value={lead.source_name ?? "-"} />
+        <Metric label={t("media.userOwner")} value={lead.owner_user_id ?? t("media.notAssigned")} />
+        <Metric label={t("media.seedConfidence")} value={lead.seed_confidence ?? "-"} />
+        <Metric label={t("media.source")} value={lead.source_name ?? "-"} />
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <Metric label="Version" value={lead.source_version ?? "-"} />
+        <Metric label={t("media.version")} value={lead.source_version ?? "-"} />
       </div>
     </article>
   );
@@ -1307,27 +1552,28 @@ function ScoreBreakdownPanel({
   lead: MediaEcosystemLead;
   onApplyScore: (scoreBreakdown: MediaEcosystemPriorityScore) => void;
 }) {
+  const { t } = useLocale();
   const [draftScore, setDraftScore] = useState<MediaEcosystemPriorityScore>(lead.score_breakdown);
   useEffect(() => {
     setDraftScore(lead.score_breakdown);
   }, [lead.id, lead.score_breakdown]);
 
   const rows = [
-    ["strategic_value", "Strategic value", 20],
-    ["user_scale_growth", "User scale growth", 15],
-    ["ad_scenario_value", "Ad scenario value", 15],
-    ["programmatic_feasibility", "Programmatic feasibility", 15],
-    ["advertiser_demand_match", "Advertiser demand match", 15],
-    ["commercial_negotiability", "Commercial negotiability", 10],
-    ["risk_compliance_control", "Risk compliance control", 10]
+    ["strategic_value", t("media.strategicValue"), 20],
+    ["user_scale_growth", t("media.userScaleGrowth"), 15],
+    ["ad_scenario_value", t("media.adScenarioValue"), 15],
+    ["programmatic_feasibility", t("media.programmaticFeasibility"), 15],
+    ["advertiser_demand_match", t("media.advertiserDemandMatch"), 15],
+    ["commercial_negotiability", t("media.commercialNegotiability"), 10],
+    ["risk_compliance_control", t("media.riskComplianceControl"), 10]
   ] as const;
   const draftTotal = chinaMediaEcosystemService.calculatePriorityScore(draftScore);
 
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <h2 className="text-base font-semibold text-slate-950">Priority score</h2>
-        <StatusBadge tone={draftTotal >= 70 ? "success" : draftTotal > 0 ? "warning" : "neutral"}>{`draft ${draftTotal}`}</StatusBadge>
+        <h2 className="text-base font-semibold text-slate-950">{t("media.priorityScore")}</h2>
+        <StatusBadge tone={draftTotal >= 70 ? "success" : draftTotal > 0 ? "warning" : "neutral"}>{String(draftTotal)}</StatusBadge>
       </div>
       <div className="mt-4 space-y-2">
         {rows.map(([key, label, max]) => (
@@ -1359,12 +1605,12 @@ function ScoreBreakdownPanel({
         onClick={() => onApplyScore(draftScore)}
       >
         <Target className="size-4" aria-hidden="true" />
-        Apply score
+        {t("media.applyScore")}
       </button>
       <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <Metric label="Scale note" value={lead.user_scale_note} />
-        <Metric label="Scenario note" value={lead.ad_scenario_note} />
-        <Metric label="Demand note" value={lead.advertiser_demand_note} />
+        <Metric label={t("media.scaleNote")} value={lead.user_scale_note} />
+        <Metric label={t("media.scenarioNote")} value={lead.ad_scenario_note} />
+        <Metric label={t("media.demandNote")} value={lead.advertiser_demand_note} />
       </div>
     </article>
   );
@@ -1379,24 +1625,31 @@ function EligibilityPanel({
   candidate?: TrustedSupplyCandidate;
   blockers: string[];
 }) {
+  const { locale, t } = useLocale();
+
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
       <div className="flex items-start justify-between gap-4">
-        <h2 className="text-base font-semibold text-slate-950">Trusted supply gate</h2>
-        <StatusBadge tone={blockers.length === 0 ? "success" : "warning"}>{blockers.length === 0 ? "eligible" : "blocked"}</StatusBadge>
+        <h2 className="text-base font-semibold text-slate-950">{t("media.trustedSupplyGate")}</h2>
+        <StatusBadge tone={blockers.length === 0 ? "success" : "warning"}>
+          {blockers.length === 0 ? t("media.eligible") : t("media.blocked")}
+        </StatusBadge>
       </div>
       <div className="mt-4 space-y-2">
-        <GateRow label="Source reviewed" passed={lead.data_quality_level !== "SEED_ONLY"} />
-        <GateRow label="Score >= 70" passed={lead.priority_score >= 70} />
-        <GateRow label="Contact confirmed" passed={lead.media_contact_confirmed} />
-        <GateRow label="Business interest" passed={lead.business_interest_confirmed} />
-        <GateRow label="Inventory identified" passed={lead.ad_inventory_identified} />
-        <GateRow label="Feasibility not impossible" passed={lead.integration_feasibility !== "impossible"} />
-        <GateRow label="Media director approved" passed={Boolean(lead.media_director_approved_at)} />
+        <GateRow label={t("media.sourceReviewed")} passed={lead.data_quality_level !== "SEED_ONLY"} />
+        <GateRow label={t("media.scoreThreshold")} passed={lead.priority_score >= 70} />
+        <GateRow label={t("media.contactConfirmed")} passed={lead.media_contact_confirmed} />
+        <GateRow label={t("media.businessInterest")} passed={lead.business_interest_confirmed} />
+        <GateRow label={t("media.inventory")} passed={lead.ad_inventory_identified} />
+        <GateRow label={t("media.feasibilityAllowed")} passed={lead.integration_feasibility !== "impossible"} />
+        <GateRow label={t("media.directorApproved")} passed={Boolean(lead.media_director_approved_at)} />
       </div>
       {lead.media_director_approved_at ? (
         <p className="mt-3 text-xs leading-5 text-slate-500">
-          Approved by {lead.media_director_approved_by ?? "media director"} at {lead.media_director_approved_at}
+          {t("media.approvedBy", {
+            owner: lead.media_director_approved_by ?? t("media.mediaDirector"),
+            time: lead.media_director_approved_at
+          })}
         </p>
       ) : null}
       {candidate ? (
@@ -1404,19 +1657,26 @@ function EligibilityPanel({
           <p className="text-sm font-semibold text-emerald-900">{candidate.media_name}</p>
           <p className="mt-1 text-xs leading-5 text-emerald-700">{candidate.evaluation_notes}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <StatusBadge tone={toneForCandidateStatus(candidate.status)}>{candidate.status}</StatusBadge>
-            {candidate.publisher_id ? <StatusBadge tone="success">publisher linked</StatusBadge> : null}
+            <StatusBadge tone={toneForCandidateStatus(candidate.status)}>
+              {getEcosystemCandidateStatusLabel(candidate.status, locale)}
+            </StatusBadge>
+            {candidate.publisher_id ? <StatusBadge tone="success">{t("media.publisherLinked")}</StatusBadge> : null}
           </div>
           <div className="mt-3 space-y-2">
-            <GateRow label="Readiness started" passed={Boolean(candidate.readiness_started_at)} />
-            <GateRow label="Technical review" passed={Boolean(candidate.technical_reviewed_at)} />
-            <GateRow label="Commercial review" passed={Boolean(candidate.commercial_reviewed_at)} />
-            <GateRow label="Onboarding ready" passed={Boolean(candidate.onboarding_ready_at)} />
+            <GateRow label={t("media.readinessStarted")} passed={Boolean(candidate.readiness_started_at)} />
+            <GateRow label={t("media.technicalReviewed")} passed={Boolean(candidate.technical_reviewed_at)} />
+            <GateRow label={t("media.commercialReviewed")} passed={Boolean(candidate.commercial_reviewed_at)} />
+            <GateRow label={t("media.onboardingReady")} passed={Boolean(candidate.onboarding_ready_at)} />
           </div>
           {candidate.readiness_notes ? <p className="mt-3 text-xs leading-5 text-emerald-700">{candidate.readiness_notes}</p> : null}
         </div>
       ) : null}
-      {blockers.length > 0 ? <p className="mt-3 text-xs leading-5 text-slate-500">Blocking gates: {blockers.join(", ")}</p> : null}
+      {blockers.length > 0 ? (
+        <div className="mt-3 border-l-2 border-amber-400 pl-3 text-xs leading-5 text-slate-600">
+          <p className="font-semibold text-slate-800">{t("media.blockers")}</p>
+          <p>{blockers.map((blocker) => getEcosystemBlockerLabel(blocker, locale)).join("; ")}</p>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -1498,10 +1758,12 @@ function OnboardingHandoffPanel({
 }
 
 function GateRow({ label, passed }: { label: string; passed: boolean }) {
+  const { t } = useLocale();
+
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
       <span className="text-sm text-slate-600">{label}</span>
-      <StatusBadge tone={passed ? "success" : "warning"}>{passed ? "pass" : "pending"}</StatusBadge>
+      <StatusBadge tone={passed ? "success" : "warning"}>{passed ? t("media.confirmed") : t("media.pending")}</StatusBadge>
     </div>
   );
 }
@@ -1517,11 +1779,13 @@ function PublisherSelector({
   onSelect: (publisherId: EntityId) => void;
   onOpen360: () => void;
 }) {
+  const { locale, t } = useLocale();
+
   return (
     <aside className="space-y-3">
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-card">
-        <p className="text-sm font-semibold text-slate-900">Publisher queue</p>
-        <p className="mt-1 text-xs leading-5 text-slate-500">Select a publisher to drive the P0 readiness flow.</p>
+        <p className="text-sm font-semibold text-slate-900">{t("media.publisherQueue")}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{t("media.publisherQueueDescription")}</p>
       </div>
       {publishers.map((publisher) => (
         <button
@@ -1536,7 +1800,7 @@ function PublisherSelector({
         >
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-slate-900">{publisher.name}</p>
-            <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{publisher.sales_scale_status}</StatusBadge>
+            <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{getPublisherStatusLabel(publisher.sales_scale_status, locale)}</StatusBadge>
           </div>
           <p className="mt-2 text-xs text-slate-500">
             {publisher.media_type ?? "Media"} / {publisher.integration_type ?? "Integration"}
@@ -1548,7 +1812,7 @@ function PublisherSelector({
         type="button"
         onClick={onOpen360}
       >
-        Open 360
+        {t("media.open360")}
       </button>
     </aside>
   );
@@ -1565,6 +1829,8 @@ function MediaManagerWorkbench({
   onOpen360: (publisherId: EntityId) => void;
   onAddSlot: (publisherId: EntityId) => void;
 }) {
+  const { locale, t } = useLocale();
+
   return (
     <div className="space-y-4">
       {queue.map(({ publisher, openBlockingCases, adSlots, terms }) => (
@@ -1573,18 +1839,18 @@ function MediaManagerWorkbench({
             <div>
               <p className="text-lg font-semibold text-slate-950">{publisher.name}</p>
               <p className="mt-1 text-sm text-slate-500">
-                Slots {adSlots} / Terms {terms} / Blocking cases {openBlockingCases}
+                {t("media.queueSignals", { slots: adSlots, terms, blockers: openBlockingCases })}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <StatusBadge tone={toneForStatus(publisher.technical_live_status)}>{publisher.technical_live_status}</StatusBadge>
-              <StatusBadge tone={toneForStatus(publisher.commercial_test_status)}>{publisher.commercial_test_status}</StatusBadge>
-              <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{publisher.sales_scale_status}</StatusBadge>
+              <StatusBadge tone={toneForStatus(publisher.technical_live_status)}>{getPublisherStatusLabel(publisher.technical_live_status, locale)}</StatusBadge>
+              <StatusBadge tone={toneForStatus(publisher.commercial_test_status)}>{getPublisherStatusLabel(publisher.commercial_test_status, locale)}</StatusBadge>
+              <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{getPublisherStatusLabel(publisher.sales_scale_status, locale)}</StatusBadge>
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <button className="h-10 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white" type="button" onClick={() => onOpen360(publisher.id)}>
-              Continue
+              {t("media.continueReadiness")}
             </button>
             <button
               className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700"
@@ -1594,7 +1860,7 @@ function MediaManagerWorkbench({
                 onAddSlot(publisher.id);
               }}
             >
-              Add ad slot
+              {t("media.addAdSlot")}
             </button>
           </div>
         </article>
@@ -1610,6 +1876,8 @@ function MediaDirectorCommandCenter({
   queue: ReturnType<typeof mediaWorkflowService.getReadinessQueue>;
   onApprove: (publisherId: EntityId, targetStatus: "limited_sellable" | "proposal_selectable" | "scale_ready") => void;
 }) {
+  const { locale, t } = useLocale();
+
   return (
     <div className="space-y-4">
       {queue.map(({ publisher, openBlockingCases }) => (
@@ -1617,19 +1885,19 @@ function MediaDirectorCommandCenter({
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-lg font-semibold text-slate-950">{publisher.name}</p>
-              <p className="mt-1 text-sm text-slate-500">Open blocking diagnostic cases: {openBlockingCases}</p>
+              <p className="mt-1 text-sm text-slate-500">{t("media.blockingCases", { count: openBlockingCases })}</p>
             </div>
-            <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{publisher.sales_scale_status}</StatusBadge>
+            <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{getPublisherStatusLabel(publisher.sales_scale_status, locale)}</StatusBadge>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <button className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700" type="button" onClick={() => onApprove(publisher.id, "limited_sellable")}>
-              Limited sellable
+              {t("media.limitedSellable")}
             </button>
             <button className="h-10 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700" type="button" onClick={() => onApprove(publisher.id, "proposal_selectable")}>
-              Proposal selectable
+              {t("media.proposalSelectable")}
             </button>
             <button className="h-10 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white" type="button" onClick={() => onApprove(publisher.id, "scale_ready")}>
-              Scale ready
+              {t("media.scaleReady")}
             </button>
           </div>
         </article>
@@ -1641,6 +1909,7 @@ function MediaDirectorCommandCenter({
 function Publisher360({
   snapshot,
   trustedSnapshot,
+  ownerRole,
   onAddSlot,
   onAddTerm,
   onOpenIntegration,
@@ -1652,6 +1921,7 @@ function Publisher360({
 }: {
   snapshot: ReturnType<typeof mediaWorkflowService.getPublisherSnapshot>;
   trustedSnapshot: ReturnType<typeof trustedSupplyNetworkService.getSnapshot>;
+  ownerRole: BusinessUser["activeRole"];
   onAddSlot: () => void;
   onAddTerm: () => void;
   onOpenIntegration: () => void;
@@ -1661,15 +1931,87 @@ function Publisher360({
   onCreatePackage: () => void;
   onActivatePackage: (packageId: EntityId) => void;
 }) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
+  const [workspaceView, setWorkspaceView] = useState<PublisherWorkspaceView>("readiness");
   const publisher = snapshot.publisher;
 
   if (!publisher) {
-    return <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">Publisher not found.</div>;
+    return <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">{t("media.publisherNotFound")}</div>;
+  }
+
+  const readinessInput = {
+    publisher,
+    adSlots: snapshot.adSlots,
+    contractTerms: snapshot.contractTerms,
+    trustProfile: trustedSnapshot.profile,
+    packages: trustedSnapshot.packages
+  };
+  const readinessSteps = getPublisherReadinessSteps(readinessInput);
+  const primaryAction = getPublisherPrimaryAction(readinessInput);
+  const draftPackage = trustedSnapshot.packages.find((item) => item.status === "draft");
+  const blockingCase = snapshot.diagnosticCases.find(
+    (item) => item.is_blocking_sales_scale && !["closed", "rejected"].includes(item.status)
+  );
+  const integrationBlocker = snapshot.integrationProjects.find((item) => item.blocker)?.blocker;
+  const blocker = blockingCase?.current_blocker ?? integrationBlocker;
+  const overallState: PublisherReadinessState = readinessSteps.some((step) => step.state === "blocked")
+    ? "blocked"
+    : readinessSteps.every((step) => step.state === "complete")
+      ? "complete"
+      : "active";
+  const stateLabels: Record<PublisherReadinessState, string> = {
+    complete: t("media.stateComplete"),
+    active: t("media.stateActive"),
+    blocked: t("media.stateBlocked"),
+    pending: t("media.statePending")
+  };
+  const actionLabels: Record<PublisherPrimaryAction, string> = {
+    addSlot: t("media.addAdSlot"),
+    addTerm: t("media.addCommercialTerms"),
+    openIntegration: t("media.openIntegrationWizard"),
+    openTest: t("media.openCommercialTest"),
+    evaluateTrust: t("media.evaluateTrust"),
+    confirmPool: t("trusted.confirmPool"),
+    createPackage: t("media.createSupplyPackage"),
+    activatePackage: t("media.activateSupplyPackage")
+  };
+
+  function runPrimaryAction(action: PublisherPrimaryAction) {
+    if (action === "addSlot") {
+      onAddSlot();
+      return;
+    }
+    if (action === "addTerm") {
+      onAddTerm();
+      return;
+    }
+    if (action === "openIntegration") {
+      onOpenIntegration();
+      return;
+    }
+    if (action === "openTest") {
+      onOpenTest();
+      return;
+    }
+    if (action === "evaluateTrust") {
+      onEvaluateTrust();
+      return;
+    }
+    if (action === "confirmPool") {
+      onConfirmPool();
+      return;
+    }
+    if (action === "createPackage") {
+      onCreatePackage();
+      return;
+    }
+    if (draftPackage) {
+      onActivatePackage(draftPackage.id);
+    }
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-5">
       <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -1679,57 +2021,227 @@ function Publisher360({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatusBadge tone={toneForStatus(publisher.technical_live_status)}>{publisher.technical_live_status}</StatusBadge>
-            <StatusBadge tone={toneForStatus(publisher.commercial_test_status)}>{publisher.commercial_test_status}</StatusBadge>
-            <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{publisher.sales_scale_status}</StatusBadge>
+            <StatusBadge tone={toneForStatus(publisher.technical_live_status)}>{getPublisherStatusLabel(publisher.technical_live_status, locale)}</StatusBadge>
+            <StatusBadge tone={toneForStatus(publisher.commercial_test_status)}>{getPublisherStatusLabel(publisher.commercial_test_status, locale)}</StatusBadge>
+            <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{getPublisherStatusLabel(publisher.sales_scale_status, locale)}</StatusBadge>
           </div>
-        </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
-          <Metric label="DAU" value={publisher.daily_active_users?.toLocaleString() ?? "-"} />
-          <Metric label="Daily requests" value={publisher.daily_requests?.toLocaleString() ?? "-"} />
-          <Metric label="Risk" value={publisher.risk_level} />
         </div>
       </article>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <DetailPanel title="Ad slots" items={snapshot.adSlots.map((slot) => `${slot.slot_name} / ${slot.ad_format}`)} action="Add slot" onAction={onAddSlot} />
-        <DetailPanel title="Commercial terms" items={snapshot.contractTerms.map((term) => `${term.billing_model} / ${term.payment_terms}`)} action="Add terms" onAction={onAddTerm} />
-        <DetailPanel title="Integration" items={snapshot.integrationProjects.map((project) => `${project.integration_type} / ${project.status}`)} action="Open wizard" onAction={onOpenIntegration} />
-        <DetailPanel title="Commercial test" items={snapshot.commercialTests.map((test) => `${test.test_name} / ${test.status}`)} action="Open test" onAction={onOpenTest} />
+      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="inline-flex w-full rounded-lg border border-slate-200 bg-slate-100 p-1 sm:w-auto" role="tablist">
+          <PublisherViewTab
+            active={workspaceView === "readiness"}
+            icon={ClipboardCheck}
+            label={t("media.readinessView")}
+            onClick={() => setWorkspaceView("readiness")}
+          />
+          <PublisherViewTab
+            active={workspaceView === "trusted"}
+            icon={ShieldCheck}
+            label={t("media.trustedView")}
+            onClick={() => setWorkspaceView("trusted")}
+          />
+          <PublisherViewTab
+            active={workspaceView === "evidence"}
+            icon={History}
+            label={t("media.evidenceView")}
+            onClick={() => setWorkspaceView("evidence")}
+          />
+        </div>
+        <p className="text-sm leading-6 text-slate-500">
+          {workspaceView === "readiness"
+            ? t("media.readinessViewDescription")
+            : workspaceView === "trusted"
+              ? t("media.trustedViewDescription")
+              : t("media.evidenceViewDescription")}
+        </p>
       </div>
 
-      <TrustedSupplyPanel
-        snapshot={trustedSnapshot}
-        onEvaluate={onEvaluateTrust}
-        onConfirmPool={onConfirmPool}
-        onCreatePackage={onCreatePackage}
-        onActivatePackage={onActivatePackage}
-        labels={{
-          title: t("trusted.title"),
-          description: t("trusted.description"),
-          notEvaluated: t("trusted.notEvaluated"),
-          score: t("trusted.score"),
-          level: t("trusted.level"),
-          suggestedPool: t("trusted.suggestedPool"),
-          confirmedPool: t("trusted.confirmedPool"),
-          evaluate: t("trusted.evaluate"),
-          confirmPool: t("trusted.confirmPool"),
-          createPackage: t("trusted.createPackage"),
-          activatePackage: t("trusted.activatePackage"),
-          scoreBreakdown: t("trusted.scoreBreakdown"),
-          reasons: t("trusted.reasons"),
-          risks: t("trusted.risks"),
-          noRisks: t("trusted.noRisks"),
-          packages: t("trusted.packages"),
-          noPackages: t("trusted.noPackages"),
-          quality: t("trusted.quality"),
-          scoreTrend: t("trusted.scoreTrend"),
-          blockers: t("trusted.blockers"),
-          nextAction: t("trusted.nextAction"),
-          humanGate: t("trusted.humanGate")
-        }}
-      />
+      {workspaceView === "readiness" ? (
+        <>
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <NextActionBar
+              heading={t("media.publisherDecision")}
+              status={stateLabels[overallState]}
+              statusTone={overallState === "complete" ? "success" : overallState === "blocked" ? "danger" : "info"}
+              nextActionLabel={t("media.nextAction")}
+              nextAction={primaryAction ? actionLabels[primaryAction] : t("media.readinessComplete")}
+              ownerLabel={t("media.owner")}
+              owner={getRoleDisplayName(ownerRole, locale)}
+              blockerLabel={t("media.blocker")}
+              blocker={blocker}
+              dueDateLabel={t("media.dueDate")}
+              dueDate={snapshot.integrationProjects[0]?.go_live_date ?? snapshot.commercialTests[0]?.end_date ?? t("media.notScheduled")}
+              actionLabel={primaryAction ? actionLabels[primaryAction] : undefined}
+              onAction={primaryAction ? () => runPrimaryAction(primaryAction) : undefined}
+            />
+          </div>
+
+          <PublisherReadinessPath steps={readinessSteps} labels={{
+            title: t("media.publisherReadiness"),
+            profile: t("media.profileFoundation"),
+            technical: t("media.technicalReadiness"),
+            commercial: t("media.commercialValidation"),
+            trusted: t("media.trustedQualification"),
+            supply: t("media.activeSupply"),
+            complete: t("media.stateComplete"),
+            active: t("media.stateActive"),
+            blocked: t("media.stateBlocked"),
+            pending: t("media.statePending")
+          }} />
+
+          <MetricStrip
+            label={t("media.profileOverview")}
+            items={[
+              { label: "DAU", value: publisher.daily_active_users?.toLocaleString() ?? "-" },
+              { label: t("media.dailyRequests"), value: publisher.daily_requests?.toLocaleString() ?? "-" },
+              { label: t("media.risk"), value: getPublisherRiskLabel(publisher.risk_level, locale), tone: publisher.risk_level === "high" || publisher.risk_level === "critical" ? "danger" : "neutral" },
+              { label: t("media.blockers"), value: String(snapshot.diagnosticCases.filter((item) => item.is_blocking_sales_scale && !["closed", "rejected"].includes(item.status)).length) }
+            ]}
+          />
+
+          <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
+            <div className="border-b border-slate-200 px-5 py-4">
+              <h2 className="text-base font-semibold text-slate-950">{t("media.profileOverview")}</h2>
+            </div>
+            <div className="grid md:grid-cols-2">
+              <ReadinessEvidenceList title={t("media.adSlots")} items={snapshot.adSlots.map((slot) => `${slot.slot_name} / ${slot.ad_format}`)} empty={t("media.noDataContinue")} />
+              <ReadinessEvidenceList title={t("media.commercialTerms")} items={snapshot.contractTerms.map((term) => `${term.billing_model} / ${term.payment_terms}`)} empty={t("media.noDataContinue")} />
+              <ReadinessEvidenceList title={t("media.integration")} items={snapshot.integrationProjects.map((project) => `${project.integration_type} / ${getPublisherStatusLabel(project.status, locale)}`)} empty={t("media.noDataContinue")} />
+              <ReadinessEvidenceList title={t("media.commercialTest")} items={snapshot.commercialTests.map((test) => `${test.test_name} / ${getPublisherStatusLabel(test.status, locale)}`)} empty={t("media.noDataContinue")} />
+            </div>
+          </section>
+        </>
+      ) : null}
+
+      {workspaceView === "trusted" ? (
+        <TrustedSupplyPanel
+          snapshot={trustedSnapshot}
+          onEvaluate={onEvaluateTrust}
+          onConfirmPool={onConfirmPool}
+          onCreatePackage={onCreatePackage}
+          onActivatePackage={onActivatePackage}
+          labels={{
+            title: t("trusted.title"),
+            description: t("trusted.description"),
+            notEvaluated: t("trusted.notEvaluated"),
+            score: t("trusted.score"),
+            level: t("trusted.level"),
+            suggestedPool: t("trusted.suggestedPool"),
+            confirmedPool: t("trusted.confirmedPool"),
+            evaluate: t("trusted.evaluate"),
+            confirmPool: t("trusted.confirmPool"),
+            createPackage: t("trusted.createPackage"),
+            activatePackage: t("trusted.activatePackage"),
+            scoreBreakdown: t("trusted.scoreBreakdown"),
+            reasons: t("trusted.reasons"),
+            risks: t("trusted.risks"),
+            noRisks: t("trusted.noRisks"),
+            packages: t("trusted.packages"),
+            noPackages: t("trusted.noPackages"),
+            quality: t("trusted.quality"),
+            scoreTrend: t("trusted.scoreTrend"),
+            blockers: t("trusted.blockers"),
+            nextAction: t("trusted.nextAction"),
+            humanGate: t("trusted.humanGate")
+          }}
+        />
+      ) : null}
+
+      {workspaceView === "evidence" ? (
+        <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
+          <div className="border-b border-slate-200 px-5 py-4">
+            <h2 className="text-base font-semibold text-slate-950">{t("media.evidenceHistory")}</h2>
+          </div>
+          <div className="grid md:grid-cols-2">
+            <ReadinessEvidenceList title={t("media.contacts")} items={snapshot.contacts.map((contact) => `${contact.name} / ${contact.role_title}`)} empty={t("media.noDataContinue")} />
+            <ReadinessEvidenceList title={t("media.integration")} items={snapshot.integrationProjects.flatMap((project) => (project.evidence ?? []).map((evidence) => `${evidence.title} / ${evidence.reference}`))} empty={t("media.noDataContinue")} />
+            <ReadinessEvidenceList title={t("media.commercialTest")} items={snapshot.commercialTests.map((test) => `${test.test_name} / ${getPublisherStatusLabel(test.status, locale)} / ${test.result_summary ?? test.next_action ?? "-"}`)} empty={t("media.noDataContinue")} />
+            <ReadinessEvidenceList title={t("media.diagnostics")} items={snapshot.diagnosticCases.map((item) => `${item.case_no} / ${item.current_blocker ?? item.next_action ?? item.status}`)} empty={t("media.noDataContinue")} />
+          </div>
+        </section>
+      ) : null}
     </div>
+  );
+}
+
+function PublisherViewTab({
+  active,
+  icon: Icon,
+  label,
+  onClick
+}: {
+  active: boolean;
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={`inline-flex h-9 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition sm:flex-none ${
+        active ? "bg-white text-blue-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+      }`}
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+    >
+      <Icon className="size-4" aria-hidden="true" />
+      {label}
+    </button>
+  );
+}
+
+function PublisherReadinessPath({
+  steps,
+  labels
+}: {
+  steps: ReturnType<typeof getPublisherReadinessSteps>;
+  labels: Record<"title" | "profile" | "technical" | "commercial" | "trusted" | "supply" | PublisherReadinessState, string>;
+}) {
+  const toneForState: Record<PublisherReadinessState, "success" | "info" | "danger" | "neutral"> = {
+    complete: "success",
+    active: "info",
+    blocked: "danger",
+    pending: "neutral"
+  };
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-card" aria-labelledby="publisher-readiness-heading">
+      <h2 id="publisher-readiness-heading" className="text-base font-semibold text-slate-950">{labels.title}</h2>
+      <ol className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        {steps.map((step, index) => (
+          <li key={step.key} className="min-w-0 border-l-2 border-slate-200 py-2 pl-3 xl:border-l-0 xl:border-t-2 xl:pt-3 xl:pl-0">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-slate-400">{String(index + 1).padStart(2, "0")}</span>
+              <StatusBadge tone={toneForState[step.state]}>{labels[step.state]}</StatusBadge>
+            </div>
+            <p className="mt-2 text-sm font-semibold text-slate-900">{labels[step.key]}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function ReadinessEvidenceList({ title, items, empty }: { title: string; items: string[]; empty: string }) {
+  return (
+    <section className="min-w-0 border-b border-slate-200 p-5 odd:md:border-r">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-slate-950">{title}</h3>
+        <StatusBadge tone={items.length > 0 ? "success" : "neutral"}>{String(items.length)}</StatusBadge>
+      </div>
+      <div className="mt-3 space-y-2">
+        {items.length > 0 ? (
+          items.map((item, index) => (
+            <p key={`${item}-${index}`} className="break-words border-l-2 border-slate-200 pl-3 text-sm leading-6 text-slate-600">{item}</p>
+          ))
+        ) : (
+          <p className="text-sm leading-6 text-slate-500">{empty}</p>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -1748,18 +2260,19 @@ function TrustedSupplyPanel({
   onActivatePackage: (packageId: EntityId) => void;
   labels: Record<string, string>;
 }) {
+  const { locale, t } = useLocale();
   const profile = snapshot.profile;
   const breakdownLabels: Record<string, string> = {
-    profile_completeness: "Profile",
-    authorization: "Authorization",
-    technical: "Technical",
-    context_signals: "Context signals",
-    quality_ivt: "Quality / IVT",
-    transparency: "Transparency",
-    commercial: "Commercial",
-    advertiser_fit: "Advertiser fit",
-    delivery: "Delivery",
-    risk_deduction: "Risk deduction"
+    profile_completeness: t("trusted.profileCompleteness"),
+    authorization: t("trusted.authorization"),
+    technical: t("trusted.technical"),
+    context_signals: t("trusted.contextSignals"),
+    quality_ivt: t("trusted.qualityIvt"),
+    transparency: t("trusted.transparency"),
+    commercial: t("trusted.commercial"),
+    advertiser_fit: t("trusted.advertiserFit"),
+    delivery: t("trusted.delivery"),
+    risk_deduction: t("trusted.riskDeduction")
   };
 
   return (
@@ -1773,15 +2286,15 @@ function TrustedSupplyPanel({
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{labels.description}</p>
         </div>
         <StatusBadge tone={snapshot.quality.status === "healthy" ? "success" : snapshot.quality.status === "at_risk" || snapshot.quality.status === "suspended" ? "danger" : "warning"}>
-          {snapshot.quality.status}
+          {getPublisherStatusLabel(snapshot.quality.status, locale)}
         </StatusBadge>
       </div>
 
       <div className="grid border-b border-slate-200 md:grid-cols-4">
         <TrustMetric label={labels.score} value={profile ? String(profile.total_score) : labels.notEvaluated} />
         <TrustMetric label={labels.level} value={profile?.trust_level ?? "-"} />
-        <TrustMetric label={labels.suggestedPool} value={profile?.suggested_pool ?? "-"} />
-        <TrustMetric label={labels.confirmedPool} value={profile?.confirmed_pool ?? "-"} />
+        <TrustMetric label={labels.suggestedPool} value={profile?.suggested_pool ? getPublisherStatusLabel(profile.suggested_pool, locale) : "-"} />
+        <TrustMetric label={labels.confirmedPool} value={profile?.confirmed_pool ? getPublisherStatusLabel(profile.confirmed_pool, locale) : "-"} />
       </div>
 
       <div className="grid gap-6 p-5 xl:grid-cols-[1.15fr_0.85fr]">
@@ -1816,9 +2329,13 @@ function TrustedSupplyPanel({
               <div><dt className="text-slate-500">{labels.blockers}</dt><dd className="mt-1 font-semibold text-slate-900">{snapshot.quality.openBlockingCases}</dd></div>
             </dl>
             <div className="mt-3 space-y-1 text-sm text-slate-600">
-              {snapshot.quality.signals.map((signal) => <p key={signal}>{signal}</p>)}
+              {snapshot.quality.signals.map((signal) => (
+                <p key={signal}>{signal === "Trusted supply score has not been calculated." ? t("trusted.scoreNotCalculated") : signal}</p>
+              ))}
             </div>
-            <p className="mt-3 border-l-2 border-blue-500 pl-3 text-sm font-medium text-slate-700">{snapshot.quality.nextAction}</p>
+            <p className="mt-3 border-l-2 border-blue-500 pl-3 text-sm font-medium text-slate-700">
+              {snapshot.quality.nextAction === "Run trusted supply evaluation." ? t("trusted.runEvaluation") : snapshot.quality.nextAction}
+            </p>
           </div>
 
           <div>
@@ -1828,13 +2345,13 @@ function TrustedSupplyPanel({
                 <div key={packageRecord.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
                   <div>
                     <p className="text-sm font-medium text-slate-900">{packageRecord.package_name}</p>
-                    <p className="mt-1 text-xs text-slate-500">{packageRecord.pool} / {packageRecord.status} / {packageRecord.ad_formats.join(", ")}</p>
+                    <p className="mt-1 text-xs text-slate-500">{getPublisherStatusLabel(packageRecord.pool, locale)} / {getPublisherStatusLabel(packageRecord.status, locale)} / {packageRecord.ad_formats.join(", ")}</p>
                   </div>
                   {packageRecord.status === "draft" ? (
                     <button className="h-9 rounded-lg border border-emerald-200 px-3 text-sm font-semibold text-emerald-700" type="button" onClick={() => onActivatePackage(packageRecord.id)}>
                       {labels.activatePackage}
                     </button>
-                  ) : <StatusBadge tone="success">active</StatusBadge>}
+                  ) : <StatusBadge tone="success">{getPublisherStatusLabel(packageRecord.status, locale)}</StatusBadge>}
                 </div>
               ))}
               {snapshot.packages.length === 0 ? <p className="text-sm text-slate-500">{labels.noPackages}</p> : null}
@@ -1896,7 +2413,7 @@ function IntegrationWizard({
   onResolveBlocker: () => void;
   onSubmit: () => void;
 }) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const snapshot = mediaWorkflowService.getIntegrationExecutionSnapshot(state, publisher.id);
   const project = snapshot.project;
   const [evidenceType, setEvidenceType] = useState<IntegrationEvidenceType>("connection_config");
@@ -1937,7 +2454,7 @@ function IntegrationWizard({
       <div className="grid border-y border-slate-200 md:grid-cols-3">
         <div className="p-4">
           <p className="text-xs font-semibold text-slate-500">{t("integration.status")}</p>
-          <div className="mt-2"><StatusBadge tone={toneForStatus(project?.status ?? "pending_integration")}>{project?.status ?? "pending_integration"}</StatusBadge></div>
+          <div className="mt-2"><StatusBadge tone={toneForStatus(project?.status ?? "pending_integration")}>{getPublisherStatusLabel(project?.status ?? "pending_integration", locale)}</StatusBadge></div>
         </div>
         <div className="border-slate-200 p-4 md:border-x">
           <p className="text-xs font-semibold text-slate-500">{t("integration.progress")}</p>
@@ -2080,13 +2597,13 @@ function CommercialTestWorkspace({
   onCreateTest: () => void;
   onPassLatestTest: () => void;
 }) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xl font-semibold text-slate-950">{t("commercial.title")}</p>
-          <p className="mt-1 text-sm text-slate-500">{publisher.name} · {t("commercial.description")}</p>
+          <p className="mt-1 text-sm text-slate-500">{publisher.name} / {t("commercial.description")}</p>
         </div>
         <TestTube2 className="size-6 text-blue-600" aria-hidden="true" />
       </div>
@@ -2095,20 +2612,20 @@ function CommercialTestWorkspace({
           <div key={test.id} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <p className="text-sm font-semibold text-slate-900">{test.test_name}</p>
             <div className="mt-3">
-              <StatusBadge tone={toneForStatus(test.status)}>{test.status}</StatusBadge>
+              <StatusBadge tone={toneForStatus(test.status)}>{getPublisherStatusLabel(test.status, locale)}</StatusBadge>
             </div>
             <p className="mt-3 text-xs leading-5 text-slate-500">
               Fill {(test.fill_rate * 100).toFixed(1)}% / Clear {(test.clear_rate * 100).toFixed(1)}% / IVT {(test.ivt_rate * 100).toFixed(1)}%
             </p>
             <dl className="mt-3 space-y-2 border-t border-slate-200 pt-3 text-xs">
-              <div><dt className="text-slate-500">{t("commercial.owner")}</dt><dd className="mt-1 font-medium text-slate-800">{test.owner_role ?? "adops_manager"}</dd></div>
+              <div><dt className="text-slate-500">{t("commercial.owner")}</dt><dd className="mt-1 font-medium text-slate-800">{getRoleDisplayName(test.owner_role ?? "adops_manager", locale)}</dd></div>
               <div><dt className="text-slate-500">{t("commercial.period")}</dt><dd className="mt-1 font-medium text-slate-800">{test.start_date ?? "-"} / {test.end_date ?? "-"}</dd></div>
-              <div><dt className="text-slate-500">{t("commercial.thresholds")}</dt><dd className="mt-1 leading-5 text-slate-700">Fill ≥ {((test.test_plan?.min_fill_rate ?? 0.5) * 100).toFixed(0)}% · Clear ≥ {((test.test_plan?.min_clear_rate ?? 0.6) * 100).toFixed(0)}% · IVT ≤ {((test.test_plan?.max_ivt_rate ?? 0.03) * 100).toFixed(0)}%</dd></div>
-              <div><dt className="text-slate-500">{t("commercial.nextAction")}</dt><dd className="mt-1 leading-5 text-slate-700">{test.next_action ?? "Run controlled traffic and record delivery metrics."}</dd></div>
+              <div><dt className="text-slate-500">{t("commercial.thresholds")}</dt><dd className="mt-1 leading-5 text-slate-700">Fill &gt;= {((test.test_plan?.min_fill_rate ?? 0.5) * 100).toFixed(0)}% / Clear &gt;= {((test.test_plan?.min_clear_rate ?? 0.6) * 100).toFixed(0)}% / IVT &lt;= {((test.test_plan?.max_ivt_rate ?? 0.03) * 100).toFixed(0)}%</dd></div>
+              <div><dt className="text-slate-500">{t("commercial.nextAction")}</dt><dd className="mt-1 leading-5 text-slate-700">{test.next_action ?? t("commercial.defaultNextAction")}</dd></div>
             </dl>
           </div>
         ))}
-        {tests.length === 0 ? <p className="text-sm text-slate-500">No commercial test exists for this publisher.</p> : null}
+        {tests.length === 0 ? <p className="text-sm text-slate-500">{t("commercial.noTests")}</p> : null}
       </div>
       <div className="mt-5 flex flex-wrap gap-2">
         <button className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700" type="button" onClick={onCreateTest}>

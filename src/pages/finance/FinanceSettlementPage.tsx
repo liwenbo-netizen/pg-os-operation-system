@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { CheckCircle2, FileCheck2, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
+import { ClipboardCheck, FileCheck2, History, ReceiptText, ShieldAlert, WalletCards } from "lucide-react";
+import { BusinessStagePath } from "../../components/BusinessStagePath";
+import { MetricStrip, NextActionBar, OperatingPageHeader } from "../../components/OperatingPage";
 import { StatusBadge } from "../../components/StatusBadge";
-import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
 import { financeSettlementService } from "../../services/financeSettlementService";
 import type { AuditEvent, BusinessUser, EntityId, FinanceWorkflowState, MediaWorkflowState, SalesWorkflowState } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
 import { getRoleDisplayName, getRouteDisplayTitle, getRoutePageType, useLocale } from "../../lib/i18n";
+import {
+  getFinancePrimaryAction,
+  getFinanceStatusLabel,
+  getFinanceSteps,
+  type FinancePrimaryAction
+} from "./financeSettlementPageModel";
+import { getBusinessGuardMessage } from "../businessGuardMessage";
 
 type FinanceSettlementPageProps = {
   route: AppRoute;
@@ -49,9 +57,10 @@ export function FinanceSettlementPage({
   onStateChange,
   onAuditEvent
 }: FinanceSettlementPageProps) {
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const [activeSettlementId, setActiveSettlementId] = useState<EntityId>(selectedSettlementId ?? "settlement-clean");
   const [message, setMessage] = useState<ActionMessage | null>(null);
+  const [workspaceView, setWorkspaceView] = useState<"operations" | "evidence">("operations");
   const summary = financeSettlementService.getSummary(state, mediaState);
   const selectedSettlement =
     state.settlements.find((settlement) => settlement.id === activeSettlementId) ?? state.settlements[0];
@@ -65,6 +74,17 @@ export function FinanceSettlementPage({
       ),
     [mediaState, salesState, selectedSettlement?.id, state]
   );
+  const blockingDiagnostics = snapshot.diagnosticCases.filter(
+    (diagnosticCase) => diagnosticCase.is_blocking_settlement && !["closed", "rejected"].includes(diagnosticCase.status)
+  );
+  const primaryAction = selectedSettlement ? getFinancePrimaryAction(selectedSettlement) : undefined;
+  const stageSteps = selectedSettlement ? getFinanceSteps(selectedSettlement, blockingDiagnostics.length > 0) : [];
+  const actionLabels: Record<FinancePrimaryAction, string> = {
+    reconcile: t("finance.reconcile"),
+    confirm: t("finance.confirm"),
+    issueInvoice: t("finance.issueInvoice"),
+    markPaid: t("finance.markPaid")
+  };
 
   useEffect(() => {
     if (selectedSettlementId) {
@@ -81,130 +101,131 @@ export function FinanceSettlementPage({
     setMessage({ title, guard: result.guard });
   }
 
+  function runPrimaryAction(action: FinancePrimaryAction) {
+    if (action === "reconcile") {
+      runAction(actionLabels[action], () => financeSettlementService.completeReconciliation(state, user, selectedSettlement!.id, -120));
+    } else if (action === "confirm") {
+      runAction(actionLabels[action], () => financeSettlementService.confirmSettlement(state, mediaState, user, selectedSettlement!.id));
+    } else if (action === "issueInvoice") {
+      runAction(actionLabels[action], () => financeSettlementService.issueInvoice(state, user, selectedSettlement!.id));
+    } else {
+      runAction(actionLabels[action], () => financeSettlementService.markPaid(state, user, selectedSettlement!.id));
+    }
+  }
+
   if (!selectedSettlement) {
     return (
       <section className="space-y-4">
         <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
         <h1 className="text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
-        <p className="text-sm text-slate-500">No settlements are available.</p>
+        <p className="text-sm text-slate-500">{t("finance.noSettlements")}</p>
       </section>
     );
   }
 
   return (
     <section className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
-            <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
-            <StatusBadge tone={statusTone[selectedSettlement.status]}>{selectedSettlement.status}</StatusBadge>
-          </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Confirm publisher payable amount, handle diagnostic blockers, issue invoice, and close payment status.
-          </p>
-        </div>
-        <button
-          className="inline-flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
-          type="button"
-          onClick={() =>
-            runAction("Confirm settlement", () =>
-              financeSettlementService.confirmSettlement(state, mediaState, user, selectedSettlement.id)
-            )
-          }
-        >
-          <CheckCircle2 className="size-4" aria-hidden="true" />
-          Confirm settlement
-        </button>
-      </header>
+      <OperatingPageHeader
+        title={getRouteDisplayTitle(route, locale)}
+        description={t("finance.description")}
+        pageType={getRoutePageType(route, locale)}
+        role={getRoleDisplayName(role.code, locale)}
+        status={<StatusBadge tone={statusTone[selectedSettlement.status]}>{getFinanceStatusLabel(selectedSettlement.status, locale)}</StatusBadge>}
+      />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <SummaryCard label="Pending review" value={String(summary.pendingReview)} tone="warning" />
-        <SummaryCard label="Exception review" value={String(summary.exceptionReview)} tone={summary.exceptionReview ? "danger" : "neutral"} />
-        <SummaryCard label="Unreconciled" value={String(summary.unreconciled)} tone={summary.unreconciled ? "warning" : "success"} />
-        <SummaryCard label="Open disputes" value={String(summary.openDisputes)} tone={summary.openDisputes ? "danger" : "success"} />
-        <SummaryCard label="Paid" value={String(summary.paid)} tone="success" />
-      </div>
+      <MetricStrip
+        label={getRouteDisplayTitle(route, locale)}
+        items={[
+          { label: t("finance.pendingReview"), value: String(summary.pendingReview), tone: "warning" },
+          { label: t("finance.exceptionReview"), value: String(summary.exceptionReview), tone: summary.exceptionReview ? "danger" : "neutral" },
+          { label: t("finance.unreconciled"), value: String(summary.unreconciled), tone: summary.unreconciled ? "warning" : "success" },
+          { label: t("finance.openDisputes"), value: String(summary.openDisputes), tone: summary.openDisputes ? "danger" : "success" }
+        ]}
+      />
 
       {message ? <GuardNotice message={message} /> : null}
 
-      <div className="grid gap-6 xl:grid-cols-[280px_1fr_320px]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
         <SettlementQueue
           settlements={state.settlements}
           selectedSettlementId={selectedSettlement.id}
           onSelect={setActiveSettlementId}
+          locale={locale}
+          title={t("finance.queue")}
+          description={t("finance.queueDescription")}
         />
 
-        <main className="space-y-4">
-          <Panel title="Settlement summary" icon={<WalletCards className="size-5 text-blue-600" aria-hidden="true" />}>
+        <main className="min-w-0 space-y-4">
+          <div className="grid grid-cols-2 rounded-lg border border-slate-200 bg-white p-1" role="tablist">
+            <WorkspaceTab active={workspaceView === "operations"} icon={ClipboardCheck} label={t("common.operations")} onClick={() => setWorkspaceView("operations")} />
+            <WorkspaceTab active={workspaceView === "evidence"} icon={History} label={t("common.evidenceHistory")} onClick={() => setWorkspaceView("evidence")} />
+          </div>
+
+          <NextActionBar
+            heading={t("finance.settlementDecision")}
+            status={blockingDiagnostics.length ? t("common.blocked") : selectedSettlement.status === "paid" ? t("common.complete") : t("common.inProgress")}
+            statusTone={blockingDiagnostics.length ? "danger" : selectedSettlement.status === "paid" ? "success" : "info"}
+            nextActionLabel={t("workbench.nextAction")}
+            nextAction={primaryAction ? actionLabels[primaryAction] : t("finance.noAction")}
+            ownerLabel={t("workbench.owner")}
+            owner={getRoleDisplayName("finance_manager", locale)}
+            blockerLabel={t("workbench.blocker")}
+            blocker={blockingDiagnostics[0]?.current_blocker ?? blockingDiagnostics[0]?.case_type}
+            dueDateLabel={t("finance.dueDate")}
+            dueDate={selectedSettlement.due_date ?? t("common.noDueDate")}
+            actionLabel={primaryAction ? actionLabels[primaryAction] : undefined}
+            onAction={primaryAction ? () => runPrimaryAction(primaryAction) : undefined}
+          />
+
+          {workspaceView === "operations" ? (
+            <>
+              <BusinessStagePath
+                title={t("common.stagePath")}
+                stages={stageSteps.map((step) => ({
+                  ...step,
+                  label: t(`finance.${step.key}`)
+                }))}
+                stateLabels={{ complete: t("common.complete"), active: t("common.inProgress"), blocked: t("common.blocked"), pending: t("common.pending") }}
+              />
+
+          <Panel title={t("finance.summary")} icon={<WalletCards className="size-5 text-blue-600" aria-hidden="true" />}>
             <div className="grid gap-3 md:grid-cols-3">
-              <Metric label="Publisher" value={snapshot.publisher?.name ?? "-"} />
-              <Metric label="Campaign" value={snapshot.campaign?.name ?? "-"} />
-              <Metric label="Due date" value={selectedSettlement.due_date ?? "-"} />
-              <Metric label="Gross amount" value={formatMoney(selectedSettlement.gross_amount, selectedSettlement.currency)} />
-              <Metric label="Payable" value={formatMoney(selectedSettlement.payable_amount, selectedSettlement.currency)} tone="success" />
-              <Metric label="Delta" value={formatMoney(selectedSettlement.reconciliation_delta, selectedSettlement.currency)} tone={selectedSettlement.reconciliation_delta ? "warning" : "success"} />
+              <Metric label={t("finance.publisher")} value={snapshot.publisher?.name ?? "-"} />
+              <Metric label={t("finance.campaign")} value={snapshot.campaign?.name ?? "-"} />
+              <Metric label={t("finance.dueDate")} value={selectedSettlement.due_date ?? "-"} />
+              <Metric label={t("finance.grossAmount")} value={formatMoney(selectedSettlement.gross_amount, selectedSettlement.currency)} />
+              <Metric label={t("finance.payable")} value={formatMoney(selectedSettlement.payable_amount, selectedSettlement.currency)} tone="success" />
+              <Metric label={t("finance.delta")} value={formatMoney(selectedSettlement.reconciliation_delta, selectedSettlement.currency)} tone={selectedSettlement.reconciliation_delta ? "warning" : "success"} />
             </div>
           </Panel>
 
-          <Panel title="Reconciliation" icon={<FileCheck2 className="size-5 text-blue-600" aria-hidden="true" />}>
+          <Panel title={t("finance.reconciliation")} icon={<FileCheck2 className="size-5 text-blue-600" aria-hidden="true" />}>
             <div className="grid gap-3 md:grid-cols-3">
-              <Metric label="Completed" value={selectedSettlement.reconciliationCompleted ? "yes" : "no"} />
-              <Metric label="Adjustment" value={formatMoney(selectedSettlement.adjustment_amount, selectedSettlement.currency)} />
-              <Metric label="Review status" value={selectedSettlement.status} tone={selectedSettlement.status === "exception_review" ? "danger" : "neutral"} />
+              <Metric label={t("finance.completed")} value={selectedSettlement.reconciliationCompleted ? t("common.complete") : t("common.pending")} />
+              <Metric label={t("finance.adjustment")} value={formatMoney(selectedSettlement.adjustment_amount, selectedSettlement.currency)} />
+              <Metric label={t("finance.reviewStatus")} value={getFinanceStatusLabel(selectedSettlement.status, locale)} tone={selectedSettlement.status === "exception_review" ? "danger" : "neutral"} />
             </div>
-            <button
-              className="mt-4 h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700"
-              type="button"
-              onClick={() =>
-                runAction("Complete reconciliation", () =>
-                  financeSettlementService.completeReconciliation(state, user, selectedSettlement.id, -120)
-                )
-              }
-            >
-              Complete reconciliation
-            </button>
           </Panel>
 
-          <Panel title="Invoice and payment" icon={<ReceiptText className="size-5 text-blue-600" aria-hidden="true" />}>
+          <Panel title={t("finance.invoicePayment")} icon={<ReceiptText className="size-5 text-blue-600" aria-hidden="true" />}>
             <div className="grid gap-3 md:grid-cols-3">
-              <Metric label="Invoice no" value={selectedSettlement.invoice_no ?? "-"} />
-              <Metric label="Invoice issued" value={selectedSettlement.invoice_issued_at ? "yes" : "no"} />
-              <Metric label="Paid" value={selectedSettlement.paid_at ? "yes" : "no"} tone={selectedSettlement.status === "paid" ? "success" : "neutral"} />
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700"
-                type="button"
-                onClick={() =>
-                  runAction("Issue invoice", () =>
-                    financeSettlementService.issueInvoice(state, user, selectedSettlement.id)
-                  )
-                }
-              >
-                Issue invoice
-              </button>
-              <button
-                className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700"
-                type="button"
-                onClick={() =>
-                  runAction("Mark paid", () => financeSettlementService.markPaid(state, user, selectedSettlement.id))
-                }
-              >
-                Mark paid
-              </button>
+              <Metric label={t("finance.invoiceNo")} value={selectedSettlement.invoice_no ?? "-"} />
+              <Metric label={t("finance.invoiceIssued")} value={selectedSettlement.invoice_issued_at ? t("common.complete") : t("common.pending")} />
+              <Metric label={t("finance.paid")} value={selectedSettlement.paid_at ? t("common.complete") : t("common.pending")} tone={selectedSettlement.status === "paid" ? "success" : "neutral"} />
             </div>
           </Panel>
+            </>
+          ) : (
+            <RightRail snapshot={snapshot} locale={locale} labels={{ blockers: t("finance.diagnosticBlockers"), recent: t("finance.recentActivity"), empty: t("finance.noBlockers") }} />
+          )}
         </main>
-
-        <RightRail snapshot={snapshot} />
       </div>
     </section>
   );
 }
 
 function GuardNotice({ message }: { message: ActionMessage }) {
+  const { locale, t } = useLocale();
   const tone = message.guard.allowed ? (message.guard.severity === "warning" ? "warning" : "success") : "danger";
 
   return (
@@ -216,9 +237,9 @@ function GuardNotice({ message }: { message: ActionMessage }) {
             <p className="text-sm font-semibold text-slate-900">{message.title}</p>
             <StatusBadge tone={tone}>{message.guard.reason_code}</StatusBadge>
           </div>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{message.guard.message}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{getBusinessGuardMessage(message.guard.reason_code, message.guard.message, locale)}</p>
           {message.guard.required_approval_role ? (
-            <p className="mt-1 text-sm text-slate-500">Owner to unblock: {message.guard.required_approval_role}</p>
+            <p className="mt-1 text-sm text-slate-500">{t("workbench.owner")}: {getRoleDisplayName(message.guard.required_approval_role as BusinessUser["activeRole"], locale)}</p>
           ) : null}
         </div>
       </div>
@@ -229,14 +250,24 @@ function GuardNotice({ message }: { message: ActionMessage }) {
 function SettlementQueue({
   settlements,
   selectedSettlementId,
-  onSelect
+  onSelect,
+  locale,
+  title,
+  description
 }: {
   settlements: FinanceWorkflowState["settlements"];
   selectedSettlementId: EntityId;
   onSelect: (id: EntityId) => void;
+  locale: "en-US" | "zh-CN";
+  title: string;
+  description: string;
 }) {
   return (
     <aside className="space-y-3">
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-card">
+        <p className="text-sm font-semibold text-slate-950">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+      </div>
       {settlements.map((settlement) => (
         <button
           key={settlement.id}
@@ -248,7 +279,7 @@ function SettlementQueue({
         >
           <div className="flex items-center justify-between gap-2">
             <p className="font-semibold text-slate-900">{settlement.id}</p>
-            <StatusBadge tone={statusTone[settlement.status]}>{settlement.status}</StatusBadge>
+            <StatusBadge tone={statusTone[settlement.status]}>{getFinanceStatusLabel(settlement.status, locale)}</StatusBadge>
           </div>
           <p className="mt-2 text-xs text-slate-500">{formatMoney(settlement.payable_amount, settlement.currency)}</p>
         </button>
@@ -258,38 +289,57 @@ function SettlementQueue({
 }
 
 function RightRail({
-  snapshot
+  snapshot,
+  locale,
+  labels
 }: {
   snapshot: ReturnType<typeof financeSettlementService.getSettlementSnapshot>;
+  locale: "en-US" | "zh-CN";
+  labels: { blockers: string; recent: string; empty: string };
 }) {
   return (
-    <aside className="space-y-4">
-      <Panel title="Diagnostic blockers">
+    <div className="grid gap-4 xl:grid-cols-2">
+      <Panel title={labels.blockers}>
         <div className="space-y-2">
           {snapshot.diagnosticCases.map((diagnosticCase) => (
             <div key={diagnosticCase.id} className="rounded-lg bg-slate-50 p-3 text-sm">
               <div className="flex items-center justify-between gap-2">
                 <p className="font-semibold text-slate-900">{diagnosticCase.case_no}</p>
-                <StatusBadge tone={diagnosticCase.is_blocking_settlement ? "danger" : "neutral"}>{diagnosticCase.status}</StatusBadge>
+                <StatusBadge tone={diagnosticCase.is_blocking_settlement ? "danger" : "neutral"}>{getFinanceStatusLabel(diagnosticCase.status, locale)}</StatusBadge>
               </div>
               <p className="mt-2 text-xs leading-5 text-slate-500">{diagnosticCase.current_blocker ?? diagnosticCase.case_type}</p>
             </div>
           ))}
-          {snapshot.diagnosticCases.length === 0 ? <p className="text-sm text-slate-500">No diagnostic blockers linked.</p> : null}
+          {snapshot.diagnosticCases.length === 0 ? <p className="text-sm text-slate-500">{labels.empty}</p> : null}
         </div>
       </Panel>
 
-      <Panel title="Recent activity">
+      <Panel title={labels.recent}>
         <div className="space-y-3">
           {snapshot.activities.slice(0, 4).map((activity) => (
             <div key={activity.id} className="border-l-2 border-blue-200 pl-3">
               <p className="text-sm font-medium text-slate-800">{activity.event}</p>
-              <p className="mt-1 text-xs text-slate-500">{activity.actor_role}</p>
+              <p className="mt-1 text-xs text-slate-500">{getRoleDisplayName(activity.actor_role, locale)}</p>
             </div>
           ))}
         </div>
       </Panel>
-    </aside>
+    </div>
+  );
+}
+
+function WorkspaceTab({ active, icon: Icon, label, onClick }: { active: boolean; icon: typeof ClipboardCheck; label: string; onClick: () => void }) {
+  return (
+    <button
+      className={`inline-flex min-w-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${active ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+    >
+      <Icon className="size-4 shrink-0" aria-hidden="true" />
+      <span className="break-words">{label}</span>
+    </button>
   );
 }
 

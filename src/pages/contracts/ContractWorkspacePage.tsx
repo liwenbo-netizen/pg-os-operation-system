@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { FileSignature, Gavel, Landmark, PenLine, ShieldAlert } from "lucide-react";
+import { ClipboardCheck, FileSignature, History, Landmark, PenLine, ShieldAlert, type LucideIcon } from "lucide-react";
+import { BusinessStagePath } from "../../components/BusinessStagePath";
+import { MetricStrip, NextActionBar, OperatingPageHeader } from "../../components/OperatingPage";
 import { StatusBadge } from "../../components/StatusBadge";
-import { SummaryCard } from "../../components/SummaryCard";
 import type { RoleDefinition } from "../../constants/roles";
 import type { AppRoute } from "../../routes/routes";
 import { contractService } from "../../services/contractService";
@@ -16,6 +17,15 @@ import type {
 } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
 import { getRoleDisplayName, getRouteDisplayTitle, getRoutePageType, useLocale } from "../../lib/i18n";
+import {
+  getContractOwner,
+  getContractPrimaryAction,
+  getContractStatusLabel,
+  getContractSteps,
+  type ContractPrimaryAction
+} from "./contractWorkspacePageModel";
+import { getPublisherRiskLabel } from "../media/publisherReadinessPageModel";
+import { getBusinessGuardMessage } from "../businessGuardMessage";
 
 type ContractWorkspacePageProps = {
   route: AppRoute;
@@ -68,9 +78,10 @@ export function ContractWorkspacePage({
   onStateChange,
   onAuditEvent
 }: ContractWorkspacePageProps) {
-  const { locale } = useLocale();
+  const { locale, t } = useLocale();
   const [activeContractId, setActiveContractId] = useState<EntityId>(selectedContractId ?? "contract-233-framework");
   const [message, setMessage] = useState<ActionMessage | null>(null);
+  const [workspaceView, setWorkspaceView] = useState<"operations" | "evidence">("operations");
   const summary = contractService.getSummary(state);
   const selectedContract = state.contracts.find((contract) => contract.id === activeContractId) ?? state.contracts[0];
   const snapshot = useMemo(
@@ -84,6 +95,20 @@ export function ContractWorkspacePage({
       ),
     [financeState, mediaState, salesState, selectedContract?.id, state]
   );
+  const hasSettlementDispute = snapshot.settlementDisputes.some(
+    (diagnosticCase) => !["closed", "rejected"].includes(diagnosticCase.status)
+  );
+  const primaryAction = selectedContract ? getContractPrimaryAction(selectedContract) : undefined;
+  const primaryOwner = selectedContract ? getContractOwner(selectedContract) : "legal_manager";
+  const stageSteps = selectedContract ? getContractSteps(selectedContract, hasSettlementDispute) : [];
+  const actionLabels: Record<ContractPrimaryAction, string> = {
+    startLegalReview: t("contract.startLegalReview"),
+    requestFinanceReview: t("contract.requestFinanceReview"),
+    approveFinanceTerms: t("contract.approveFinanceTerms"),
+    approveLegalReview: t("contract.approveLegalReview"),
+    markSigned: t("contract.markSigned"),
+    archive: t("contract.archive")
+  };
 
   useEffect(() => {
     if (selectedContractId) {
@@ -100,157 +125,149 @@ export function ContractWorkspacePage({
     setMessage({ title, guard: result.guard });
   }
 
+  function runPrimaryAction(action: ContractPrimaryAction) {
+    if (action === "startLegalReview") {
+      runAction(actionLabels[action], () => contractService.startLegalReview(state, user, selectedContract!.id));
+    } else if (action === "requestFinanceReview") {
+      runAction(actionLabels[action], () => contractService.requestFinanceReview(state, user, selectedContract!.id));
+    } else if (action === "approveFinanceTerms") {
+      runAction(actionLabels[action], () => contractService.approveFinanceTerms(state, user, selectedContract!.id, "Payment terms verified from workspace."));
+    } else if (action === "approveLegalReview") {
+      runAction(actionLabels[action], () => contractService.approveLegalReview(state, user, selectedContract!.id, "Legal review approved from workspace."));
+    } else if (action === "markSigned") {
+      runAction(actionLabels[action], () => contractService.markSigned(state, mediaState, user, selectedContract!.id));
+    } else {
+      runAction(actionLabels[action], () => contractService.archiveSignedContract(state, user, selectedContract!.id));
+    }
+  }
+
   if (!selectedContract) {
     return (
       <section className="space-y-4">
         <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
         <h1 className="text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
-        <p className="text-sm text-slate-500">No contracts are available.</p>
+        <p className="text-sm text-slate-500">{t("contract.noContracts")}</p>
       </section>
     );
   }
 
   return (
     <section className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge tone="info">{getRoutePageType(route, locale)}</StatusBadge>
-            <StatusBadge tone="neutral">{getRoleDisplayName(role.code, locale)}</StatusBadge>
-            <StatusBadge tone={statusTone[selectedContract.status]}>{selectedContract.status}</StatusBadge>
-          </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">{getRouteDisplayTitle(route, locale)}</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Legal and finance collaboration for counterparty contracts, settlement side letters, and signing readiness.
-          </p>
-        </div>
-        <button
-          className="inline-flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
-          type="button"
-          onClick={() =>
-            runAction("Approve legal review", () =>
-              contractService.approveLegalReview(state, user, selectedContract.id, "Legal review approved from workspace.")
-            )
-          }
-        >
-          <Gavel className="size-4" aria-hidden="true" />
-          Approve legal review
-        </button>
-      </header>
+      <OperatingPageHeader
+        title={getRouteDisplayTitle(route, locale)}
+        description={t("contract.description")}
+        pageType={getRoutePageType(route, locale)}
+        role={getRoleDisplayName(role.code, locale)}
+        status={<StatusBadge tone={statusTone[selectedContract.status]}>{getContractStatusLabel(selectedContract.status, locale)}</StatusBadge>}
+      />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <SummaryCard label="Legal review" value={String(summary.legalReview)} tone="warning" />
-        <SummaryCard label="Finance review" value={String(summary.financeReview)} />
-        <SummaryCard label="Redline" value={String(summary.redline)} tone={summary.redline ? "danger" : "neutral"} />
-        <SummaryCard label="Signing" value={String(summary.signing)} tone="success" />
-        <SummaryCard label="High risk" value={String(summary.highRisk)} tone={summary.highRisk ? "danger" : "neutral"} />
-      </div>
+      <MetricStrip
+        label={getRouteDisplayTitle(route, locale)}
+        items={[
+          { label: t("contract.legalReview"), value: String(summary.legalReview), tone: "warning" },
+          { label: t("contract.financeReview"), value: String(summary.financeReview) },
+          { label: t("contract.redline"), value: String(summary.redline), tone: summary.redline ? "danger" : "neutral" },
+          { label: t("contract.signing"), value: String(summary.signing), tone: "success" }
+        ]}
+      />
 
       {message ? <GuardNotice message={message} /> : null}
 
-      <div className="grid gap-6 xl:grid-cols-[280px_1fr_320px]">
-        <ContractQueue contracts={state.contracts} selectedContractId={selectedContract.id} onSelect={setActiveContractId} />
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
+        <ContractQueue
+          contracts={state.contracts}
+          selectedContractId={selectedContract.id}
+          onSelect={setActiveContractId}
+          locale={locale}
+          title={t("contract.queue")}
+          description={t("contract.queueDescription")}
+        />
 
-        <main className="space-y-4">
-          <Panel title="Contract summary" icon={<FileSignature className="size-5 text-blue-600" aria-hidden="true" />}>
+        <main className="min-w-0 space-y-4">
+          <div className="grid grid-cols-2 rounded-lg border border-slate-200 bg-white p-1" role="tablist">
+            <WorkspaceTab active={workspaceView === "operations"} icon={ClipboardCheck} label={t("common.operations")} onClick={() => setWorkspaceView("operations")} />
+            <WorkspaceTab active={workspaceView === "evidence"} icon={History} label={t("common.evidenceHistory")} onClick={() => setWorkspaceView("evidence")} />
+          </div>
+
+          <NextActionBar
+            heading={t("contract.decision")}
+            status={hasSettlementDispute || selectedContract.status === "redline" ? t("common.blocked") : selectedContract.status === "archived" ? t("common.complete") : t("common.inProgress")}
+            statusTone={hasSettlementDispute || selectedContract.status === "redline" ? "danger" : selectedContract.status === "archived" ? "success" : "info"}
+            nextActionLabel={t("workbench.nextAction")}
+            nextAction={primaryAction ? actionLabels[primaryAction] : t("contract.noAction")}
+            ownerLabel={t("workbench.owner")}
+            owner={getRoleDisplayName(primaryOwner, locale)}
+            blockerLabel={t("workbench.blocker")}
+            blocker={selectedContract.blocker ?? snapshot.settlementDisputes[0]?.current_blocker}
+            dueDateLabel={t("finance.dueDate")}
+            dueDate={selectedContract.expiration_date ?? t("common.noDueDate")}
+            actionLabel={primaryAction ? actionLabels[primaryAction] : undefined}
+            onAction={primaryAction ? () => runPrimaryAction(primaryAction) : undefined}
+          />
+
+          {workspaceView === "operations" ? (
+            <>
+              <BusinessStagePath
+                title={t("common.stagePath")}
+                stages={stageSteps.map((step) => ({
+                  ...step,
+                  label: t(step.key === "archive" ? "contract.archiveStage" : `contract.${step.key}`)
+                }))}
+                stateLabels={{ complete: t("common.complete"), active: t("common.inProgress"), blocked: t("common.blocked"), pending: t("common.pending") }}
+              />
+
+          <Panel title={t("contract.summary")} icon={<FileSignature className="size-5 text-blue-600" aria-hidden="true" />}>
             <div className="grid gap-3 md:grid-cols-3">
-              <Metric label="Contract no" value={selectedContract.contract_no} />
-              <Metric label="Counterparty" value={selectedContract.counterparty_name} />
-              <Metric label="Type" value={selectedContract.contract_type.replace(/_/g, " ")} />
-              <Metric label="Risk" value={selectedContract.risk_level} tone={riskTone[selectedContract.risk_level]} />
-              <Metric label="Value" value={formatMoney(selectedContract.value_amount, selectedContract.currency)} />
-              <Metric label="Owner" value={selectedContract.owner_role} />
+              <Metric label={t("contract.contractNo")} value={selectedContract.contract_no} />
+              <Metric label={t("contract.counterparty")} value={selectedContract.counterparty_name} />
+              <Metric label={t("contract.type")} value={selectedContract.contract_type.replace(/_/g, " ")} />
+              <Metric label={t("contract.risk")} value={getPublisherRiskLabel(selectedContract.risk_level, locale)} tone={riskTone[selectedContract.risk_level]} />
+              <Metric label={t("contract.value")} value={formatMoney(selectedContract.value_amount, selectedContract.currency)} />
+              <Metric label={t("workbench.owner")} value={getRoleDisplayName(primaryOwner, locale)} />
             </div>
-            <p className="mt-4 text-sm leading-6 text-slate-600">{selectedContract.blocker ?? selectedContract.next_action ?? "No blocker recorded."}</p>
+            <p className="mt-4 text-sm leading-6 text-slate-600">{selectedContract.blocker ?? selectedContract.next_action ?? t("contract.noBlocker")}</p>
           </Panel>
 
-          <Panel title="Review controls" icon={<PenLine className="size-5 text-blue-600" aria-hidden="true" />}>
+          <Panel title={t("contract.reviewEvidence")} icon={<PenLine className="size-5 text-blue-600" aria-hidden="true" />}>
             <div className="grid gap-3 md:grid-cols-2">
-              <Metric label="Legal notes" value={selectedContract.legal_notes ?? "pending"} />
-              <Metric label="Finance notes" value={selectedContract.finance_notes ?? "pending"} />
+              <Metric label={t("contract.legalNotes")} value={selectedContract.legal_notes ?? t("contract.pendingEvidence")} />
+              <Metric label={t("contract.financeNotes")} value={selectedContract.finance_notes ?? t("contract.pendingEvidence")} />
             </div>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <details className="mt-4 border-t border-slate-200 pt-4">
+              <summary className="cursor-pointer text-sm font-semibold text-slate-700">{t("contract.additionalControls")}</summary>
               <button
-                className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700"
+                className="mt-3 h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700"
                 type="button"
-                onClick={() =>
-                  runAction("Request finance review", () =>
-                    contractService.requestFinanceReview(state, user, selectedContract.id)
-                  )
-                }
+                onClick={() => runAction(t("contract.sendRedline"), () => contractService.sendRedline(state, user, selectedContract.id, "Counterparty clause requires revision."))}
               >
-                Request finance review
+                {t("contract.sendRedline")}
               </button>
-              <button
-                className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700"
-                type="button"
-                onClick={() =>
-                  runAction("Approve finance terms", () =>
-                    contractService.approveFinanceTerms(
-                      state,
-                      user,
-                      selectedContract.id,
-                      "Payment terms verified from workspace."
-                    )
-                  )
-                }
-              >
-                Approve finance terms
-              </button>
-              <button
-                className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700"
-                type="button"
-                onClick={() =>
-                  runAction("Send redline", () =>
-                    contractService.sendRedline(state, user, selectedContract.id, "Counterparty clause requires revision.")
-                  )
-                }
-              >
-                Send redline
-              </button>
-            </div>
+            </details>
           </Panel>
 
-          <Panel title="Signing and archive" icon={<Landmark className="size-5 text-blue-600" aria-hidden="true" />}>
+          <Panel title={t("contract.signingArchive")} icon={<Landmark className="size-5 text-blue-600" aria-hidden="true" />}>
             <div className="grid gap-3 md:grid-cols-3">
-              <Metric label="Signed" value={selectedContract.signed_at ? "yes" : "no"} />
-              <Metric label="Archived" value={selectedContract.archived_at ? "yes" : "no"} />
-              <Metric label="Next action" value={selectedContract.next_action ?? "-"} />
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700"
-                type="button"
-                onClick={() =>
-                  runAction("Mark signed", () =>
-                    contractService.markSigned(state, mediaState, user, selectedContract.id)
-                  )
-                }
-              >
-                Mark signed
-              </button>
-              <button
-                className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700"
-                type="button"
-                onClick={() =>
-                  runAction("Archive contract", () =>
-                    contractService.archiveSignedContract(state, user, selectedContract.id)
-                  )
-                }
-              >
-                Archive
-              </button>
+              <Metric label={t("contract.signed")} value={selectedContract.signed_at ? t("common.complete") : t("common.pending")} />
+              <Metric label={t("contract.archived")} value={selectedContract.archived_at ? t("common.complete") : t("common.pending")} />
+              <Metric label={t("contract.nextAction")} value={selectedContract.next_action ?? "-"} />
             </div>
           </Panel>
+            </>
+          ) : (
+            <RightRail
+              snapshot={snapshot}
+              locale={locale}
+              labels={{ linked: t("contract.linkedRecords"), publisher: t("finance.publisher"), advertiser: t("contract.advertiser"), settlement: t("contract.settlement"), disputes: t("contract.settlementDisputes"), recent: t("finance.recentActivity"), none: t("contract.none") }}
+            />
+          )}
         </main>
-
-        <RightRail snapshot={snapshot} />
       </div>
     </section>
   );
 }
 
 function GuardNotice({ message }: { message: ActionMessage }) {
+  const { locale, t } = useLocale();
   const tone = message.guard.allowed ? (message.guard.severity === "warning" ? "warning" : "success") : "danger";
 
   return (
@@ -262,9 +279,9 @@ function GuardNotice({ message }: { message: ActionMessage }) {
             <p className="text-sm font-semibold text-slate-900">{message.title}</p>
             <StatusBadge tone={tone}>{message.guard.reason_code}</StatusBadge>
           </div>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{message.guard.message}</p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{getBusinessGuardMessage(message.guard.reason_code, message.guard.message, locale)}</p>
           {message.guard.required_approval_role ? (
-            <p className="mt-1 text-sm text-slate-500">Owner to unblock: {message.guard.required_approval_role}</p>
+            <p className="mt-1 text-sm text-slate-500">{t("workbench.owner")}: {getRoleDisplayName(message.guard.required_approval_role as BusinessUser["activeRole"], locale)}</p>
           ) : null}
         </div>
       </div>
@@ -275,14 +292,24 @@ function GuardNotice({ message }: { message: ActionMessage }) {
 function ContractQueue({
   contracts,
   selectedContractId,
-  onSelect
+  onSelect,
+  locale,
+  title,
+  description
 }: {
   contracts: ContractWorkflowState["contracts"];
   selectedContractId: EntityId;
   onSelect: (id: EntityId) => void;
+  locale: "en-US" | "zh-CN";
+  title: string;
+  description: string;
 }) {
   return (
     <aside className="space-y-3">
+      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-card">
+        <p className="text-sm font-semibold text-slate-950">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+      </div>
       {contracts.map((contract) => (
         <button
           key={contract.id}
@@ -294,7 +321,7 @@ function ContractQueue({
         >
           <div className="flex items-center justify-between gap-2">
             <p className="font-semibold text-slate-900">{contract.contract_no}</p>
-            <StatusBadge tone={statusTone[contract.status]}>{contract.status}</StatusBadge>
+            <StatusBadge tone={statusTone[contract.status]}>{getContractStatusLabel(contract.status, locale)}</StatusBadge>
           </div>
           <p className="mt-2 text-xs text-slate-500">{contract.counterparty_name}</p>
         </button>
@@ -303,29 +330,52 @@ function ContractQueue({
   );
 }
 
-function RightRail({ snapshot }: { snapshot: ReturnType<typeof contractService.getContractSnapshot> }) {
+function RightRail({
+  snapshot,
+  locale,
+  labels
+}: {
+  snapshot: ReturnType<typeof contractService.getContractSnapshot>;
+  locale: "en-US" | "zh-CN";
+  labels: { linked: string; publisher: string; advertiser: string; settlement: string; disputes: string; recent: string; none: string };
+}) {
   return (
-    <aside className="space-y-4">
-      <Panel title="Linked records">
-        <RailItem label="Publisher" value={snapshot.publisher?.name ?? "-"} />
-        <RailItem label="Advertiser" value={snapshot.advertiser?.name ?? "-"} />
-        <RailItem label="Settlement" value={snapshot.settlement?.id ?? "-"} />
+    <div className="grid gap-4 xl:grid-cols-2">
+      <Panel title={labels.linked}>
+        <RailItem label={labels.publisher} value={snapshot.publisher?.name ?? "-"} />
+        <RailItem label={labels.advertiser} value={snapshot.advertiser?.name ?? "-"} />
+        <RailItem label={labels.settlement} value={snapshot.settlement?.id ?? "-"} />
         <RailItem
-          label="Settlement disputes"
-          value={snapshot.settlementDisputes.length ? `${snapshot.settlementDisputes.length} linked` : "none"}
+          label={labels.disputes}
+          value={snapshot.settlementDisputes.length ? String(snapshot.settlementDisputes.length) : labels.none}
         />
       </Panel>
-      <Panel title="Recent activity">
+      <Panel title={labels.recent}>
         <div className="space-y-3">
           {snapshot.activities.slice(0, 4).map((activity) => (
             <div key={activity.id} className="border-l-2 border-blue-200 pl-3">
               <p className="text-sm font-medium text-slate-800">{activity.event}</p>
-              <p className="mt-1 text-xs text-slate-500">{activity.actor_role}</p>
+              <p className="mt-1 text-xs text-slate-500">{getRoleDisplayName(activity.actor_role, locale)}</p>
             </div>
           ))}
         </div>
       </Panel>
-    </aside>
+    </div>
+  );
+}
+
+function WorkspaceTab({ active, icon: Icon, label, onClick }: { active: boolean; icon: LucideIcon; label: string; onClick: () => void }) {
+  return (
+    <button
+      className={`inline-flex min-w-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${active ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+    >
+      <Icon className="size-4 shrink-0" aria-hidden="true" />
+      <span className="break-words">{label}</span>
+    </button>
   );
 }
 
