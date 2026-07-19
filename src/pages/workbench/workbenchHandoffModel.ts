@@ -85,42 +85,42 @@ function getCurrentNode(task: WorkbenchTask, input: WorkbenchHandoffInput): Work
 
   if (task.source_object_type === "proposal") {
     const proposal = input.salesState.proposals.find((item) => item.id === objectId);
-    return node("proposal", proposal?.name ?? task.title, task.related_route, objectId);
+    return node("proposal", proposal?.name ?? task.title, "/proposals/:id/wizard", objectId);
   }
   if (task.source_object_type === "campaign") {
     const campaign = input.salesState.campaigns.find((item) => item.id === objectId);
-    return node("campaign", campaign?.name ?? task.title, task.related_route, objectId);
+    return node("campaign", campaign?.name ?? task.title, "/campaigns/:id/wizard", objectId);
   }
   if (task.source_object_type === "opportunity") {
     const opportunity = input.salesState.opportunities.find((item) => item.id === objectId);
-    return node("opportunity", opportunity?.name ?? task.title, task.related_route, objectId);
+    return node("opportunity", opportunity?.name ?? task.title, "/sales/manager-workbench", objectId);
   }
   if (task.source_object_type === "advertiser") {
     const advertiser = input.salesState.advertisers.find((item) => item.id === objectId);
-    return node("advertiser", advertiser?.name ?? task.title, task.related_route, objectId);
+    return node("advertiser", advertiser?.name ?? task.title, "/sales/manager-workbench", objectId);
   }
   if (task.source_object_type === "settlement") {
-    return node("settlement", objectId ?? task.title, task.related_route, objectId);
+    return node("settlement", objectId ?? task.title, "/finance/settlements/:id", objectId);
   }
   if (task.source_object_type === "contract") {
     const contract = input.contractState.contracts.find((item) => item.id === objectId);
-    return node("contract", contract?.contract_no ?? task.title, task.related_route, objectId);
+    return node("contract", contract?.contract_no ?? task.title, "/contracts/:id", objectId);
   }
   if (task.source_object_type === "publisher") {
     const publisher = input.mediaState.publishers.find((item) => item.id === objectId);
-    return node("publisher", publisher?.name ?? task.title, task.related_route, objectId);
+    return node("publisher", publisher?.name ?? task.title, "/media/publishers/:id", objectId);
   }
   if (task.source_object_type === "trusted_supply_candidate") {
     const candidate = input.mediaState.trustedSupplyCandidates.find((item) => item.id === objectId);
-    return node("trustedCandidate", candidate?.media_name ?? task.title, task.related_route, objectId);
+    return node("trustedCandidate", candidate?.media_name ?? task.title, "/media/china-ecosystem", objectId);
   }
   if (task.source_object_type === "media_ecosystem_lead") {
     const lead = input.mediaState.mediaEcosystemLeads.find((item) => item.id === objectId);
-    return node("ecosystemLead", lead?.media_name ?? task.title, task.related_route, objectId);
+    return node("ecosystemLead", lead?.media_name ?? task.title, "/media/china-ecosystem", objectId);
   }
   if (task.source_object_type === "diagnostic_case") {
     const diagnostic = input.mediaState.diagnosticCases.find((item) => item.id === objectId);
-    return node("diagnostic", diagnostic?.case_no ?? task.title, task.related_route, objectId);
+    return node("diagnostic", diagnostic?.case_no ?? task.title, "/diagnostics/:id", objectId);
   }
 
   return node("task", task.title, task.related_route, objectId);

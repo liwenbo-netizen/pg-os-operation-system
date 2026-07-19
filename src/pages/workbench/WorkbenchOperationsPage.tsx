@@ -25,7 +25,12 @@ import type {
 } from "../../types/domain";
 import type { GuardResult } from "../../types/guards";
 import { getRoleDisplayName, getRouteDisplayTitle, getRoutePageType, useLocale } from "../../lib/i18n";
-import { getWorkbenchMetricValues, getWorkbenchTaskAction } from "./workbenchPageModel";
+import {
+  getWorkbenchMetricValues,
+  getWorkbenchModuleDisplayName,
+  getWorkbenchTaskAction,
+  getWorkbenchTaskDisplayTitle
+} from "./workbenchPageModel";
 import {
   getWorkbenchHandoffContext,
   getWorkbenchModuleSummaries,
@@ -222,9 +227,9 @@ export function WorkbenchOperationsPage({
                 <div className="flex flex-wrap gap-2">
                   <StatusBadge tone={priorityTone[selectedTask.priority]}>{selectedTask.priority}</StatusBadge>
                   <StatusBadge tone={taskTone[selectedTask.status]}>{taskStatusLabels[selectedTask.status]}</StatusBadge>
-                  <StatusBadge tone="neutral">{selectedTask.module}</StatusBadge>
+                  <StatusBadge tone="neutral">{getWorkbenchModuleDisplayName(selectedTask.module, locale)}</StatusBadge>
                 </div>
-                <h2 className="mt-4 text-xl font-semibold text-slate-950">{selectedTask.title}</h2>
+                <h2 className="mt-4 text-xl font-semibold text-slate-950">{getWorkbenchTaskDisplayTitle(selectedTask, locale)}</h2>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <button
                     className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400"
@@ -407,7 +412,7 @@ function TaskQueue({
             onClick={() => onSelect(task.id)}
           >
             <div className="flex items-start justify-between gap-2">
-              <p className="font-semibold leading-5 text-slate-900">{task.title}</p>
+              <p className="font-semibold leading-5 text-slate-900">{getWorkbenchTaskDisplayTitle(task, locale)}</p>
               <StatusBadge tone={priorityTone[task.priority]}>{task.priority}</StatusBadge>
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
@@ -433,7 +438,7 @@ function ExecutiveHandoffOverview({
   selectedTaskId?: string;
   onSelectTask: (taskId: string) => void;
 }) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const moduleLabels: Record<WorkbenchTask["module"], string> = {
     Media: t("workbench.moduleMedia"),
     Sales: t("workbench.moduleSales"),
@@ -471,7 +476,9 @@ function ExecutiveHandoffOverview({
                 <td className="px-4 py-3 text-slate-700">{summary.total}</td>
                 <td className="px-4 py-3 text-rose-700">{summary.p0}</td>
                 <td className="px-4 py-3 text-amber-700">{summary.blocked}</td>
-                <td className="max-w-sm px-4 py-3 text-slate-700">{summary.nextTask?.title ?? "-"}</td>
+                <td className="max-w-sm px-4 py-3 text-slate-700">
+                  {summary.nextTask ? getWorkbenchTaskDisplayTitle(summary.nextTask, locale) : "-"}
+                </td>
                 <td className="px-4 py-3 text-right">
                   {summary.nextTask ? (
                     <button
@@ -586,7 +593,7 @@ function RightRail({
   tasks: WorkbenchTask[];
   recentEvents: ReturnType<typeof workbenchService.getSnapshot>["recentEvents"];
 }) {
-  const { t } = useLocale();
+  const { locale, t } = useLocale();
   const blocked = tasks.filter((task) => task.status === "blocked").slice(0, 3);
 
   return (
@@ -595,7 +602,7 @@ function RightRail({
         <div className="space-y-2">
           {blocked.map((task) => (
             <div key={task.id} className="rounded-lg bg-rose-50 p-3 text-sm">
-              <p className="font-semibold text-rose-900">{task.title}</p>
+              <p className="font-semibold text-rose-900">{getWorkbenchTaskDisplayTitle(task, locale)}</p>
               <p className="mt-1 text-xs leading-5 text-rose-700">{task.blocker ?? task.next_action}</p>
             </div>
           ))}

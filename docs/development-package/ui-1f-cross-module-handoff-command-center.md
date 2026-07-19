@@ -63,6 +63,15 @@ Expose the business relationships already present in PG OS so a task is no longe
 - Mobile browser: Media Director route, heading, empty state, and disabled invalid Publisher 360 action verified at 390 x 844.
 - Relationship chains with business data were verified through deterministic fixture tests because the local Supabase snapshot contained no task or publisher rows.
 
+## Production UAT follow-up
+
+The first CEO production review confirmed that the cross-module table, task queue, selected-task detail, and handoff context were populated with real workflow data. It also exposed two presentation defects that were corrected without changing stored workflow records:
+
+- generated workbench task titles and module badges now use localized display adapters in the Chinese interface while English and stored task data remain unchanged;
+- the handoff context now opens the canonical business record route for the current object instead of reusing the task execution route.
+
+The QuZhi Campus commercial-validation task was used as the regression case. Its current record now opens Publisher 360 at `/media/publishers/:id`, while starting the task still uses the commercial-test route. Focused tests, full regression, TypeScript validation, production build, and a local CEO browser walkthrough all passed after the correction.
+
 ## Boundaries preserved
 
 - no database migration;

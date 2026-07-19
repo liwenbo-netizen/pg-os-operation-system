@@ -87,4 +87,23 @@ describe("workbench handoff model", () => {
 
     expect(context.current).toMatchObject({ kind: "ecosystemLead", label: "RedBook Lifestyle Community" });
   });
+
+  it("uses the canonical publisher record route for handoff context", () => {
+    const context = getWorkbenchHandoffContext(
+      task({
+        module: "Media",
+        source_object_type: "publisher",
+        source_object_id: "publisher-quzhi",
+        related_route: "/media/commercial-tests/:id"
+      }),
+      input
+    );
+
+    expect(context.current).toMatchObject({
+      kind: "publisher",
+      label: "QuZhi Campus",
+      route: "/media/publishers/:id",
+      objectId: "publisher-quzhi"
+    });
+  });
 });
