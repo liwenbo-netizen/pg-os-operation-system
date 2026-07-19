@@ -74,8 +74,11 @@ export function validateDirectBusinessAuditWrites(root) {
     if (!source.includes("onAuditEvent: (event: AuditEvent) => void")) {
       failures.push(`${page} must accept an onAuditEvent callback.`);
     }
-    if (!source.includes("onAuditEvent(result.auditEvent)")) {
-      failures.push(`${page} must call onAuditEvent when a workflow auditEvent exists.`);
+    if (
+      !source.includes("onAuditEvent(result.auditEvent)") &&
+      !source.includes("auditEvents.forEach(onAuditEvent)")
+    ) {
+      failures.push(`${page} must dispatch workflow audit events through onAuditEvent.`);
     }
   }
 

@@ -24,30 +24,58 @@ type WorkflowResult = {
   state: MediaWorkflowState;
   guard: GuardResult;
   auditEvent?: AuditEvent;
+  auditEvents?: AuditEvent[];
   businessEvent?: ModuleBusinessEvent;
+  publisherId?: EntityId;
 };
 
-type CreatePublisherInput = {
+export type CreatePublisherInput = {
   name: string;
   region: string;
   mediaType: string;
   integrationType: string;
+  legalEntity?: string;
+  propertyName?: string;
+  propertyIdentifierType?: string;
+  propertyIdentifier?: string;
+  dailyActiveUsers?: number;
+  monthlyActiveUsers?: number;
+  dailyRequests?: number;
+  trafficDataAsOf?: string;
+  trafficSource?: string;
 };
 
-type AdSlotInput = {
+export type PublisherContactInput = {
+  name: string;
+  roleTitle: string;
+  email?: string;
+  phone?: string;
+};
+
+export type AdSlotInput = {
   slotName: string;
   adFormat: string;
   placementType: string;
   floorPrice?: number;
+  currency?: string;
   dailyRequests?: number;
+  creativeSpec?: string;
 };
 
-type ContractTermInput = {
+export type ContractTermInput = {
   contractType: string;
   billingModel: string;
   settlementCycle: string;
   paymentTerms: string;
   revenueShare?: number;
+  currency?: string;
+};
+
+export type PublisherOnboardingInput = {
+  publisher: CreatePublisherInput;
+  contact: PublisherContactInput;
+  adSlot: AdSlotInput;
+  contractTerm: ContractTermInput;
 };
 
 type TechnicalEvidenceInput = {
@@ -302,13 +330,24 @@ export class MediaWorkflowService {
     const publisher: Publisher = {
       id,
       name: input.name,
+      legal_entity: input.legalEntity,
       region: input.region,
       media_type: input.mediaType,
       integration_type: input.integrationType,
       technical_live_status: "draft",
       commercial_test_status: "not_started",
       sales_scale_status: "not_allowed",
-      risk_level: "medium"
+      risk_level: "medium",
+      daily_active_users: input.dailyActiveUsers,
+      daily_requests: input.dailyRequests,
+      metadata: {
+        property_name: input.propertyName,
+        property_identifier_type: input.propertyIdentifierType,
+        property_identifier: input.propertyIdentifier,
+        monthly_active_users: input.monthlyActiveUsers,
+        traffic_data_as_of: input.trafficDataAsOf,
+        traffic_source: input.trafficSource
+      }
     };
     const integrationProject = {
       id: crypto.randomUUID(),
@@ -326,8 +365,55 @@ export class MediaWorkflowService {
       integrationProjects: [integrationProject, ...state.integrationProjects]
     };
     const guard = createAllowed("Publisher created and integration project initialized.", "PUBLISHER_CREATED");
-    const businessEvent = createBusinessEvent("publisher.created", id, user.activeRole, { integrationType: input.integrationType });
+    const businessEvent = createBusinessEvent("publisher.created", id, user.activeRole, {
+      integrationType: input.integrationType,
+      mediaType: input.mediaType,
+      propertyIdentifierType: input.propertyIdentifierType
+    });
     const eventState = appendEvents(nextState, user, "publisher.create", id, guard, businessEvent);
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent
+    };
+  }
+
+  addPublisherContact(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    publisherId: EntityId,
+    input: PublisherContactInput
+  ): WorkflowResult {
+    if (!findPublisher(state, publisherId)) {
+      const guard = createBlocked("Publisher record was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "publisher_contact.create", publisherId, guard), guard };
+    }
+
+    if (!rlsService.canWriteTable(user, "publisher_contacts")) {
+      const guard = createBlocked("Current role cannot add publisher contacts.", "PUBLISHER_CONTACT_CREATE_FORBIDDEN", "media_manager");
+      return { state: appendEvents(state, user, "publisher_contact.create", publisherId, guard), guard };
+    }
+
+    const contact: PublisherContact = {
+      id: crypto.randomUUID(),
+      publisher_id: publisherId,
+      name: input.name,
+      role_title: input.roleTitle,
+      email: input.email,
+      phone: input.phone,
+      is_primary: true
+    };
+    const nextState = {
+      ...state,
+      publisherContacts: [contact, ...state.publisherContacts]
+    };
+    const guard = createAllowed("Primary publisher contact added.", "PUBLISHER_CONTACT_CREATED");
+    const businessEvent = createBusinessEvent("publisher.contact_created", publisherId, user.activeRole, {
+      roleTitle: input.roleTitle
+    });
+    const eventState = appendEvents(nextState, user, "publisher_contact.create", publisherId, guard, businessEvent);
 
     return {
       state: eventState,
@@ -355,7 +441,9 @@ export class MediaWorkflowService {
       ad_format: input.adFormat,
       placement_type: input.placementType,
       floor_price: input.floorPrice,
+      currency: input.currency ?? "CNY",
       daily_requests: input.dailyRequests,
+      creative_spec: input.creativeSpec,
       status: "active"
     };
     const nextState = {
@@ -387,7 +475,7 @@ export class MediaWorkflowService {
       return { state: appendEvents(state, user, "publisher_contract_term.create", publisherId, guard), guard };
     }
 
-    if (!rlsService.canWriteTable(user, "publishers")) {
+    if (!rlsService.canWriteTable(user, "publisher_contract_terms")) {
       const guard = createBlocked("Current role cannot add publisher commercial terms.", "CONTRACT_TERM_CREATE_FORBIDDEN", "media_manager");
       return { state: appendEvents(state, user, "publisher_contract_term.create", publisherId, guard), guard };
     }
@@ -399,7 +487,8 @@ export class MediaWorkflowService {
       billing_model: input.billingModel,
       settlement_cycle: input.settlementCycle,
       payment_terms: input.paymentTerms,
-      revenue_share: input.revenueShare
+      revenue_share: input.revenueShare,
+      currency: input.currency ?? "CNY"
     };
     const nextState = {
       ...state,
@@ -416,6 +505,103 @@ export class MediaWorkflowService {
       guard,
       auditEvent: eventState.auditEvents[0],
       businessEvent
+    };
+  }
+
+  createPublisherOnboarding(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    input: PublisherOnboardingInput
+  ): WorkflowResult {
+    const canCreateAllRecords =
+      rlsService.canWriteTable(user, "publishers") &&
+      rlsService.canWriteTable(user, "publisher_contacts") &&
+      rlsService.canWriteTable(user, "publisher_ad_slots") &&
+      rlsService.canWriteTable(user, "publisher_contract_terms") &&
+      rbacService.hasCapability(user, "publisher.manage");
+
+    if (!canCreateAllRecords) {
+      const guard = createBlocked(
+        "Current role cannot create a complete publisher onboarding package.",
+        "PUBLISHER_ONBOARDING_FORBIDDEN",
+        "media_manager"
+      );
+      const eventState = appendEvents(state, user, "publisher.onboarding.create", undefined, guard);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    const requiredText = [
+      input.publisher.name,
+      input.publisher.legalEntity,
+      input.publisher.propertyName,
+      input.publisher.propertyIdentifier,
+      input.publisher.trafficDataAsOf,
+      input.publisher.trafficSource,
+      input.contact.name,
+      input.contact.roleTitle,
+      input.adSlot.slotName,
+      input.adSlot.adFormat,
+      input.adSlot.placementType,
+      input.contractTerm.billingModel,
+      input.contractTerm.settlementCycle,
+      input.contractTerm.paymentTerms
+    ];
+    const validScale =
+      (input.publisher.dailyActiveUsers ?? 0) > 0 &&
+      (input.publisher.dailyRequests ?? 0) > 0 &&
+      (input.adSlot.dailyRequests ?? 0) > 0;
+
+    if (requiredText.some((value) => !value?.trim()) || !validScale) {
+      const guard = createBlocked(
+        "Publisher onboarding requires complete identity, traffic, inventory, contact, and commercial data.",
+        "PUBLISHER_ONBOARDING_INVALID"
+      );
+      const eventState = appendEvents(state, user, "publisher.onboarding.create", undefined, guard);
+      return { state: eventState, guard, auditEvent: eventState.auditEvents[0] };
+    }
+
+    const publisherResult = this.createPublisher(state, user, input.publisher);
+    const publisherId = publisherResult.businessEvent?.objectId;
+    if (!publisherResult.guard.allowed || !publisherId) {
+      return publisherResult;
+    }
+
+    const contactResult = this.addPublisherContact(publisherResult.state, user, publisherId, input.contact);
+    const slotResult = this.addAdSlot(contactResult.state, user, publisherId, input.adSlot);
+    const termResult = this.addContractTerm(slotResult.state, user, publisherId, input.contractTerm);
+    const guard = createAllowed(
+      "Publisher onboarding package created with identity, traffic, inventory, contact, commercial terms, and integration project.",
+      "PUBLISHER_ONBOARDING_CREATED"
+    );
+    const businessEvent = createBusinessEvent("publisher.onboarding_created", publisherId, user.activeRole, {
+      adSlotCount: 1,
+      contactCount: 1,
+      commercialTermCount: 1,
+      integrationType: input.publisher.integrationType
+    });
+    const eventState = appendEvents(
+      termResult.state,
+      user,
+      "publisher.onboarding.create",
+      publisherId,
+      guard,
+      businessEvent
+    );
+    const auditEvents = [
+      eventState.auditEvents[0],
+      publisherResult.auditEvent,
+      contactResult.auditEvent,
+      slotResult.auditEvent,
+      termResult.auditEvent
+    ].filter((event): event is AuditEvent => Boolean(event));
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      auditEvents,
+      businessEvent,
+      publisherId
     };
   }
 

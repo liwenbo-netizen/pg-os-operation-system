@@ -8,7 +8,7 @@ const requiredMarkers = [
   "businessActions",
   "dataQualityChecks",
   "auditEvents",
-  "New publisher",
+  "Create publisher onboarding package",
   "Validate media",
   "Complete reconciliation",
   "Approve legal review"

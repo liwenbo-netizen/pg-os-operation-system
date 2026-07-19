@@ -36,7 +36,11 @@ import {
   type MediaEcosystemOperationalQueueKey,
   type OnboardingHandoffSnapshot
 } from "../../services/chinaMediaEcosystemService";
-import { integrationEvidenceDefinitions, mediaWorkflowService } from "../../services/mediaWorkflowService";
+import {
+  integrationEvidenceDefinitions,
+  mediaWorkflowService,
+  type PublisherOnboardingInput
+} from "../../services/mediaWorkflowService";
 import { trustedSupplyNetworkService } from "../../services/trustedSupplyNetworkService";
 import type {
   AuditEvent,
@@ -80,6 +84,7 @@ import {
   getMediaDirectorReadinessSteps,
   type MediaDirectorApprovalTarget
 } from "./mediaDirectorCommandCenterModel";
+import { PublisherOnboardingWizard } from "./PublisherOnboardingWizard";
 
 type MediaExperiencePageProps = {
   route: AppRoute;
@@ -101,6 +106,8 @@ type MediaActionResult = {
   state: MediaWorkflowState;
   guard: GuardResult;
   auditEvent?: AuditEvent;
+  auditEvents?: AuditEvent[];
+  publisherId?: EntityId;
 };
 
 const statusTone = {
@@ -277,6 +284,7 @@ export function MediaExperiencePage({
   const { locale, t } = useLocale();
   const [selectedPublisherId, setSelectedPublisherId] = useState<EntityId>("publisher-new-ctv");
   const [message, setMessage] = useState<ActionMessage | null>(null);
+  const [publisherOnboardingOpen, setPublisherOnboardingOpen] = useState(false);
 
   const summary = mediaWorkflowService.getSummary(state);
   const ecosystemSummary = chinaMediaEcosystemService.getSummary(state);
@@ -295,10 +303,24 @@ export function MediaExperiencePage({
   function runAction(title: string, action: () => MediaActionResult) {
     const result = action();
     onStateChange(result.state);
-    if (result.auditEvent) {
-      onAuditEvent(result.auditEvent);
-    }
+    const auditEvents = result.auditEvents ?? (result.auditEvent ? [result.auditEvent] : []);
+    auditEvents.forEach(onAuditEvent);
     setMessage({ title, guard: result.guard });
+  }
+
+  function submitPublisherOnboarding(input: PublisherOnboardingInput) {
+    const result = mediaWorkflowService.createPublisherOnboarding(state, user, input);
+    onStateChange(result.state);
+    const auditEvents = result.auditEvents ?? (result.auditEvent ? [result.auditEvent] : []);
+    auditEvents.forEach(onAuditEvent);
+    setMessage({ title: t("media.onboardingTitle"), guard: result.guard });
+
+    if (result.guard.allowed && result.publisherId) {
+      setSelectedPublisherId(result.publisherId);
+      onRouteChange("/media/publishers/:id", result.publisherId);
+    }
+
+    return result.guard.allowed;
   }
 
   const page = useMemo(() => {
@@ -346,16 +368,7 @@ export function MediaExperiencePage({
             <button
               className="inline-flex h-11 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
               type="button"
-              onClick={() =>
-                runAction(t("media.createPublisher"), () =>
-                  mediaWorkflowService.createPublisher(state, user, {
-                    name: "Demo Audio Network",
-                    region: "CN",
-                    mediaType: "App",
-                    integrationType: "SDK"
-                  })
-                )
-              }
+              onClick={() => setPublisherOnboardingOpen(true)}
             >
               <Plus className="size-4" aria-hidden="true" />
               {t("media.newPublisher")}
@@ -538,6 +551,11 @@ export function MediaExperiencePage({
         ) : null}
         </div>
       )}
+      <PublisherOnboardingWizard
+        open={publisherOnboardingOpen}
+        onClose={() => setPublisherOnboardingOpen(false)}
+        onSubmit={submitPublisherOnboarding}
+      />
     </section>
   );
 }
@@ -547,6 +565,7 @@ function GuardNotice({ message }: { message: ActionMessage }) {
   const tone = message.guard.allowed ? (message.guard.severity === "warning" ? "warning" : "success") : "danger";
   const guardMessages: Record<string, string> = {
     PUBLISHER_CREATED: locale === "zh-CN" ? "媒体已创建，并已初始化技术集成项目。" : message.guard.message,
+    PUBLISHER_ONBOARDING_CREATED: locale === "zh-CN" ? "媒体准入包已创建，包含媒体资产、流量、广告位、联系人、商务条款和技术项目。" : message.guard.message,
     AD_SLOT_CREATED: locale === "zh-CN" ? "媒体广告位已新增。" : message.guard.message,
     CONTRACT_TERM_CREATED: locale === "zh-CN" ? "媒体商务条款已新增。" : message.guard.message,
     TRUST_SCORE_EVALUATED: locale === "zh-CN" ? "可信供给评分已完成，仍需人工确认运营池。" : message.guard.message,
@@ -2189,8 +2208,32 @@ function Publisher360({
               <h2 className="text-base font-semibold text-slate-950">{t("media.profileOverview")}</h2>
             </div>
             <div className="grid md:grid-cols-2">
-              <ReadinessEvidenceList title={t("media.adSlots")} items={snapshot.adSlots.map((slot) => `${slot.slot_name} / ${slot.ad_format}`)} empty={t("media.noDataContinue")} />
-              <ReadinessEvidenceList title={t("media.commercialTerms")} items={snapshot.contractTerms.map((term) => `${term.billing_model} / ${term.payment_terms}`)} empty={t("media.noDataContinue")} />
+              <ReadinessEvidenceList
+                title={t("media.assetIdentity")}
+                items={[
+                  publisher.legal_entity ? `${t("media.onboardingLegalEntity")}: ${publisher.legal_entity}` : undefined,
+                  publisher.metadata?.property_name ? `${t("media.onboardingPropertyName")}: ${publisher.metadata.property_name}` : undefined,
+                  publisher.metadata?.property_identifier
+                    ? `${t("media.onboardingIdentifierType")}: ${publisher.metadata.property_identifier_type ?? "-"} / ${publisher.metadata.property_identifier}`
+                    : undefined
+                ].filter((item): item is string => Boolean(item))}
+                empty={t("media.noDataContinue")}
+              />
+              <ReadinessEvidenceList
+                title={t("media.trafficEvidence")}
+                items={[
+                  `DAU: ${publisher.daily_active_users?.toLocaleString() ?? "-"}`,
+                  `MAU: ${publisher.metadata?.monthly_active_users?.toLocaleString() ?? "-"}`,
+                  `${t("media.dailyRequests")}: ${publisher.daily_requests?.toLocaleString() ?? "-"}`,
+                  publisher.metadata?.traffic_data_as_of
+                    ? `${t("media.onboardingDataAsOf")}: ${publisher.metadata.traffic_data_as_of} / ${publisher.metadata.traffic_source ?? "-"}`
+                    : undefined
+                ].filter((item): item is string => Boolean(item))}
+                empty={t("media.noDataContinue")}
+              />
+              <ReadinessEvidenceList title={t("media.contacts")} items={snapshot.contacts.map((contact) => `${contact.name} / ${contact.role_title} / ${contact.email ?? contact.phone ?? "-"}`)} empty={t("media.noDataContinue")} />
+              <ReadinessEvidenceList title={t("media.adSlots")} items={snapshot.adSlots.map((slot) => `${slot.slot_name} / ${slot.ad_format} / ${slot.placement_type} / ${slot.daily_requests?.toLocaleString() ?? "-"} / ${slot.currency ?? "CNY"} ${slot.floor_price ?? "-"}`)} empty={t("media.noDataContinue")} />
+              <ReadinessEvidenceList title={t("media.commercialTerms")} items={snapshot.contractTerms.map((term) => `${term.billing_model} / ${term.payment_terms} / ${term.settlement_cycle} / ${term.currency ?? "CNY"}`)} empty={t("media.noDataContinue")} />
               <ReadinessEvidenceList title={t("media.integration")} items={snapshot.integrationProjects.map((project) => `${project.integration_type} / ${getPublisherStatusLabel(project.status, locale)}`)} empty={t("media.noDataContinue")} />
               <ReadinessEvidenceList title={t("media.commercialTest")} items={snapshot.commercialTests.map((test) => `${test.test_name} / ${getPublisherStatusLabel(test.status, locale)}`)} empty={t("media.noDataContinue")} />
             </div>

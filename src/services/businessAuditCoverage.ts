@@ -13,11 +13,25 @@ export type CoreBusinessAuditAction = {
 
 export const CORE_BUSINESS_AUDIT_ACTIONS: CoreBusinessAuditAction[] = [
   {
+    action: "publisher.onboarding.create",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Publisher Onboarding Wizard",
+    criticality: "P0"
+  },
+  {
     action: "publisher.create",
     objectType: "publisher",
     module: "Media",
     workflowSurface: "Media Publisher Onboarding",
     criticality: "P0"
+  },
+  {
+    action: "publisher_contact.create",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Media Publisher Onboarding",
+    criticality: "P1"
   },
   {
     action: "publisher_ad_slot.create",

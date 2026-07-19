@@ -75,6 +75,7 @@ describe("workflow repositories", () => {
         {
           id: publisherId,
           name: "DB Publisher",
+          legal_entity: "DB Publisher Co., Ltd.",
           region: "CN",
           media_type: "CTV",
           integration_type: "VAST",
@@ -82,7 +83,15 @@ describe("workflow repositories", () => {
           commercial_test_status: "test_passed",
           sales_scale_status: "scale_ready",
           risk_level: "medium",
-          daily_requests: 1000
+          daily_requests: 1000,
+          metadata: {
+            property_name: "DB Publisher App",
+            property_identifier_type: "android_package",
+            property_identifier: "com.db.publisher",
+            monthly_active_users: 9000,
+            traffic_data_as_of: "2026-07-19",
+            traffic_source: "first_party_analytics"
+          }
         }
       ],
       commercial_tests: [
@@ -352,7 +361,16 @@ describe("workflow repositories", () => {
     const result = await repository.loadSnapshot();
 
     expect(result.health).toMatchObject({ mode: "supabase", source: "supabase" });
-    expect(result.snapshot.mediaState.publishers[0]).toMatchObject({ id: publisherId, name: "DB Publisher" });
+    expect(result.snapshot.mediaState.publishers[0]).toMatchObject({
+      id: publisherId,
+      name: "DB Publisher",
+      legal_entity: "DB Publisher Co., Ltd.",
+      metadata: {
+        property_identifier: "com.db.publisher",
+        monthly_active_users: 9000,
+        traffic_data_as_of: "2026-07-19"
+      }
+    });
     expect(result.snapshot.mediaState.commercialTests[0]).toMatchObject({ fill_rate: 0.61, spend: 1100 });
     expect(result.snapshot.mediaState.mediaTrustProfiles[0]).toMatchObject({
       id: trustProfileId,
@@ -424,13 +442,62 @@ describe("workflow repositories", () => {
     const ecosystemLeadId = uuid(35);
     const outreachId = uuid(36);
     const trustedCandidateId = uuid(37);
+    const publisherContactId = uuid(39);
+    const publisherAdSlotId = uuid(40);
+    const publisherContractTermId = uuid(41);
 
     snapshot.mediaState.publishers = [
       snapshot.mediaState.publishers[0],
       {
         ...snapshot.mediaState.publishers[0],
         id: publisherId,
-        name: "UUID Publisher"
+        name: "UUID Publisher",
+        legal_entity: "UUID Publisher Co., Ltd.",
+        metadata: {
+          property_name: "UUID Publisher App",
+          property_identifier_type: "android_package",
+          property_identifier: "com.uuid.publisher",
+          monthly_active_users: 1200000,
+          traffic_data_as_of: "2026-07-19",
+          traffic_source: "first_party_analytics"
+        }
+      }
+    ];
+    snapshot.mediaState.publisherContacts = [
+      {
+        id: publisherContactId,
+        publisher_id: publisherId,
+        name: "UUID Contact",
+        role_title: "Business Development",
+        email: "contact@example.com",
+        phone: "+86 138 0000 0000",
+        is_primary: true
+      }
+    ];
+    snapshot.mediaState.publisherAdSlots = [
+      {
+        id: publisherAdSlotId,
+        publisher_id: publisherId,
+        slot_name: "Home Feed Native",
+        ad_format: "Native",
+        placement_type: "Feed",
+        floor_price: 12.5,
+        currency: "CNY",
+        daily_requests: 3000000,
+        creative_spec: "1200x627",
+        status: "active"
+      }
+    ];
+    snapshot.mediaState.publisherContractTerms = [
+      {
+        id: publisherContractTermId,
+        publisher_id: publisherId,
+        contract_type: "Framework",
+        billing_model: "CPM",
+        settlement_cycle: "Monthly",
+        payment_terms: "Net 30",
+        revenue_share: 0.65,
+        currency: "CNY"
       }
     ];
     snapshot.salesState.advertisers = [
@@ -522,7 +589,29 @@ describe("workflow repositories", () => {
     expect(result.savedTables).toContain("media_ecosystem_outreach_activities");
     expect(result.savedTables).toContain("trusted_supply_candidates");
     expect(fakeSupabase.writes.publishers).toEqual([
-      expect.objectContaining({ id: publisherId, name: "UUID Publisher" })
+      expect.objectContaining({
+        id: publisherId,
+        name: "UUID Publisher",
+        legal_entity: "UUID Publisher Co., Ltd.",
+        metadata: expect.objectContaining({
+          property_identifier: "com.uuid.publisher",
+          monthly_active_users: 1200000
+        })
+      })
+    ]);
+    expect(fakeSupabase.writes.publisher_contacts).toEqual([
+      expect.objectContaining({ id: publisherContactId, publisher_id: publisherId, phone: "+86 138 0000 0000" })
+    ]);
+    expect(fakeSupabase.writes.publisher_ad_slots).toEqual([
+      expect.objectContaining({
+        id: publisherAdSlotId,
+        publisher_id: publisherId,
+        currency: "CNY",
+        metadata: { creative_spec: "1200x627" }
+      })
+    ]);
+    expect(fakeSupabase.writes.publisher_contract_terms).toEqual([
+      expect.objectContaining({ id: publisherContractTermId, publisher_id: publisherId, currency: "CNY" })
     ]);
     expect(fakeSupabase.writes.media_ecosystem_opportunities).toEqual([
       expect.objectContaining({

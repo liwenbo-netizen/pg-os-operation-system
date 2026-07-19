@@ -217,6 +217,7 @@ function mapPublisher(row: Row): Publisher {
   return {
     id: stringValue(row.id),
     name: stringValue(row.name, "Unnamed publisher"),
+    legal_entity: optionalString(row.legal_entity),
     region: optionalString(row.region),
     media_type: optionalString(row.media_type),
     integration_type: optionalString(row.integration_type),
@@ -225,7 +226,8 @@ function mapPublisher(row: Row): Publisher {
     sales_scale_status: stringValue(row.sales_scale_status, "not_allowed") as Publisher["sales_scale_status"],
     risk_level: stringValue(row.risk_level, "medium") as Publisher["risk_level"],
     daily_active_users: optionalNumber(row.daily_active_users),
-    daily_requests: optionalNumber(row.daily_requests)
+    daily_requests: optionalNumber(row.daily_requests),
+    metadata: objectValue(row.metadata) as Publisher["metadata"]
   };
 }
 
@@ -236,6 +238,7 @@ function mapPublisherContact(row: Row): PublisherContact {
     name: stringValue(row.name, "Unnamed contact"),
     role_title: stringValue(row.role_title),
     email: optionalString(row.email),
+    phone: optionalString(row.phone),
     is_primary: booleanValue(row.is_primary)
   };
 }
@@ -248,7 +251,9 @@ function mapPublisherAdSlot(row: Row): PublisherAdSlot {
     ad_format: stringValue(row.ad_format),
     placement_type: stringValue(row.placement_type),
     floor_price: optionalNumber(row.floor_price),
+    currency: stringValue(row.currency, "CNY"),
     daily_requests: optionalNumber(row.daily_requests),
+    creative_spec: optionalString(objectValue(row.metadata).creative_spec),
     status: stringValue(row.status, "active") === "paused" ? "paused" : "active"
   };
 }
@@ -261,7 +266,8 @@ function mapPublisherContractTerm(row: Row): PublisherContractTerm {
     billing_model: stringValue(row.billing_model),
     settlement_cycle: stringValue(row.settlement_cycle),
     payment_terms: stringValue(row.payment_terms),
-    revenue_share: optionalNumber(row.revenue_share)
+    revenue_share: optionalNumber(row.revenue_share),
+    currency: stringValue(row.currency, "CNY")
   };
 }
 
@@ -718,6 +724,7 @@ function toPublisherRow(publisher: Publisher): Row {
   return {
     id: publisher.id,
     name: publisher.name,
+    legal_entity: publisher.legal_entity,
     region: publisher.region,
     media_type: publisher.media_type,
     integration_type: publisher.integration_type,
@@ -726,7 +733,8 @@ function toPublisherRow(publisher: Publisher): Row {
     sales_scale_status: publisher.sales_scale_status,
     risk_level: publisher.risk_level,
     daily_active_users: publisher.daily_active_users,
-    daily_requests: publisher.daily_requests
+    daily_requests: publisher.daily_requests,
+    metadata: publisher.metadata ?? {}
   };
 }
 
@@ -1083,6 +1091,7 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           name: contact.name,
           role_title: contact.role_title,
           email: contact.email,
+          phone: contact.phone,
           is_primary: contact.is_primary
         })),
         uuidFields: ["publisher_id"]
@@ -1096,7 +1105,9 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           ad_format: slot.ad_format,
           placement_type: slot.placement_type,
           floor_price: slot.floor_price,
+          currency: slot.currency ?? "CNY",
           daily_requests: slot.daily_requests,
+          metadata: { creative_spec: slot.creative_spec },
           status: slot.status
         })),
         uuidFields: ["publisher_id"]
@@ -1110,7 +1121,8 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           billing_model: term.billing_model,
           settlement_cycle: term.settlement_cycle,
           payment_terms: term.payment_terms,
-          revenue_share: term.revenue_share
+          revenue_share: term.revenue_share,
+          currency: term.currency ?? "CNY"
         })),
         uuidFields: ["publisher_id"]
       },

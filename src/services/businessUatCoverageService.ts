@@ -22,7 +22,7 @@ export type BusinessUatCoverageSummary = {
 export const coreBusinessDomains: CoreBusinessDomain[] = ["Media", "Sales", "Finance", "Contract"];
 
 const minimumBusinessActions: Record<CoreBusinessDomain, string[]> = {
-  Media: ["New publisher", "Add ad slot", "Add commercial terms"],
+  Media: ["Create publisher onboarding package", "Add ad slot", "Add commercial terms"],
   Sales: ["Create advertiser", "Create opportunity", "Validate media"],
   Finance: ["Complete reconciliation", "Confirm settlement", "Issue invoice"],
   Contract: ["Request finance review", "Approve legal review", "Mark signed"]

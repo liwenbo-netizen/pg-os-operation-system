@@ -97,18 +97,21 @@ export const productionUatScripts: UatScript[] = [
     businessDomain: "Media",
     roleCode: "media_manager",
     title: "Media Manager publisher onboarding closed loop",
-    scope: "Publisher 360 create flow, ad slot and terms data quality, repository save, business audit coverage.",
+    scope: "Publisher onboarding wizard, media property identity, traffic evidence, inventory, contact, terms, repository save, and audit coverage.",
     loginAccount: "media_manager@poly-gamma.com",
     targetRoute: "/media/manager-workbench",
-    objective: "Confirm Media Manager can create a publisher, enrich operational readiness data, and produce traceable Media audit evidence.",
-    auditEvents: ["publisher.create", "publisher_ad_slot.create", "publisher_contract_term.create"],
+    objective: "Confirm Media Manager can create a commercially usable publisher onboarding package and produce traceable Media audit evidence.",
+    auditEvents: ["publisher.onboarding.create", "publisher.create", "publisher_contact.create", "publisher_ad_slot.create", "publisher_contract_term.create"],
     businessActions: [
       {
         domain: "Media",
-        action: "New publisher",
+        action: "Create publisher onboarding package",
         route: "/media/manager-workbench",
-        expectedAuditEvent: "publisher.create",
-        dataQualityChecks: ["Publisher has name, region, media type, integration type, and integration project."]
+        expectedAuditEvent: "publisher.onboarding.create",
+        dataQualityChecks: [
+          "Publisher has legal entity, media property name, package/bundle/domain identifier, integration type, DAU, daily requests, traffic date, and traffic source.",
+          "Primary contact, first ad slot, initial commercial terms, and integration project are created in the same onboarding package."
+        ]
       },
       {
         domain: "Media",
@@ -127,14 +130,14 @@ export const productionUatScripts: UatScript[] = [
     ],
     dataQualityChecks: [
       "Publisher onboarding does not leave integration_projects RLS warnings.",
-      "Created publisher can be selected in Publisher 360 without losing ad slot or terms context.",
+      "Created publisher opens in Publisher 360 without losing asset identity, traffic, contact, ad slot, or terms context.",
       "Audit Events contains Media owner role and publisher object id for each write."
     ],
     evidence: [
       "Publisher count increases",
-      "Ad slot and commercial terms are visible on Publisher 360",
+      "Asset identifier, traffic evidence, contact, ad slot, and commercial terms are visible on Publisher 360",
       "Supabase warning count remains zero or actionable",
-      "publisher.create appears in audit events"
+      "publisher.onboarding.create and child record writes appear in audit events"
     ],
     steps: [
       {
@@ -144,17 +147,17 @@ export const productionUatScripts: UatScript[] = [
       },
       {
         id: "media-new-publisher",
-        action: "Open Publisher 360 and click New publisher.",
-        businessAction: "New publisher",
-        dataQualityCheck: "Publisher row includes profile fields and integration project metadata.",
-        expectedResult: "A new publisher row is created and onboarding action feedback appears."
+        action: "Open Media Manager Workbench, click New publisher, and complete all four onboarding steps.",
+        businessAction: "Create publisher onboarding package",
+        dataQualityCheck: "Required identity, traffic, inventory, contact, commercial, and integration fields contain real operating values.",
+        expectedResult: "The onboarding package is created and the new publisher opens in Publisher 360."
       },
       {
         id: "media-add-slot-terms",
-        action: "Open Publisher 360, click Add slot, then click Add terms.",
-        businessAction: "Add ad slot and Add commercial terms",
-        dataQualityCheck: "Ad slot and terms sections both show newly created records with no blank required fields.",
-        expectedResult: "Publisher 360 shows ad slot, commercial terms, and readiness context for the selected publisher."
+        action: "Review the new Publisher 360 identity, traffic, contact, ad slot, commercial terms, and integration sections.",
+        businessAction: "Verify publisher onboarding package",
+        dataQualityCheck: "Package or domain identifier, DAU, daily requests, ad format, placement, contact, billing model, and payment terms are visible.",
+        expectedResult: "Publisher 360 shows the complete onboarding context and advances profile foundation readiness."
       },
       {
         id: "media-warning-check",

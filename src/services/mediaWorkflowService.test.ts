@@ -5,6 +5,91 @@ import { createInitialMediaWorkflowState, mediaWorkflowService } from "./mediaWo
 const user = authService.createMockUser.bind(authService);
 
 describe("MediaWorkflowService P0 mainline", () => {
+  it("creates a complete commercial publisher onboarding package", () => {
+    const state = createInitialMediaWorkflowState();
+    const result = mediaWorkflowService.createPublisherOnboarding(state, user("media_manager"), {
+      publisher: {
+        name: "Example Media Group",
+        legalEntity: "Example Media Technology Co., Ltd.",
+        region: "CN",
+        mediaType: "App",
+        propertyName: "Example Video",
+        propertyIdentifierType: "android_package",
+        propertyIdentifier: "com.example.video",
+        integrationType: "SDK",
+        dailyActiveUsers: 1200000,
+        monthlyActiveUsers: 8000000,
+        dailyRequests: 9000000,
+        trafficDataAsOf: "2026-07-19",
+        trafficSource: "first_party_analytics"
+      },
+      contact: {
+        name: "Li Ming",
+        roleTitle: "Business Development",
+        email: "li.ming@example.com",
+        phone: "+86 138 0000 0000"
+      },
+      adSlot: {
+        slotName: "Home Feed Native",
+        adFormat: "Native",
+        placementType: "Feed",
+        creativeSpec: "1200x627",
+        dailyRequests: 3000000,
+        floorPrice: 12.5,
+        currency: "CNY"
+      },
+      contractTerm: {
+        contractType: "Framework",
+        billingModel: "CPM",
+        settlementCycle: "Monthly",
+        paymentTerms: "Net 30",
+        revenueShare: 0.65,
+        currency: "CNY"
+      }
+    });
+
+    expect(result.guard).toMatchObject({ allowed: true, reason_code: "PUBLISHER_ONBOARDING_CREATED" });
+    expect(result.publisherId).toBeDefined();
+    expect(result.state.publishers).toHaveLength(state.publishers.length + 1);
+    expect(result.state.publisherContacts).toHaveLength(state.publisherContacts.length + 1);
+    expect(result.state.publisherAdSlots).toHaveLength(state.publisherAdSlots.length + 1);
+    expect(result.state.publisherContractTerms).toHaveLength(state.publisherContractTerms.length + 1);
+    expect(result.state.integrationProjects).toHaveLength(state.integrationProjects.length + 1);
+    expect(result.state.publishers[0]).toMatchObject({
+      name: "Example Media Group",
+      legal_entity: "Example Media Technology Co., Ltd.",
+      daily_active_users: 1200000,
+      daily_requests: 9000000,
+      metadata: {
+        property_identifier: "com.example.video",
+        monthly_active_users: 8000000,
+        traffic_data_as_of: "2026-07-19"
+      }
+    });
+    expect(result.state.auditEvents.slice(0, 5).map((event) => event.action)).toEqual([
+      "publisher.onboarding.create",
+      "publisher_contract_term.create",
+      "publisher_ad_slot.create",
+      "publisher_contact.create",
+      "publisher.create"
+    ]);
+    expect(result.state.businessEvents.map((event) => event.eventCode)).toContain("publisher.onboarding_created");
+  });
+
+  it("rejects incomplete onboarding before creating partial records", () => {
+    const state = createInitialMediaWorkflowState();
+    const result = mediaWorkflowService.createPublisherOnboarding(state, user("media_manager"), {
+      publisher: { name: "", region: "CN", mediaType: "App", integrationType: "SDK" },
+      contact: { name: "", roleTitle: "" },
+      adSlot: { slotName: "", adFormat: "Native", placementType: "Feed" },
+      contractTerm: { contractType: "Framework", billingModel: "CPM", settlementCycle: "Monthly", paymentTerms: "" }
+    });
+
+    expect(result.guard).toMatchObject({ allowed: false, reason_code: "PUBLISHER_ONBOARDING_INVALID" });
+    expect(result.state.publishers).toHaveLength(state.publishers.length);
+    expect(result.state.publisherAdSlots).toHaveLength(state.publisherAdSlots.length);
+  });
+
   it("creates publisher only for media roles with publisher.manage", () => {
     const state = createInitialMediaWorkflowState();
     const blocked = mediaWorkflowService.createPublisher(state, user("audit_viewer"), {

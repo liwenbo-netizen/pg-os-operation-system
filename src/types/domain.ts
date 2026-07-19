@@ -41,6 +41,7 @@ export type ObjectType =
 export type Publisher = {
   id: EntityId;
   name: string;
+  legal_entity?: string;
   region?: string;
   media_type?: string;
   integration_type?: string;
@@ -50,6 +51,14 @@ export type Publisher = {
   risk_level: Severity;
   daily_active_users?: number;
   daily_requests?: number;
+  metadata?: {
+    property_name?: string;
+    property_identifier_type?: string;
+    property_identifier?: string;
+    monthly_active_users?: number;
+    traffic_data_as_of?: string;
+    traffic_source?: string;
+  };
 };
 
 export type PublisherContact = {
@@ -58,6 +67,7 @@ export type PublisherContact = {
   name: string;
   role_title: string;
   email?: string;
+  phone?: string;
   is_primary: boolean;
 };
 
@@ -68,7 +78,9 @@ export type PublisherAdSlot = {
   ad_format: string;
   placement_type: string;
   floor_price?: number;
+  currency?: string;
   daily_requests?: number;
+  creative_spec?: string;
   status: "active" | "paused";
 };
 
@@ -80,6 +92,7 @@ export type PublisherContractTerm = {
   settlement_cycle: string;
   payment_terms: string;
   revenue_share?: number;
+  currency?: string;
 };
 
 export type IntegrationProject = {

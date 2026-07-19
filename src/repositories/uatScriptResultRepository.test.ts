@@ -220,8 +220,8 @@ describe("uatScriptResultRepository", () => {
           step_id: "media-new-publisher",
           metadata: expect.objectContaining({
             businessDomain: "Media",
-            stepBusinessAction: "New publisher",
-            dataQualityCheck: expect.stringContaining("Publisher row")
+            stepBusinessAction: "Create publisher onboarding package",
+            dataQualityCheck: expect.stringContaining("identity, traffic, inventory")
           })
         })
       ])
