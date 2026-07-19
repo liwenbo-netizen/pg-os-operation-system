@@ -1,4 +1,5 @@
 import type { PublisherOnboardingInput } from "../../services/mediaWorkflowService";
+import { formatUtcPlus8Date } from "../../lib/time";
 
 export type PublisherOnboardingStep = "identity" | "traffic" | "inventory" | "commercial";
 
@@ -39,7 +40,7 @@ export type PublisherOnboardingErrors = Partial<Record<PublisherOnboardingField,
 
 export const publisherOnboardingSteps: PublisherOnboardingStep[] = ["identity", "traffic", "inventory", "commercial"];
 
-export function createPublisherOnboardingDraft(today = new Date().toISOString().slice(0, 10)): PublisherOnboardingDraft {
+export function createPublisherOnboardingDraft(today = formatUtcPlus8Date()): PublisherOnboardingDraft {
   return {
     name: "",
     legalEntity: "",

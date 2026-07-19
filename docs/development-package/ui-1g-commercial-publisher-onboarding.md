@@ -43,3 +43,10 @@ Audit coverage includes the underlying record events plus `publisher.onboarding.
 - Supabase repository tests cover all new mapped fields.
 - Business audit and UAT coverage tests include the new onboarding action.
 - Desktop and 390 px mobile browser checks cover layout, validation, and step navigation without submitting data.
+
+## Production live UAT
+
+- Media Manager created `PGOS UAT Publisher 226568` in production with a complete identity, traffic, inventory, contact, commercial, and integration package.
+- Publisher count increased from 20 to 21 and repository health remained `Supabase synced` with zero warnings.
+- CEO Audit Events showed the main onboarding event, all child write events, and matching business events for publisher object `c09b8bca-d733-4225-bb4f-bedc0b12d82b`.
+- The UAT exposed a UTC date-boundary issue in the traffic evidence default. The wizard now derives its default calendar date in UTC+8 rather than slicing a UTC ISO timestamp.

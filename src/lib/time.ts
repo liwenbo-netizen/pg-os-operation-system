@@ -24,3 +24,15 @@ export function formatUtcPlus8DateTime(value: string | number | Date | null | un
     "UTC+8"
   ].join(" ");
 }
+
+export function formatUtcPlus8Date(value: string | number | Date = new Date()) {
+  const sourceDate = value instanceof Date ? value : new Date(value);
+  const timestamp = sourceDate.getTime();
+
+  if (Number.isNaN(timestamp)) {
+    return "";
+  }
+
+  const utcPlus8Date = new Date(timestamp + UTC_PLUS_8_OFFSET_MS);
+  return `${utcPlus8Date.getUTCFullYear()}-${pad(utcPlus8Date.getUTCMonth() + 1)}-${pad(utcPlus8Date.getUTCDate())}`;
+}

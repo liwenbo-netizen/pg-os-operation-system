@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatUtcPlus8DateTime } from "./time";
+import { formatUtcPlus8Date, formatUtcPlus8DateTime } from "./time";
 
 describe("formatUtcPlus8DateTime", () => {
   it("renders UTC timestamps as fixed UTC+8 display time", () => {
@@ -14,5 +14,10 @@ describe("formatUtcPlus8DateTime", () => {
   it("returns a neutral placeholder for missing or invalid values", () => {
     expect(formatUtcPlus8DateTime(undefined)).toBe("-");
     expect(formatUtcPlus8DateTime("not-a-date")).toBe("-");
+  });
+
+  it("returns the UTC+8 calendar date across a UTC day boundary", () => {
+    expect(formatUtcPlus8Date("2026-07-19T17:00:00.000Z")).toBe("2026-07-20");
+    expect(formatUtcPlus8Date("not-a-date")).toBe("");
   });
 });
