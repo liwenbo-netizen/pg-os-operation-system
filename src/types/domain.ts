@@ -51,6 +51,7 @@ export type Publisher = {
   risk_level: Severity;
   daily_active_users?: number;
   daily_requests?: number;
+  updated_at?: string;
   metadata?: {
     property_name?: string;
     property_identifier_type?: string;

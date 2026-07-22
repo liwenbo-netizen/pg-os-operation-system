@@ -90,6 +90,13 @@ import {
   createPublisherOnboardingDraftFromSnapshot,
   type PublisherOnboardingDraft
 } from "./publisherOnboardingModel";
+import {
+  filterAndSortPublisherQueue,
+  publisherQueueStatusOptions,
+  type PublisherQueueSort,
+  type PublisherQueueStatusFilter
+} from "./publisherQueueModel";
+import { formatUtcPlus8Date } from "../../lib/time";
 
 type MediaExperiencePageProps = {
   route: AppRoute;
@@ -1855,33 +1862,104 @@ function PublisherSelector({
   onOpen360: () => void;
 }) {
   const { locale, t } = useLocale();
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<PublisherQueueStatusFilter>("all");
+  const [sort, setSort] = useState<PublisherQueueSort>("recent");
+  const visiblePublishers = useMemo(
+    () => filterAndSortPublisherQueue(publishers, { query, status: statusFilter, sort }),
+    [publishers, query, sort, statusFilter]
+  );
+  const hasFilters = query.trim().length > 0 || statusFilter !== "all";
 
   return (
     <aside className="space-y-3">
       <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-card">
-        <p className="text-sm font-semibold text-slate-900">{t("media.publisherQueue")}</p>
-        <p className="mt-1 text-xs leading-5 text-slate-500">{t("media.publisherQueueDescription")}</p>
-      </div>
-      {publishers.map((publisher) => (
-        <button
-          key={publisher.id}
-          className={`w-full rounded-lg border p-4 text-left shadow-card transition ${
-            selectedPublisherId === publisher.id
-              ? "border-blue-300 bg-blue-50"
-              : "border-slate-200 bg-white hover:border-slate-300"
-          }`}
-          type="button"
-          onClick={() => onSelect(publisher.id)}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-slate-900">{publisher.name}</p>
-            <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{getPublisherStatusLabel(publisher.sales_scale_status, locale)}</StatusBadge>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">{t("media.publisherQueue")}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">{t("media.publisherQueueDescription")}</p>
           </div>
-          <p className="mt-2 text-xs text-slate-500">
-            {publisher.media_type ?? "Media"} / {publisher.integration_type ?? "Integration"}
-          </p>
-        </button>
-      ))}
+          <StatusBadge tone="neutral">{t("media.publisherQueueCount", { visible: visiblePublishers.length, total: publishers.length })}</StatusBadge>
+        </div>
+        <label className="relative mt-4 block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <span className="sr-only">{t("media.publisherSearch")}</span>
+          <input
+            className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            type="search"
+            value={query}
+            placeholder={t("media.publisherSearchPlaceholder")}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <label>
+            <span className="sr-only">{t("media.publisherStatusFilter")}</span>
+            <select
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as PublisherQueueStatusFilter)}
+            >
+              {publisherQueueStatusOptions.map((status) => (
+                <option key={status} value={status}>
+                  {status === "all" ? t("media.publisherStatusAll") : getPublisherStatusLabel(status, locale)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span className="sr-only">{t("media.publisherSort")}</span>
+            <select
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              value={sort}
+              onChange={(event) => setSort(event.target.value as PublisherQueueSort)}
+            >
+              <option value="recent">{t("media.publisherSortRecent")}</option>
+              <option value="name">{t("media.publisherSortName")}</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div className="max-h-[min(62vh,680px)] space-y-3 overflow-y-auto pr-1">
+        {visiblePublishers.map((publisher) => (
+          <button
+            key={publisher.id}
+            className={`w-full rounded-lg border p-4 text-left shadow-card transition ${
+              selectedPublisherId === publisher.id
+                ? "border-blue-300 bg-blue-50"
+                : "border-slate-200 bg-white hover:border-slate-300"
+            }`}
+            type="button"
+            onClick={() => onSelect(publisher.id)}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <p className="min-w-0 break-words text-sm font-semibold text-slate-900">{publisher.name}</p>
+              <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{getPublisherStatusLabel(publisher.sales_scale_status, locale)}</StatusBadge>
+            </div>
+            <p className="mt-2 truncate text-xs text-slate-500">
+              {publisher.metadata?.property_identifier ?? publisher.metadata?.property_name ?? `${publisher.media_type ?? "Media"} / ${publisher.integration_type ?? "Integration"}`}
+            </p>
+            {publisher.updated_at ? <p className="mt-1 text-xs text-slate-400">{t("media.publisherUpdated", { date: formatUtcPlus8Date(publisher.updated_at) })}</p> : null}
+          </button>
+        ))}
+        {visiblePublishers.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center">
+            <p className="text-sm font-semibold text-slate-700">{t("media.publisherNoMatches")}</p>
+            {hasFilters ? (
+              <button
+                className="mt-3 text-sm font-semibold text-blue-700 hover:text-blue-800"
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  setStatusFilter("all");
+                }}
+              >
+                {t("media.clearFilters")}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
       <button
         className="h-10 w-full rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
         type="button"

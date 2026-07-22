@@ -227,6 +227,7 @@ function mapPublisher(row: Row): Publisher {
     risk_level: stringValue(row.risk_level, "medium") as Publisher["risk_level"],
     daily_active_users: optionalNumber(row.daily_active_users),
     daily_requests: optionalNumber(row.daily_requests),
+    updated_at: optionalString(row.updated_at),
     metadata: objectValue(row.metadata) as Publisher["metadata"]
   };
 }
