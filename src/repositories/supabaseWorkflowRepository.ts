@@ -25,6 +25,7 @@ import type {
   PublisherAdSlot,
   PublisherContact,
   PublisherContractTerm,
+  PublisherTrafficEvidenceRecord,
   Settlement,
   SopCard,
   TrustedSupplyCandidate,
@@ -77,6 +78,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 
 const TABLES_TO_LOAD = [
   "publishers",
+  "publisher_traffic_evidence_history",
   "publisher_contacts",
   "publisher_ad_slots",
   "publisher_contract_terms",
@@ -110,6 +112,7 @@ const AUDIT_FIELD_CONFIG: Record<string, AuditFieldConfig> = {
   module_business_events: { ownerUserId: true },
   work_items: { ownerUserId: true, createdBy: true, updatedBy: true },
   publishers: { ownerUserId: true, createdBy: true, updatedBy: true },
+  publisher_traffic_evidence_history: { actorUserId: true },
   integration_projects: { ownerUserId: true },
   commercial_tests: { ownerUserId: true },
   media_trust_profiles: { ownerUserId: true },
@@ -229,6 +232,25 @@ function mapPublisher(row: Row): Publisher {
     daily_requests: optionalNumber(row.daily_requests),
     updated_at: optionalString(row.updated_at),
     metadata: objectValue(row.metadata) as Publisher["metadata"]
+  };
+}
+
+function mapPublisherTrafficEvidenceRecord(row: Row): PublisherTrafficEvidenceRecord {
+  return {
+    id: stringValue(row.id),
+    publisher_id: stringValue(row.publisher_id),
+    daily_active_users: optionalNumber(row.daily_active_users),
+    monthly_active_users: optionalNumber(row.monthly_active_users),
+    daily_requests: optionalNumber(row.daily_requests),
+    traffic_data_as_of: stringValue(row.traffic_data_as_of),
+    traffic_source: stringValue(row.traffic_source),
+    recorded_by_user_id: optionalString(row.actor_user_id),
+    recorded_by_role: optionalString(row.recorded_by_role) as PublisherTrafficEvidenceRecord["recorded_by_role"],
+    recorded_via: stringValue(
+      row.recorded_via,
+      "migration_backfill"
+    ) as PublisherTrafficEvidenceRecord["recorded_via"],
+    created_at: stringValue(row.created_at)
   };
 }
 
@@ -979,6 +1001,11 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
       mediaState: {
         ...fallback.mediaState,
         publishers: rowsOrFallback(loadedRows.publishers, fallback.mediaState.publishers, mapPublisher),
+        publisherTrafficEvidenceHistory: rowsOrFallback(
+          loadedRows.publisher_traffic_evidence_history,
+          fallback.mediaState.publisherTrafficEvidenceHistory,
+          mapPublisherTrafficEvidenceRecord
+        ),
         publisherContacts: rowsOrFallback(loadedRows.publisher_contacts, fallback.mediaState.publisherContacts, mapPublisherContact),
         publisherAdSlots: rowsOrFallback(loadedRows.publisher_ad_slots, fallback.mediaState.publisherAdSlots, mapPublisherAdSlot),
         publisherContractTerms: rowsOrFallback(
@@ -1083,6 +1110,23 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
         table: "publishers",
         rows: snapshot.mediaState.publishers.map(toPublisherRow),
         uuidFields: []
+      },
+      {
+        table: "publisher_traffic_evidence_history",
+        rows: snapshot.mediaState.publisherTrafficEvidenceHistory.map((record) => ({
+          id: record.id,
+          publisher_id: record.publisher_id,
+          daily_active_users: record.daily_active_users,
+          monthly_active_users: record.monthly_active_users,
+          daily_requests: record.daily_requests,
+          traffic_data_as_of: record.traffic_data_as_of,
+          traffic_source: record.traffic_source,
+          actor_user_id: optionalUuid(record.recorded_by_user_id),
+          recorded_by_role: record.recorded_by_role,
+          recorded_via: record.recorded_via,
+          created_at: record.created_at
+        })),
+        uuidFields: ["publisher_id", "actor_user_id"]
       },
       {
         table: "publisher_contacts",

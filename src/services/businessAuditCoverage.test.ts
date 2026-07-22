@@ -15,6 +15,11 @@ describe("businessAuditCoverage", () => {
         expect.objectContaining({ action: "integration.blocker.resolve", module: "Media", criticality: "P1" }),
         expect.objectContaining({ action: "publisher.create", module: "Media", criticality: "P0" }),
         expect.objectContaining({ action: "publisher.onboarding.update", module: "Media", criticality: "P0" }),
+        expect.objectContaining({
+          action: "publisher.traffic_evidence.record",
+          module: "Media",
+          criticality: "P1"
+        }),
         expect.objectContaining({ action: "publisher_ad_slot.update", module: "Media", criticality: "P1" }),
         expect.objectContaining({ action: "trusted_supply.evaluate", module: "Media", criticality: "P0" }),
         expect.objectContaining({ action: "trusted_supply.pool.confirm", module: "Media", criticality: "P0" }),

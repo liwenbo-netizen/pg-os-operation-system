@@ -41,6 +41,13 @@ export const CORE_BUSINESS_AUDIT_ACTIONS: CoreBusinessAuditAction[] = [
     criticality: "P0"
   },
   {
+    action: "publisher.traffic_evidence.record",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Publisher Traffic Evidence History",
+    criticality: "P1"
+  },
+  {
     action: "publisher_contact.update",
     objectType: "publisher",
     module: "Media",

@@ -96,6 +96,20 @@ export type PublisherContractTerm = {
   currency?: string;
 };
 
+export type PublisherTrafficEvidenceRecord = {
+  id: EntityId;
+  publisher_id: EntityId;
+  daily_active_users?: number;
+  monthly_active_users?: number;
+  daily_requests?: number;
+  traffic_data_as_of: string;
+  traffic_source: string;
+  recorded_by_user_id?: UserId;
+  recorded_by_role?: RoleCode;
+  recorded_via: "publisher_onboarding_created" | "publisher_profile_updated" | "migration_backfill";
+  created_at: string;
+};
+
 export type IntegrationProject = {
   id: EntityId;
   publisher_id: EntityId;
@@ -589,6 +603,7 @@ export type ModuleBusinessEvent = {
 
 export type MediaWorkflowState = {
   publishers: Publisher[];
+  publisherTrafficEvidenceHistory: PublisherTrafficEvidenceRecord[];
   publisherContacts: PublisherContact[];
   publisherAdSlots: PublisherAdSlot[];
   publisherContractTerms: PublisherContractTerm[];

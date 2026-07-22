@@ -12,7 +12,8 @@ import type {
   Publisher,
   PublisherAdSlot,
   PublisherContact,
-  PublisherContractTerm
+  PublisherContractTerm,
+  PublisherTrafficEvidenceRecord
 } from "../types/domain";
 import { auditService } from "./auditService";
 import { fixtureRepository } from "./fixtures";
@@ -37,6 +38,14 @@ export type PublisherOnboardingChangeArea =
   | "ad_slot"
   | "contract_term"
   | "integration";
+
+const publisherTrafficEvidenceFields = new Set([
+  "publisher.daily_active_users",
+  "publisher.monthly_active_users",
+  "publisher.daily_requests",
+  "publisher.traffic_data_as_of",
+  "publisher.traffic_source"
+]);
 
 type PublisherOnboardingChange = {
   area: PublisherOnboardingChangeArea;
@@ -122,6 +131,7 @@ export const integrationEvidenceDefinitions: Array<{
 export function createInitialMediaWorkflowState(): MediaWorkflowState {
   return {
     publishers: fixtureRepository.publishers.map((publisher) => ({ ...publisher })),
+    publisherTrafficEvidenceHistory: [],
     publisherContacts: fixtureRepository.publisherContacts.map((contact) => ({ ...contact })),
     publisherAdSlots: fixtureRepository.publisherAdSlots.map((slot) => ({ ...slot })),
     publisherContractTerms: fixtureRepository.publisherContractTerms.map((term) => ({ ...term })),
@@ -214,6 +224,44 @@ function getGuardService(state: MediaWorkflowState) {
 
 function findPublisher(state: MediaWorkflowState, publisherId: EntityId) {
   return state.publishers.find((publisher) => publisher.id === publisherId);
+}
+
+function createPublisherTrafficEvidenceRecord(
+  publisherId: EntityId,
+  user: BusinessUser,
+  input: CreatePublisherInput,
+  recordedVia: PublisherTrafficEvidenceRecord["recorded_via"]
+): PublisherTrafficEvidenceRecord | undefined {
+  if (!input.trafficDataAsOf?.trim() || !input.trafficSource?.trim()) return undefined;
+  if (![input.dailyActiveUsers, input.monthlyActiveUsers, input.dailyRequests].some((value) => (value ?? 0) > 0)) {
+    return undefined;
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    publisher_id: publisherId,
+    daily_active_users: input.dailyActiveUsers,
+    monthly_active_users: input.monthlyActiveUsers,
+    daily_requests: input.dailyRequests,
+    traffic_data_as_of: input.trafficDataAsOf,
+    traffic_source: input.trafficSource,
+    recorded_by_user_id: user.id,
+    recorded_by_role: user.activeRole,
+    recorded_via: recordedVia,
+    created_at: new Date().toISOString()
+  };
+}
+
+function trafficEvidenceEventPayload(record: PublisherTrafficEvidenceRecord) {
+  return {
+    evidenceRecordId: record.id,
+    trafficDataAsOf: record.traffic_data_as_of,
+    trafficSource: record.traffic_source,
+    dailyActiveUsers: record.daily_active_users,
+    monthlyActiveUsers: record.monthly_active_users,
+    dailyRequests: record.daily_requests,
+    recordedVia: record.recorded_via
+  };
 }
 
 function normalizePublisherName(value?: string) {
@@ -492,6 +540,9 @@ export class MediaWorkflowService {
   getPublisherSnapshot(state: MediaWorkflowState, publisherId: EntityId) {
     return {
       publisher: findPublisher(state, publisherId),
+      trafficEvidenceHistory: state.publisherTrafficEvidenceHistory
+        .filter((record) => record.publisher_id === publisherId)
+        .sort((left, right) => right.created_at.localeCompare(left.created_at)),
       contacts: state.publisherContacts.filter((contact) => contact.publisher_id === publisherId),
       adSlots: state.publisherAdSlots.filter((slot) => slot.publisher_id === publisherId),
       contractTerms: state.publisherContractTerms.filter((term) => term.publisher_id === publisherId),
@@ -558,7 +609,11 @@ export class MediaWorkflowService {
   }
 
   createPublisher(state: MediaWorkflowState, user: BusinessUser, input: CreatePublisherInput): WorkflowResult {
-    if (!rlsService.canWriteTable(user, "publishers") || !rbacService.hasCapability(user, "publisher.manage")) {
+    if (
+      !rlsService.canWriteTable(user, "publishers") ||
+      !rlsService.canWriteTable(user, "publisher_traffic_evidence_history") ||
+      !rbacService.hasCapability(user, "publisher.manage")
+    ) {
       const guard = createBlocked("Current role cannot create publishers.", "PUBLISHER_CREATE_FORBIDDEN", "media_manager");
       return { state: appendEvents(state, user, "publisher.create", undefined, guard), guard };
     }
@@ -602,12 +657,33 @@ export class MediaWorkflowService {
       evidence: [],
       next_action: "Start technical execution and record connection configuration evidence."
     };
-    const nextState: MediaWorkflowState = {
+    const trafficEvidence = createPublisherTrafficEvidenceRecord(
+      id,
+      user,
+      input,
+      "publisher_onboarding_created"
+    );
+    let nextState: MediaWorkflowState = {
       ...state,
       publishers: [publisher, ...state.publishers],
+      publisherTrafficEvidenceHistory: trafficEvidence
+        ? [trafficEvidence, ...state.publisherTrafficEvidenceHistory]
+        : state.publisherTrafficEvidenceHistory,
       integrationProjects: [integrationProject, ...state.integrationProjects]
     };
     const guard = createAllowed("Publisher created and integration project initialized.", "PUBLISHER_CREATED");
+    if (trafficEvidence) {
+      const evidencePayload = trafficEvidenceEventPayload(trafficEvidence);
+      nextState = appendEvents(
+        nextState,
+        user,
+        "publisher.traffic_evidence.record",
+        id,
+        createAllowed("Publisher traffic evidence recorded.", "PUBLISHER_TRAFFIC_EVIDENCE_RECORDED"),
+        createBusinessEvent("publisher.traffic_evidence_recorded", id, user.activeRole, evidencePayload),
+        evidencePayload
+      );
+    }
     const businessEvent = createBusinessEvent("publisher.created", id, user.activeRole, {
       integrationType: input.integrationType,
       mediaType: input.mediaType,
@@ -619,6 +695,7 @@ export class MediaWorkflowService {
       state: eventState,
       guard,
       auditEvent: eventState.auditEvents[0],
+      auditEvents: eventState.auditEvents.slice(0, trafficEvidence ? 2 : 1),
       businessEvent
     };
   }
@@ -758,6 +835,7 @@ export class MediaWorkflowService {
   ): WorkflowResult {
     const canCreateAllRecords =
       rlsService.canWriteTable(user, "publishers") &&
+      rlsService.canWriteTable(user, "publisher_traffic_evidence_history") &&
       rlsService.canWriteTable(user, "publisher_contacts") &&
       rlsService.canWriteTable(user, "publisher_ad_slots") &&
       rlsService.canWriteTable(user, "publisher_contract_terms") &&
@@ -849,6 +927,7 @@ export class MediaWorkflowService {
 
     const canUpdateAllRecords =
       rlsService.canWriteTable(user, "publishers") &&
+      rlsService.canWriteTable(user, "publisher_traffic_evidence_history") &&
       rlsService.canWriteTable(user, "publisher_contacts") &&
       rlsService.canWriteTable(user, "publisher_ad_slots") &&
       rlsService.canWriteTable(user, "publisher_contract_terms") &&
@@ -911,6 +990,9 @@ export class MediaWorkflowService {
     const termId = currentTerm?.id ?? crypto.randomUUID();
     const projectId = currentProject?.id ?? crypto.randomUUID();
     const changedAreaSet = new Set(changedAreas);
+    const trafficEvidence = changes.some((change) => publisherTrafficEvidenceFields.has(change.field))
+      ? createPublisherTrafficEvidenceRecord(publisherId, user, input.publisher, "publisher_profile_updated")
+      : undefined;
 
     let nextState: MediaWorkflowState = {
       ...state,
@@ -939,6 +1021,9 @@ export class MediaWorkflowService {
               : item
           )
         : state.publishers,
+      publisherTrafficEvidenceHistory: trafficEvidence
+        ? [trafficEvidence, ...state.publisherTrafficEvidenceHistory]
+        : state.publisherTrafficEvidenceHistory,
       publisherContacts: changedAreaSet.has("contact")
         ? currentContact
           ? state.publisherContacts.map((contact) =>
@@ -1093,6 +1178,19 @@ export class MediaWorkflowService {
       );
     }
 
+    if (trafficEvidence) {
+      const evidencePayload = trafficEvidenceEventPayload(trafficEvidence);
+      nextState = appendEvents(
+        nextState,
+        user,
+        "publisher.traffic_evidence.record",
+        publisherId,
+        createAllowed("Publisher traffic evidence recorded.", "PUBLISHER_TRAFFIC_EVIDENCE_RECORDED"),
+        createBusinessEvent("publisher.traffic_evidence_recorded", publisherId, user.activeRole, evidencePayload),
+        evidencePayload
+      );
+    }
+
     const changeMetadata = buildPublisherChangeMetadata(changes);
     const guard = createAllowed(
       `Publisher onboarding package updated: ${changes.length} field${changes.length === 1 ? "" : "s"} across ${changedAreas.length} data area${changedAreas.length === 1 ? "" : "s"}.`,
@@ -1117,7 +1215,7 @@ export class MediaWorkflowService {
       state: eventState,
       guard,
       auditEvent: eventState.auditEvents[0],
-      auditEvents: eventState.auditEvents.slice(0, recordUpdates.length + 1),
+      auditEvents: eventState.auditEvents.slice(0, recordUpdates.length + (trafficEvidence ? 2 : 1)),
       businessEvent,
       publisherId,
       changedFields,

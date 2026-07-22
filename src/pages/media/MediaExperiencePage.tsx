@@ -97,7 +97,7 @@ import {
   type PublisherQueueSort,
   type PublisherQueueStatusFilter
 } from "./publisherQueueModel";
-import { formatUtcPlus8Date } from "../../lib/time";
+import { formatUtcPlus8Date, formatUtcPlus8DateTime } from "../../lib/time";
 
 type MediaExperiencePageProps = {
   route: AppRoute;
@@ -2321,7 +2321,7 @@ function Publisher360({
         </div>
       </article>
 
-      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4">
         <div className="inline-flex w-full rounded-lg border border-slate-200 bg-slate-100 p-1 sm:w-auto" role="tablist">
           <PublisherViewTab
             active={workspaceView === "readiness"}
@@ -2470,6 +2470,56 @@ function Publisher360({
         <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
           <div className="border-b border-slate-200 px-5 py-4">
             <h2 className="text-base font-semibold text-slate-950">{t("media.evidenceHistory")}</h2>
+          </div>
+          <div className="border-b border-slate-200">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-950">{t("media.trafficEvidenceHistory")}</h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  {t("media.itemCount", { count: snapshot.trafficEvidenceHistory.length })}
+                </p>
+              </div>
+            </div>
+            {snapshot.trafficEvidenceHistory.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-[880px] w-full border-collapse text-left text-sm">
+                  <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
+                    <tr>
+                      <th className="px-5 py-3">{t("media.onboardingDataAsOf")}</th>
+                      <th className="px-5 py-3">{t("media.onboardingTrafficSource")}</th>
+                      <th className="px-5 py-3">DAU</th>
+                      <th className="px-5 py-3">MAU</th>
+                      <th className="px-5 py-3">{t("media.dailyRequests")}</th>
+                      <th className="px-5 py-3">{t("media.evidenceRecorded")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {snapshot.trafficEvidenceHistory.map((record, index) => (
+                      <tr key={record.id} className="text-slate-700">
+                        <td className="px-5 py-4 font-medium text-slate-950">
+                          <div className="flex items-center gap-2">
+                            {record.traffic_data_as_of}
+                            {index === 0 ? <StatusBadge tone="success">{t("media.evidenceLatest")}</StatusBadge> : null}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">{record.traffic_source}</td>
+                        <td className="px-5 py-4 tabular-nums">{record.daily_active_users?.toLocaleString() ?? "-"}</td>
+                        <td className="px-5 py-4 tabular-nums">{record.monthly_active_users?.toLocaleString() ?? "-"}</td>
+                        <td className="px-5 py-4 tabular-nums">{record.daily_requests?.toLocaleString() ?? "-"}</td>
+                        <td className="px-5 py-4">
+                          <p>{formatUtcPlus8DateTime(record.created_at)}</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {record.recorded_by_role ? getRoleDisplayName(record.recorded_by_role, locale) : "-"}
+                          </p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="px-5 pb-5 text-sm text-slate-500">{t("media.noDataContinue")}</p>
+            )}
           </div>
           <div className="grid md:grid-cols-2">
             <ReadinessEvidenceList title={t("media.contacts")} items={snapshot.contacts.map((contact) => `${contact.name} / ${contact.role_title}`)} empty={t("media.noDataContinue")} />

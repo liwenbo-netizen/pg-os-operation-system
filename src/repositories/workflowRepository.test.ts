@@ -69,6 +69,8 @@ describe("workflow repositories", () => {
     const trustProfileId = uuid(20);
     const trustHistoryId = uuid(21);
     const supplyPackageId = uuid(22);
+    const trafficEvidenceId = uuid(23);
+    const trafficEvidenceActorId = uuid(24);
 
     const fakeSupabase = new FakeSupabase({
       publishers: [
@@ -92,6 +94,21 @@ describe("workflow repositories", () => {
             traffic_data_as_of: "2026-07-19",
             traffic_source: "first_party_analytics"
           }
+        }
+      ],
+      publisher_traffic_evidence_history: [
+        {
+          id: trafficEvidenceId,
+          publisher_id: publisherId,
+          daily_active_users: 1200,
+          monthly_active_users: 9000,
+          daily_requests: 1000,
+          traffic_data_as_of: "2026-07-19",
+          traffic_source: "first_party_analytics",
+          actor_user_id: trafficEvidenceActorId,
+          recorded_by_role: "media_manager",
+          recorded_via: "publisher_profile_updated",
+          created_at: "2026-07-19T08:00:00.000Z"
         }
       ],
       commercial_tests: [
@@ -370,6 +387,14 @@ describe("workflow repositories", () => {
         monthly_active_users: 9000,
         traffic_data_as_of: "2026-07-19"
       }
+    });
+    expect(result.snapshot.mediaState.publisherTrafficEvidenceHistory[0]).toMatchObject({
+      id: trafficEvidenceId,
+      publisher_id: publisherId,
+      recorded_by_user_id: trafficEvidenceActorId,
+      recorded_by_role: "media_manager",
+      recorded_via: "publisher_profile_updated",
+      traffic_data_as_of: "2026-07-19"
     });
     expect(result.snapshot.mediaState.commercialTests[0]).toMatchObject({ fill_rate: 0.61, spend: 1100 });
     expect(result.snapshot.mediaState.mediaTrustProfiles[0]).toMatchObject({
@@ -813,16 +838,40 @@ describe("workflow repositories", () => {
         traffic_data_as_of: "2026-07-20"
       }
     };
+    snapshot.mediaState.publisherTrafficEvidenceHistory = [
+      {
+        id: uuid(78),
+        publisher_id: publisherId,
+        daily_active_users: 120000,
+        monthly_active_users: 800000,
+        daily_requests: 900000,
+        traffic_data_as_of: "2026-07-20",
+        traffic_source: "first_party_analytics",
+        recorded_by_user_id: uuid(77),
+        recorded_by_role: "media_manager",
+        recorded_via: "publisher_profile_updated",
+        created_at: "2026-07-20T08:00:00.000Z"
+      }
+    ];
 
     const result = await repository.saveSnapshot(snapshot, {
       actor: { id: uuid(77), activeRole: "media_manager" }
     });
 
-    expect(result.savedTables).toEqual(["publishers"]);
+    expect(result.savedTables).toEqual(["publishers", "publisher_traffic_evidence_history"]);
     expect(fakeSupabase.writes.publishers).toEqual([
       expect.objectContaining({
         id: publisherId,
         metadata: expect.objectContaining({ traffic_data_as_of: "2026-07-20" })
+      })
+    ]);
+    expect(fakeSupabase.writes.publisher_traffic_evidence_history).toEqual([
+      expect.objectContaining({
+        id: uuid(78),
+        publisher_id: publisherId,
+        actor_user_id: uuid(77),
+        traffic_data_as_of: "2026-07-20",
+        recorded_via: "publisher_profile_updated"
       })
     ]);
   });

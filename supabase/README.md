@@ -14,7 +14,14 @@ This folder contains PG OS Phase 2 database artifacts.
 8. `migrations/202607020003_uat_script_results.sql`
 9. `migrations/202607040001_contract_uat_seed.sql`
 10. `migrations/202607100001_china_media_ecosystem_schema.sql`
-11. `seed/202606290003_uat_seed.sql`
-12. `seed/202607100002_china_media_ecosystem_seed.sql`
+11. `migrations/202607120001_trusted_supply_candidate_readiness.sql`
+12. `migrations/202607160001_integration_execution_readiness.sql`
+13. `migrations/202607170001_commercial_validation_handoff.sql`
+14. `migrations/202607170002_trusted_supply_qualification.sql`
+15. `migrations/202607170003_trusted_supply_packages.sql`
+16. `migrations/202607170004_commercial_test_publisher_status_sync.sql`
+17. `migrations/202607220001_publisher_traffic_evidence_history.sql`
+18. `seed/202606290003_uat_seed.sql`
+19. `seed/202607100002_china_media_ecosystem_seed.sql`
 
 The RLS policy file is mirrored in `policies/rls_policies.sql` for review.

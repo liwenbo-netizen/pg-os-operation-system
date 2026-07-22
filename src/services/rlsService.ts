@@ -6,6 +6,7 @@ export type RlsTable =
   | "profiles"
   | "user_roles"
   | "publishers"
+  | "publisher_traffic_evidence_history"
   | "publisher_contacts"
   | "publisher_ad_slots"
   | "publisher_contract_terms"
@@ -27,6 +28,7 @@ export type RlsTable =
 
 const tableWriteRoles: Partial<Record<RlsTable, RoleCode[]>> = {
   publishers: ["media_director", "media_manager", "integration_manager", "operations_director"],
+  publisher_traffic_evidence_history: ["media_director", "media_manager", "operations_director"],
   publisher_contacts: ["media_director", "media_manager", "integration_manager", "operations_director"],
   publisher_ad_slots: ["media_director", "media_manager", "integration_manager", "operations_director"],
   publisher_contract_terms: ["media_director", "media_manager", "finance_manager", "legal_manager", "operations_director"],

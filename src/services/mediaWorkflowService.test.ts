@@ -96,6 +96,9 @@ describe("MediaWorkflowService P0 mainline", () => {
     expect(result.guard).toMatchObject({ allowed: true, reason_code: "PUBLISHER_ONBOARDING_CREATED" });
     expect(result.publisherId).toBeDefined();
     expect(result.state.publishers).toHaveLength(state.publishers.length + 1);
+    expect(result.state.publisherTrafficEvidenceHistory).toHaveLength(
+      state.publisherTrafficEvidenceHistory.length + 1
+    );
     expect(result.state.publisherContacts).toHaveLength(state.publisherContacts.length + 1);
     expect(result.state.publisherAdSlots).toHaveLength(state.publisherAdSlots.length + 1);
     expect(result.state.publisherContractTerms).toHaveLength(state.publisherContractTerms.length + 1);
@@ -111,6 +114,16 @@ describe("MediaWorkflowService P0 mainline", () => {
         traffic_data_as_of: "2026-07-19"
       }
     });
+    expect(result.state.publisherTrafficEvidenceHistory[0]).toMatchObject({
+      publisher_id: result.publisherId,
+      daily_active_users: 1200000,
+      monthly_active_users: 8000000,
+      daily_requests: 9000000,
+      traffic_data_as_of: "2026-07-19",
+      traffic_source: "first_party_analytics",
+      recorded_by_role: "media_manager",
+      recorded_via: "publisher_onboarding_created"
+    });
     expect(result.state.auditEvents.slice(0, 5).map((event) => event.action)).toEqual([
       "publisher.onboarding.create",
       "publisher_contract_term.create",
@@ -119,6 +132,9 @@ describe("MediaWorkflowService P0 mainline", () => {
       "publisher.create"
     ]);
     expect(result.state.businessEvents.map((event) => event.eventCode)).toContain("publisher.onboarding_created");
+    expect(result.state.businessEvents.map((event) => event.eventCode)).toContain(
+      "publisher.traffic_evidence_recorded"
+    );
   });
 
   it("rejects incomplete onboarding before creating partial records", () => {
@@ -213,6 +229,7 @@ describe("MediaWorkflowService P0 mainline", () => {
     });
     expect(updated.auditEvents?.map((event) => event.action)).toEqual([
       "publisher.onboarding.update",
+      "publisher.traffic_evidence.record",
       "integration_project.update",
       "publisher_contract_term.update",
       "publisher_ad_slot.update",
@@ -230,6 +247,12 @@ describe("MediaWorkflowService P0 mainline", () => {
         "integration.integration_type"
       ])
     );
+    expect(after.trafficEvidenceHistory).toHaveLength(before.trafficEvidenceHistory.length + 1);
+    expect(after.trafficEvidenceHistory[0]).toMatchObject({
+      traffic_data_as_of: "2026-07-21",
+      daily_active_users: 240000,
+      recorded_via: "publisher_profile_updated"
+    });
   });
 
   it("writes only publisher data and precise audit metadata for a traffic evidence date change", () => {
@@ -251,6 +274,7 @@ describe("MediaWorkflowService P0 mainline", () => {
 
     expect(updated.auditEvents?.map((event) => event.action)).toEqual([
       "publisher.onboarding.update",
+      "publisher.traffic_evidence.record",
       "publisher.update"
     ]);
     expect(updated.changedFields).toEqual(["publisher.traffic_data_as_of"]);
@@ -259,6 +283,17 @@ describe("MediaWorkflowService P0 mainline", () => {
     expect(updated.state.publisherAdSlots).toBe(created.state.publisherAdSlots);
     expect(updated.state.publisherContractTerms).toBe(created.state.publisherContractTerms);
     expect(updated.state.integrationProjects).toBe(created.state.integrationProjects);
+    expect(updated.state.publisherTrafficEvidenceHistory).toHaveLength(
+      created.state.publisherTrafficEvidenceHistory.length + 1
+    );
+    expect(updated.state.publisherTrafficEvidenceHistory[0]).toMatchObject({
+      publisher_id: created.publisherId,
+      traffic_data_as_of: "2026-07-22",
+      daily_active_users: 120000,
+      monthly_active_users: 800000,
+      daily_requests: 900000,
+      recorded_via: "publisher_profile_updated"
+    });
     expect(updated.auditEvent?.metadata).toMatchObject({
       changedFields: ["publisher.traffic_data_as_of"],
       changes: {
@@ -294,6 +329,7 @@ describe("MediaWorkflowService P0 mainline", () => {
     expect(updated.changedFields).toEqual(["contact.email"]);
     expect(updated.changedAreas).toEqual(["contact"]);
     expect(updated.state.publishers).toBe(created.state.publishers);
+    expect(updated.state.publisherTrafficEvidenceHistory).toBe(created.state.publisherTrafficEvidenceHistory);
     expect(updated.auditEvent?.metadata).toMatchObject({
       changes: {
         "contact.email": {
