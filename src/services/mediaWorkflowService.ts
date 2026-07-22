@@ -27,6 +27,22 @@ type WorkflowResult = {
   auditEvents?: AuditEvent[];
   businessEvent?: ModuleBusinessEvent;
   publisherId?: EntityId;
+  changedFields?: string[];
+  changedAreas?: PublisherOnboardingChangeArea[];
+};
+
+export type PublisherOnboardingChangeArea =
+  | "publisher"
+  | "contact"
+  | "ad_slot"
+  | "contract_term"
+  | "integration";
+
+type PublisherOnboardingChange = {
+  area: PublisherOnboardingChangeArea;
+  field: string;
+  before: unknown;
+  after: unknown;
 };
 
 export type CreatePublisherInput = {
@@ -176,9 +192,10 @@ function appendEvents(
   action: string,
   objectId: EntityId | undefined,
   guard: GuardResult,
-  businessEvent?: ModuleBusinessEvent
+  businessEvent?: ModuleBusinessEvent,
+  metadata?: Record<string, unknown>
 ): MediaWorkflowState {
-  const auditEvent = auditService.createGuardAuditEvent(user, action, "publisher", guard, objectId);
+  const auditEvent = auditService.createGuardAuditEvent(user, action, "publisher", guard, objectId, metadata);
 
   return {
     ...state,
@@ -201,6 +218,132 @@ function findPublisher(state: MediaWorkflowState, publisherId: EntityId) {
 
 function normalizePublisherName(value?: string) {
   return value?.trim().replace(/\s+/g, " ").toLocaleLowerCase() ?? "";
+}
+
+function comparableChangeValue(value: unknown) {
+  return value === undefined ? null : value;
+}
+
+function addPublisherOnboardingChange(
+  changes: PublisherOnboardingChange[],
+  area: PublisherOnboardingChangeArea,
+  field: string,
+  before: unknown,
+  after: unknown
+) {
+  const comparableBefore = comparableChangeValue(before);
+  const comparableAfter = comparableChangeValue(after);
+  if (Object.is(comparableBefore, comparableAfter)) return;
+  changes.push({ area, field, before: comparableBefore, after: comparableAfter });
+}
+
+function collectPublisherOnboardingChanges(
+  publisher: Publisher,
+  contact: PublisherContact | undefined,
+  adSlot: PublisherAdSlot | undefined,
+  contractTerm: PublisherContractTerm | undefined,
+  integrationProject: IntegrationProject | undefined,
+  input: PublisherOnboardingInput
+) {
+  const changes: PublisherOnboardingChange[] = [];
+  const add = addPublisherOnboardingChange.bind(null, changes);
+
+  add("publisher", "publisher.name", publisher.name, input.publisher.name);
+  add("publisher", "publisher.legal_entity", publisher.legal_entity, input.publisher.legalEntity);
+  add("publisher", "publisher.region", publisher.region, input.publisher.region);
+  add("publisher", "publisher.media_type", publisher.media_type, input.publisher.mediaType);
+  add("publisher", "publisher.integration_type", publisher.integration_type, input.publisher.integrationType);
+  add("publisher", "publisher.daily_active_users", publisher.daily_active_users, input.publisher.dailyActiveUsers);
+  add("publisher", "publisher.daily_requests", publisher.daily_requests, input.publisher.dailyRequests);
+  add("publisher", "publisher.property_name", publisher.metadata?.property_name, input.publisher.propertyName);
+  add(
+    "publisher",
+    "publisher.property_identifier_type",
+    publisher.metadata?.property_identifier_type,
+    input.publisher.propertyIdentifierType
+  );
+  add(
+    "publisher",
+    "publisher.property_identifier",
+    publisher.metadata?.property_identifier,
+    input.publisher.propertyIdentifier
+  );
+  add(
+    "publisher",
+    "publisher.monthly_active_users",
+    publisher.metadata?.monthly_active_users,
+    input.publisher.monthlyActiveUsers
+  );
+  add(
+    "publisher",
+    "publisher.traffic_data_as_of",
+    publisher.metadata?.traffic_data_as_of,
+    input.publisher.trafficDataAsOf
+  );
+  add("publisher", "publisher.traffic_source", publisher.metadata?.traffic_source, input.publisher.trafficSource);
+
+  add("contact", "contact.name", contact?.name, input.contact.name);
+  add("contact", "contact.role_title", contact?.role_title, input.contact.roleTitle);
+  add("contact", "contact.email", contact?.email, input.contact.email);
+  add("contact", "contact.phone", contact?.phone, input.contact.phone);
+
+  add("ad_slot", "ad_slot.slot_name", adSlot?.slot_name, input.adSlot.slotName);
+  add("ad_slot", "ad_slot.ad_format", adSlot?.ad_format, input.adSlot.adFormat);
+  add("ad_slot", "ad_slot.placement_type", adSlot?.placement_type, input.adSlot.placementType);
+  add("ad_slot", "ad_slot.floor_price", adSlot?.floor_price, input.adSlot.floorPrice);
+  add("ad_slot", "ad_slot.currency", adSlot?.currency, input.adSlot.currency ?? "CNY");
+  add("ad_slot", "ad_slot.daily_requests", adSlot?.daily_requests, input.adSlot.dailyRequests);
+  add("ad_slot", "ad_slot.creative_spec", adSlot?.creative_spec, input.adSlot.creativeSpec);
+
+  add("contract_term", "contract_term.contract_type", contractTerm?.contract_type, input.contractTerm.contractType);
+  add("contract_term", "contract_term.billing_model", contractTerm?.billing_model, input.contractTerm.billingModel);
+  add(
+    "contract_term",
+    "contract_term.settlement_cycle",
+    contractTerm?.settlement_cycle,
+    input.contractTerm.settlementCycle
+  );
+  add("contract_term", "contract_term.payment_terms", contractTerm?.payment_terms, input.contractTerm.paymentTerms);
+  add("contract_term", "contract_term.revenue_share", contractTerm?.revenue_share, input.contractTerm.revenueShare);
+  add("contract_term", "contract_term.currency", contractTerm?.currency, input.contractTerm.currency ?? "CNY");
+
+  add(
+    "integration",
+    "integration.integration_type",
+    integrationProject?.integration_type,
+    input.publisher.integrationType
+  );
+
+  return changes;
+}
+
+function maskPublisherAuditValue(field: string, value: unknown) {
+  if (typeof value !== "string" || !value) return value;
+  if (field === "contact.email") {
+    const [localPart, domain] = value.split("@");
+    return domain ? `${localPart.slice(0, 1)}***@${domain}` : "[redacted]";
+  }
+  if (field === "contact.phone") {
+    const digits = value.replace(/\D/g, "");
+    return digits ? `***${digits.slice(-4)}` : "[redacted]";
+  }
+  return value;
+}
+
+function buildPublisherChangeMetadata(changes: PublisherOnboardingChange[]) {
+  return {
+    changedFields: changes.map((change) => change.field),
+    changedAreas: Array.from(new Set(changes.map((change) => change.area))),
+    changes: Object.fromEntries(
+      changes.map((change) => [
+        change.field,
+        {
+          before: maskPublisherAuditValue(change.field, change.before),
+          after: maskPublisherAuditValue(change.field, change.after)
+        }
+      ])
+    )
+  };
 }
 
 function normalizePropertyIdentifier(value?: string, identifierType?: string) {
@@ -744,166 +887,231 @@ export class MediaWorkflowService {
     const currentSlot = state.publisherAdSlots.find((slot) => slot.publisher_id === publisherId);
     const currentTerm = state.publisherContractTerms.find((term) => term.publisher_id === publisherId);
     const currentProject = findIntegrationProject(state, publisherId);
+    const changes = collectPublisherOnboardingChanges(
+      publisher,
+      currentContact,
+      currentSlot,
+      currentTerm,
+      currentProject,
+      input
+    );
+    const changedFields = changes.map((change) => change.field);
+    const changedAreas = Array.from(new Set(changes.map((change) => change.area)));
+
+    if (changes.length === 0) {
+      const guard = {
+        ...createAllowed("No publisher onboarding changes were detected.", "PUBLISHER_ONBOARDING_NO_CHANGES"),
+        audit_required: false
+      };
+      return { state, guard, auditEvents: [], publisherId, changedFields, changedAreas };
+    }
+
     const contactId = currentContact?.id ?? crypto.randomUUID();
     const slotId = currentSlot?.id ?? crypto.randomUUID();
     const termId = currentTerm?.id ?? crypto.randomUUID();
     const projectId = currentProject?.id ?? crypto.randomUUID();
+    const changedAreaSet = new Set(changedAreas);
 
     let nextState: MediaWorkflowState = {
       ...state,
-      publishers: state.publishers.map((item) =>
-        item.id === publisherId
-          ? {
-              ...item,
-              name: input.publisher.name,
-              legal_entity: input.publisher.legalEntity,
-              region: input.publisher.region,
-              media_type: input.publisher.mediaType,
-              integration_type: input.publisher.integrationType,
-              daily_active_users: input.publisher.dailyActiveUsers,
-              daily_requests: input.publisher.dailyRequests,
-              metadata: {
-                ...item.metadata,
-                property_name: input.publisher.propertyName,
-                property_identifier_type: input.publisher.propertyIdentifierType,
-                property_identifier: input.publisher.propertyIdentifier,
-                monthly_active_users: input.publisher.monthlyActiveUsers,
-                traffic_data_as_of: input.publisher.trafficDataAsOf,
-                traffic_source: input.publisher.trafficSource
-              }
-            }
-          : item
-      ),
-      publisherContacts: currentContact
-        ? state.publisherContacts.map((contact) =>
-            contact.id === contactId
+      publishers: changedAreaSet.has("publisher")
+        ? state.publishers.map((item) =>
+            item.id === publisherId
               ? {
-                  ...contact,
-                  name: input.contact.name,
-                  role_title: input.contact.roleTitle,
-                  email: input.contact.email,
-                  phone: input.contact.phone,
-                  is_primary: true
+                  ...item,
+                  name: input.publisher.name,
+                  legal_entity: input.publisher.legalEntity,
+                  region: input.publisher.region,
+                  media_type: input.publisher.mediaType,
+                  integration_type: input.publisher.integrationType,
+                  daily_active_users: input.publisher.dailyActiveUsers,
+                  daily_requests: input.publisher.dailyRequests,
+                  metadata: {
+                    ...item.metadata,
+                    property_name: input.publisher.propertyName,
+                    property_identifier_type: input.publisher.propertyIdentifierType,
+                    property_identifier: input.publisher.propertyIdentifier,
+                    monthly_active_users: input.publisher.monthlyActiveUsers,
+                    traffic_data_as_of: input.publisher.trafficDataAsOf,
+                    traffic_source: input.publisher.trafficSource
+                  }
                 }
-              : contact
+              : item
           )
-        : [
-            {
-              id: contactId,
-              publisher_id: publisherId,
-              name: input.contact.name,
-              role_title: input.contact.roleTitle,
-              email: input.contact.email,
-              phone: input.contact.phone,
-              is_primary: true
-            },
-            ...state.publisherContacts
-          ],
-      publisherAdSlots: currentSlot
-        ? state.publisherAdSlots.map((slot) =>
-            slot.id === slotId
-              ? {
-                  ...slot,
-                  slot_name: input.adSlot.slotName,
-                  ad_format: input.adSlot.adFormat,
-                  placement_type: input.adSlot.placementType,
-                  floor_price: input.adSlot.floorPrice,
-                  currency: input.adSlot.currency ?? "CNY",
-                  daily_requests: input.adSlot.dailyRequests,
-                  creative_spec: input.adSlot.creativeSpec
-                }
-              : slot
-          )
-        : [
-            {
-              id: slotId,
-              publisher_id: publisherId,
-              slot_name: input.adSlot.slotName,
-              ad_format: input.adSlot.adFormat,
-              placement_type: input.adSlot.placementType,
-              floor_price: input.adSlot.floorPrice,
-              currency: input.adSlot.currency ?? "CNY",
-              daily_requests: input.adSlot.dailyRequests,
-              creative_spec: input.adSlot.creativeSpec,
-              status: "active"
-            },
-            ...state.publisherAdSlots
-          ],
-      publisherContractTerms: currentTerm
-        ? state.publisherContractTerms.map((term) =>
-            term.id === termId
-              ? {
-                  ...term,
-                  contract_type: input.contractTerm.contractType,
-                  billing_model: input.contractTerm.billingModel,
-                  settlement_cycle: input.contractTerm.settlementCycle,
-                  payment_terms: input.contractTerm.paymentTerms,
-                  revenue_share: input.contractTerm.revenueShare,
-                  currency: input.contractTerm.currency ?? "CNY"
-                }
-              : term
-          )
-        : [
-            {
-              id: termId,
-              publisher_id: publisherId,
-              contract_type: input.contractTerm.contractType,
-              billing_model: input.contractTerm.billingModel,
-              settlement_cycle: input.contractTerm.settlementCycle,
-              payment_terms: input.contractTerm.paymentTerms,
-              revenue_share: input.contractTerm.revenueShare,
-              currency: input.contractTerm.currency ?? "CNY"
-            },
-            ...state.publisherContractTerms
-          ],
-      integrationProjects: currentProject
-        ? state.integrationProjects.map((project) =>
-            project.id === projectId
-              ? { ...project, integration_type: input.publisher.integrationType }
-              : project
-          )
-        : [
-            {
-              id: projectId,
-              publisher_id: publisherId,
-              integration_type: input.publisher.integrationType,
-              status: "pending_integration",
-              checklist: {},
-              notes: "Created while completing publisher profile governance.",
-              evidence: [],
-              next_action: "Start technical execution and record connection configuration evidence."
-            },
-            ...state.integrationProjects
-          ]
+        : state.publishers,
+      publisherContacts: changedAreaSet.has("contact")
+        ? currentContact
+          ? state.publisherContacts.map((contact) =>
+              contact.id === contactId
+                ? {
+                    ...contact,
+                    name: input.contact.name,
+                    role_title: input.contact.roleTitle,
+                    email: input.contact.email,
+                    phone: input.contact.phone,
+                    is_primary: true
+                  }
+                : contact
+            )
+          : [
+              {
+                id: contactId,
+                publisher_id: publisherId,
+                name: input.contact.name,
+                role_title: input.contact.roleTitle,
+                email: input.contact.email,
+                phone: input.contact.phone,
+                is_primary: true
+              },
+              ...state.publisherContacts
+            ]
+        : state.publisherContacts,
+      publisherAdSlots: changedAreaSet.has("ad_slot")
+        ? currentSlot
+          ? state.publisherAdSlots.map((slot) =>
+              slot.id === slotId
+                ? {
+                    ...slot,
+                    slot_name: input.adSlot.slotName,
+                    ad_format: input.adSlot.adFormat,
+                    placement_type: input.adSlot.placementType,
+                    floor_price: input.adSlot.floorPrice,
+                    currency: input.adSlot.currency ?? "CNY",
+                    daily_requests: input.adSlot.dailyRequests,
+                    creative_spec: input.adSlot.creativeSpec
+                  }
+                : slot
+            )
+          : [
+              {
+                id: slotId,
+                publisher_id: publisherId,
+                slot_name: input.adSlot.slotName,
+                ad_format: input.adSlot.adFormat,
+                placement_type: input.adSlot.placementType,
+                floor_price: input.adSlot.floorPrice,
+                currency: input.adSlot.currency ?? "CNY",
+                daily_requests: input.adSlot.dailyRequests,
+                creative_spec: input.adSlot.creativeSpec,
+                status: "active"
+              },
+              ...state.publisherAdSlots
+            ]
+        : state.publisherAdSlots,
+      publisherContractTerms: changedAreaSet.has("contract_term")
+        ? currentTerm
+          ? state.publisherContractTerms.map((term) =>
+              term.id === termId
+                ? {
+                    ...term,
+                    contract_type: input.contractTerm.contractType,
+                    billing_model: input.contractTerm.billingModel,
+                    settlement_cycle: input.contractTerm.settlementCycle,
+                    payment_terms: input.contractTerm.paymentTerms,
+                    revenue_share: input.contractTerm.revenueShare,
+                    currency: input.contractTerm.currency ?? "CNY"
+                  }
+                : term
+            )
+          : [
+              {
+                id: termId,
+                publisher_id: publisherId,
+                contract_type: input.contractTerm.contractType,
+                billing_model: input.contractTerm.billingModel,
+                settlement_cycle: input.contractTerm.settlementCycle,
+                payment_terms: input.contractTerm.paymentTerms,
+                revenue_share: input.contractTerm.revenueShare,
+                currency: input.contractTerm.currency ?? "CNY"
+              },
+              ...state.publisherContractTerms
+            ]
+        : state.publisherContractTerms,
+      integrationProjects: changedAreaSet.has("integration")
+        ? currentProject
+          ? state.integrationProjects.map((project) =>
+              project.id === projectId
+                ? { ...project, integration_type: input.publisher.integrationType }
+                : project
+            )
+          : [
+              {
+                id: projectId,
+                publisher_id: publisherId,
+                integration_type: input.publisher.integrationType,
+                status: "pending_integration",
+                checklist: {},
+                notes: "Created while completing publisher profile governance.",
+                evidence: [],
+                next_action: "Start technical execution and record connection configuration evidence."
+              },
+              ...state.integrationProjects
+            ]
+        : state.integrationProjects
     };
 
-    const recordUpdates = [
-      { action: "publisher.update", eventCode: "publisher.updated" },
-      { action: "publisher_contact.update", eventCode: "publisher.contact_updated" },
-      { action: "publisher_ad_slot.update", eventCode: "publisher.ad_slot_updated" },
-      { action: "publisher_contract_term.update", eventCode: "publisher.contract_term_updated" }
+    const candidateRecordUpdates: Array<{
+      area: PublisherOnboardingChangeArea;
+      action: string;
+      eventCode: string;
+    }> = [
+      { area: "publisher", action: "publisher.update", eventCode: "publisher.updated" },
+      {
+        area: "contact",
+        action: currentContact ? "publisher_contact.update" : "publisher_contact.create",
+        eventCode: currentContact ? "publisher.contact_updated" : "publisher.contact_created"
+      },
+      {
+        area: "ad_slot",
+        action: currentSlot ? "publisher_ad_slot.update" : "publisher_ad_slot.create",
+        eventCode: currentSlot ? "publisher.ad_slot_updated" : "publisher.ad_slot_created"
+      },
+      {
+        area: "contract_term",
+        action: currentTerm ? "publisher_contract_term.update" : "publisher_contract_term.create",
+        eventCode: currentTerm ? "publisher.contract_term_updated" : "publisher.contract_term_created"
+      },
+      {
+        area: "integration",
+        action: currentProject ? "integration_project.update" : "integration_project.create",
+        eventCode: currentProject ? "publisher.integration_project_updated" : "publisher.integration_project_created"
+      }
     ];
+    const recordUpdates = candidateRecordUpdates.filter((update) => changedAreaSet.has(update.area));
     const recordGuard = createAllowed("Publisher onboarding record updated.", "PUBLISHER_PROFILE_UPDATED");
     for (const update of recordUpdates) {
+      const areaChanges = changes.filter((change) => change.area === update.area);
+      const changeMetadata = buildPublisherChangeMetadata(areaChanges);
       nextState = appendEvents(
         nextState,
         user,
         update.action,
         publisherId,
         recordGuard,
-        createBusinessEvent(update.eventCode, publisherId, user.activeRole)
+        createBusinessEvent(update.eventCode, publisherId, user.activeRole, changeMetadata),
+        changeMetadata
       );
     }
 
+    const changeMetadata = buildPublisherChangeMetadata(changes);
     const guard = createAllowed(
-      "Publisher onboarding package updated and remains connected to technical integration.",
+      `Publisher onboarding package updated: ${changes.length} field${changes.length === 1 ? "" : "s"} across ${changedAreas.length} data area${changedAreas.length === 1 ? "" : "s"}.`,
       "PUBLISHER_ONBOARDING_UPDATED"
     );
     const businessEvent = createBusinessEvent("publisher.onboarding_updated", publisherId, user.activeRole, {
       integrationProjectId: projectId,
-      propertyIdentifierType: input.publisher.propertyIdentifierType
+      propertyIdentifierType: input.publisher.propertyIdentifierType,
+      ...changeMetadata
     });
-    const eventState = appendEvents(nextState, user, "publisher.onboarding.update", publisherId, guard, businessEvent);
+    const eventState = appendEvents(
+      nextState,
+      user,
+      "publisher.onboarding.update",
+      publisherId,
+      guard,
+      businessEvent,
+      changeMetadata
+    );
 
     return {
       state: eventState,
@@ -911,7 +1119,9 @@ export class MediaWorkflowService {
       auditEvent: eventState.auditEvents[0],
       auditEvents: eventState.auditEvents.slice(0, recordUpdates.length + 1),
       businessEvent,
-      publisherId
+      publisherId,
+      changedFields,
+      changedAreas
     };
   }
 

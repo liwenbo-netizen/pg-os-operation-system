@@ -574,6 +574,7 @@ export type AuditEvent = {
   allowed: boolean;
   reasonCode: string;
   createdAt: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type ModuleBusinessEvent = {

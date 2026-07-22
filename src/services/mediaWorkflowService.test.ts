@@ -211,13 +211,120 @@ describe("MediaWorkflowService P0 mainline", () => {
       id: before.integrationProjects[0].id,
       integration_type: "OpenRTB"
     });
-    expect(updated.state.auditEvents.slice(0, 5).map((event) => event.action)).toEqual([
+    expect(updated.auditEvents?.map((event) => event.action)).toEqual([
       "publisher.onboarding.update",
+      "integration_project.update",
       "publisher_contract_term.update",
       "publisher_ad_slot.update",
       "publisher_contact.update",
       "publisher.update"
     ]);
+    expect(updated.changedAreas).toEqual(["publisher", "contact", "ad_slot", "contract_term", "integration"]);
+    expect(updated.changedFields).toEqual(
+      expect.arrayContaining([
+        "publisher.name",
+        "publisher.traffic_data_as_of",
+        "contact.name",
+        "ad_slot.floor_price",
+        "contract_term.payment_terms",
+        "integration.integration_type"
+      ])
+    );
+  });
+
+  it("writes only publisher data and precise audit metadata for a traffic evidence date change", () => {
+    const state = createInitialMediaWorkflowState();
+    const created = mediaWorkflowService.createPublisherOnboarding(
+      state,
+      user("media_manager"),
+      completeOnboardingInput("DateOnly")
+    );
+    const updatedInput = completeOnboardingInput("DateOnly");
+    updatedInput.publisher.trafficDataAsOf = "2026-07-22";
+
+    const updated = mediaWorkflowService.updatePublisherOnboarding(
+      created.state,
+      user("media_manager"),
+      created.publisherId!,
+      updatedInput
+    );
+
+    expect(updated.auditEvents?.map((event) => event.action)).toEqual([
+      "publisher.onboarding.update",
+      "publisher.update"
+    ]);
+    expect(updated.changedFields).toEqual(["publisher.traffic_data_as_of"]);
+    expect(updated.changedAreas).toEqual(["publisher"]);
+    expect(updated.state.publisherContacts).toBe(created.state.publisherContacts);
+    expect(updated.state.publisherAdSlots).toBe(created.state.publisherAdSlots);
+    expect(updated.state.publisherContractTerms).toBe(created.state.publisherContractTerms);
+    expect(updated.state.integrationProjects).toBe(created.state.integrationProjects);
+    expect(updated.auditEvent?.metadata).toMatchObject({
+      changedFields: ["publisher.traffic_data_as_of"],
+      changes: {
+        "publisher.traffic_data_as_of": {
+          before: "2026-07-20",
+          after: "2026-07-22"
+        }
+      }
+    });
+  });
+
+  it("writes only the primary contact and masks contact values in audit metadata", () => {
+    const state = createInitialMediaWorkflowState();
+    const created = mediaWorkflowService.createPublisherOnboarding(
+      state,
+      user("media_manager"),
+      completeOnboardingInput("ContactOnly")
+    );
+    const updatedInput = completeOnboardingInput("ContactOnly");
+    updatedInput.contact.email = "updated.contact@example.com";
+
+    const updated = mediaWorkflowService.updatePublisherOnboarding(
+      created.state,
+      user("media_manager"),
+      created.publisherId!,
+      updatedInput
+    );
+
+    expect(updated.auditEvents?.map((event) => event.action)).toEqual([
+      "publisher.onboarding.update",
+      "publisher_contact.update"
+    ]);
+    expect(updated.changedFields).toEqual(["contact.email"]);
+    expect(updated.changedAreas).toEqual(["contact"]);
+    expect(updated.state.publishers).toBe(created.state.publishers);
+    expect(updated.auditEvent?.metadata).toMatchObject({
+      changes: {
+        "contact.email": {
+          before: "l***@example.com",
+          after: "u***@example.com"
+        }
+      }
+    });
+  });
+
+  it("does not write or audit when the onboarding package is unchanged", () => {
+    const state = createInitialMediaWorkflowState();
+    const input = completeOnboardingInput("NoChange");
+    const created = mediaWorkflowService.createPublisherOnboarding(state, user("media_manager"), input);
+
+    const updated = mediaWorkflowService.updatePublisherOnboarding(
+      created.state,
+      user("media_manager"),
+      created.publisherId!,
+      completeOnboardingInput("NoChange")
+    );
+
+    expect(updated.guard).toMatchObject({
+      allowed: true,
+      reason_code: "PUBLISHER_ONBOARDING_NO_CHANGES",
+      audit_required: false
+    });
+    expect(updated.state).toBe(created.state);
+    expect(updated.auditEvents).toEqual([]);
+    expect(updated.changedFields).toEqual([]);
+    expect(updated.changedAreas).toEqual([]);
   });
 
   it("blocks profile updates that collide with another publisher identifier", () => {

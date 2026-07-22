@@ -40,6 +40,7 @@ import {
 import {
   integrationEvidenceDefinitions,
   mediaWorkflowService,
+  type PublisherOnboardingChangeArea,
   type PublisherOnboardingInput
 } from "../../services/mediaWorkflowService";
 import { trustedSupplyNetworkService } from "../../services/trustedSupplyNetworkService";
@@ -112,6 +113,7 @@ type MediaExperiencePageProps = {
 type ActionMessage = {
   title: string;
   guard: GuardResult;
+  detail?: string;
 };
 
 type MediaActionResult = {
@@ -121,6 +123,33 @@ type MediaActionResult = {
   auditEvents?: AuditEvent[];
   publisherId?: EntityId;
 };
+
+function publisherUpdateDetail(
+  locale: string,
+  changedFields: string[],
+  changedAreas: PublisherOnboardingChangeArea[]
+) {
+  if (changedFields.length === 0) {
+    return locale === "zh-CN"
+      ? "未检测到字段变化，因此没有写入数据库或生成更新审计。"
+      : "No field changes were detected, so no database writes or update audit events were created.";
+  }
+
+  const labels: Record<PublisherOnboardingChangeArea, { en: string; zh: string }> = {
+    publisher: { en: "publisher profile", zh: "媒体资料" },
+    contact: { en: "primary contact", zh: "主要联系人" },
+    ad_slot: { en: "ad inventory", zh: "广告位库存" },
+    contract_term: { en: "commercial terms", zh: "商务条款" },
+    integration: { en: "technical handoff", zh: "技术交接" }
+  };
+  const areaText = changedAreas
+    .map((area) => labels[area][locale === "zh-CN" ? "zh" : "en"])
+    .join(locale === "zh-CN" ? "、" : ", ");
+
+  return locale === "zh-CN"
+    ? `本次实际更新 ${changedFields.length} 个字段，涉及：${areaText}。`
+    : `${changedFields.length} field${changedFields.length === 1 ? "" : "s"} changed across: ${areaText}.`;
+}
 
 const statusTone = {
   draft: "neutral",
@@ -363,7 +392,11 @@ export function MediaExperiencePage({
     onStateChange(result.state);
     const auditEvents = result.auditEvents ?? (result.auditEvent ? [result.auditEvent] : []);
     auditEvents.forEach(onAuditEvent);
-    setMessage({ title: t("media.onboardingEditTitle"), guard: result.guard });
+    setMessage({
+      title: t("media.onboardingEditTitle"),
+      guard: result.guard,
+      detail: publisherUpdateDetail(locale, result.changedFields ?? [], result.changedAreas ?? [])
+    });
 
     return { allowed: result.guard.allowed, message: onboardingSubmitMessage(result.guard) };
   }
@@ -617,6 +650,8 @@ function GuardNotice({ message }: { message: ActionMessage }) {
   const { locale, t } = useLocale();
   const tone = message.guard.allowed ? (message.guard.severity === "warning" ? "warning" : "success") : "danger";
   const guardMessages: Record<string, string> = {
+    PUBLISHER_ONBOARDING_NO_CHANGES:
+      locale === "zh-CN" ? "媒体准入资料未发生变化。" : message.guard.message,
     PUBLISHER_CREATED: locale === "zh-CN" ? "媒体已创建，并已初始化技术集成项目。" : message.guard.message,
     PUBLISHER_ONBOARDING_CREATED: locale === "zh-CN" ? "媒体准入包已创建，包含媒体资产、流量、广告位、联系人、商务条款和技术项目。" : message.guard.message,
     PUBLISHER_ONBOARDING_UPDATED: locale === "zh-CN" ? "媒体准入资料已更新，并保持与技术集成项目的关联。" : message.guard.message,
@@ -640,6 +675,7 @@ function GuardNotice({ message }: { message: ActionMessage }) {
             <StatusBadge tone={tone}>{message.guard.reason_code}</StatusBadge>
           </div>
           <p className="mt-2 text-sm leading-6 text-slate-600">{guardMessages[message.guard.reason_code] ?? message.guard.message}</p>
+          {message.detail ? <p className="mt-1 text-sm leading-6 text-slate-500">{message.detail}</p> : null}
           {message.guard.required_approval_role ? (
             <p className="mt-1 text-sm text-slate-500">{t("workbench.owner")}: {getRoleDisplayName(message.guard.required_approval_role as BusinessUser["activeRole"], locale)}</p>
           ) : null}

@@ -119,4 +119,38 @@ describe("businessAuditCoverage", () => {
       reasonCode: "ROUTE_VISIT"
     });
   });
+
+  it("preserves differential workflow metadata without allowing it to override guard facts", () => {
+    expect(
+      buildBusinessAuditAfterData(
+        {
+          action: "publisher.onboarding.update",
+          objectType: "publisher",
+          allowed: true,
+          reasonCode: "PUBLISHER_ONBOARDING_UPDATED",
+          metadata: {
+            allowed: false,
+            changedFields: ["publisher.traffic_data_as_of"],
+            changes: {
+              "publisher.traffic_data_as_of": {
+                before: "2026-07-20",
+                after: "2026-07-22"
+              }
+            }
+          }
+        },
+        "media_manager"
+      )
+    ).toMatchObject({
+      allowed: true,
+      actorRole: "media_manager",
+      changedFields: ["publisher.traffic_data_as_of"],
+      changes: {
+        "publisher.traffic_data_as_of": {
+          before: "2026-07-20",
+          after: "2026-07-22"
+        }
+      }
+    });
+  });
 });

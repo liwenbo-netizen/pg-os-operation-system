@@ -7,7 +7,8 @@ export class AuditService {
     action: string,
     objectType: ObjectType,
     guardResult: GuardResult,
-    objectId?: EntityId
+    objectId?: EntityId,
+    metadata?: Record<string, unknown>
   ): AuditEvent {
     return {
       id: crypto.randomUUID(),
@@ -17,10 +18,10 @@ export class AuditService {
       objectId,
       allowed: guardResult.allowed,
       reasonCode: guardResult.reason_code,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      metadata
     };
   }
 }
 
 export const auditService = new AuditService();
-

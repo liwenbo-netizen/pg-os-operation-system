@@ -62,6 +62,20 @@ export const CORE_BUSINESS_AUDIT_ACTIONS: CoreBusinessAuditAction[] = [
     criticality: "P1"
   },
   {
+    action: "integration_project.update",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Publisher Technical Handoff Governance",
+    criticality: "P1"
+  },
+  {
+    action: "integration_project.create",
+    objectType: "publisher",
+    module: "Media",
+    workflowSurface: "Publisher Technical Handoff Governance",
+    criticality: "P1"
+  },
+  {
     action: "publisher_contact.create",
     objectType: "publisher",
     module: "Media",
@@ -429,12 +443,13 @@ export function getCoreBusinessAuditAction(action: string, objectType: ObjectTyp
 }
 
 export function buildBusinessAuditAfterData(
-  event: Pick<AuditEvent, "action" | "objectType" | "allowed" | "reasonCode">,
+  event: Pick<AuditEvent, "action" | "objectType" | "allowed" | "reasonCode" | "metadata">,
   actorRole?: RoleCode
 ) {
   const coreAction = getCoreBusinessAuditAction(event.action, event.objectType);
 
   return {
+    ...(event.metadata ?? {}),
     allowed: event.allowed,
     reasonCode: event.reasonCode,
     ...(actorRole ? { actorRole } : {}),
