@@ -178,6 +178,7 @@ describe("MediaWorkflowService P0 mainline", () => {
     const updatedInput = completeOnboardingInput("Editable");
     updatedInput.publisher.name = "Publisher Editable Updated";
     updatedInput.publisher.dailyActiveUsers = 240000;
+    updatedInput.publisher.trafficDataAsOf = "2026-07-21";
     updatedInput.publisher.integrationType = "OpenRTB";
     updatedInput.contact.name = "Wang Lin";
     updatedInput.adSlot.floorPrice = 18;
@@ -200,7 +201,8 @@ describe("MediaWorkflowService P0 mainline", () => {
       id: publisherId,
       name: "Publisher Editable Updated",
       daily_active_users: 240000,
-      integration_type: "OpenRTB"
+      integration_type: "OpenRTB",
+      metadata: expect.objectContaining({ traffic_data_as_of: "2026-07-21" })
     });
     expect(after.contacts[0]).toMatchObject({ id: before.contacts[0].id, name: "Wang Lin" });
     expect(after.adSlots[0]).toMatchObject({ id: before.adSlots[0].id, floor_price: 18 });

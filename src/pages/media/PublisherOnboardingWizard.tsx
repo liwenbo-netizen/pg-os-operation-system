@@ -397,7 +397,8 @@ function TextField({ id, label, value, onChange, error, required, autoFocus, ...
         required={required}
         autoFocus={autoFocus}
         aria-invalid={Boolean(error)}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={inputProps.type === "date" ? undefined : (event) => onChange(event.target.value)}
+        onInput={inputProps.type === "date" ? (event) => onChange(event.currentTarget.value) : undefined}
       />
     </FieldShell>
   );

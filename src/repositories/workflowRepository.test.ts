@@ -782,6 +782,51 @@ describe("workflow repositories", () => {
     expect(fakeSupabase.writes.advertisers).toBeUndefined();
   });
 
+  it("dirty saves a publisher traffic evidence date nested in metadata", async () => {
+    const publisherId = uuid(76);
+    const fakeSupabase = new FakeSupabase({
+      publishers: [
+        {
+          id: publisherId,
+          name: "Traffic Evidence Publisher",
+          region: "CN",
+          media_type: "App",
+          integration_type: "SDK",
+          technical_live_status: "draft",
+          commercial_test_status: "not_started",
+          sales_scale_status: "not_allowed",
+          risk_level: "medium",
+          metadata: {
+            property_identifier: "com.example.traffic-evidence",
+            traffic_data_as_of: "2026-07-19"
+          }
+        }
+      ]
+    });
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const { snapshot } = await repository.loadSnapshot();
+
+    snapshot.mediaState.publishers[0] = {
+      ...snapshot.mediaState.publishers[0],
+      metadata: {
+        ...snapshot.mediaState.publishers[0].metadata,
+        traffic_data_as_of: "2026-07-20"
+      }
+    };
+
+    const result = await repository.saveSnapshot(snapshot, {
+      actor: { id: uuid(77), activeRole: "media_manager" }
+    });
+
+    expect(result.savedTables).toEqual(["publishers"]);
+    expect(fakeSupabase.writes.publishers).toEqual([
+      expect.objectContaining({
+        id: publisherId,
+        metadata: expect.objectContaining({ traffic_data_as_of: "2026-07-20" })
+      })
+    ]);
+  });
+
   it("lets the commercial-test trigger synchronize publisher readiness for AdOps", async () => {
     const publisherId = uuid(64);
     const testId = uuid(65);
