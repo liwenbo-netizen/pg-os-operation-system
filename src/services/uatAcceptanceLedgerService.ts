@@ -13,7 +13,7 @@ export type UatAcceptanceEvidenceKind =
 
 export type UatAcceptanceLedgerItem = {
   id: string;
-  phase: "Phase 37" | "Phase 38" | "Phase 39" | "CM-4B" | "CM-5A" | "CM-5D-5H";
+  phase: "Phase 37" | "Phase 38" | "Phase 39" | "CM-4B" | "CM-5A" | "CM-5D-5H" | "MOL-1";
   title: string;
   businessDomains: UatBusinessDomain[];
   roles: RoleCode[];
@@ -270,6 +270,26 @@ export const productionUatAcceptanceLedger: UatAcceptanceLedgerItem[] = [
     ],
     sourceDocument: "docs/development-package/cm-5d-5h-trusted-supply-live-write-uat.md",
     followUp: "Closed. Continue routine score-trend, IVT, blocker, and package-quality monitoring."
+  },
+  {
+    id: "mol-1-media-onboarding-lifecycle-command-center",
+    phase: "MOL-1",
+    title: "Media onboarding lifecycle command center production proof",
+    businessDomains: ["Platform", "Media"],
+    roles: ["media_director"],
+    status: "passed",
+    recordedAt: "2026-07-26T14:12:32.000Z",
+    productionUrl: "https://pg-os-operation-system.vercel.app/media/onboarding-lifecycle",
+    evidenceKinds: ["automated", "manual", "deployment_smoke", "data_quality"],
+    proofPoints: [
+      "The production lifecycle command center loaded 489 media records and exposed the complete nine-stage onboarding model from Media Discovery through Scale Operation.",
+      "The stage projection reconciled to 489 records: 467 Media Discovery, 17 Technical Qualification, 1 SDK Integration, 1 QA and Certification, and 3 Production Launch.",
+      "Production UI checks passed for route availability, stage and status filtering, search and pagination controls, China Media ecosystem navigation, browser return behavior, and console health."
+    ],
+    auditMarkers: ["production route smoke", "lifecycle projection", "stage filter", "cross-module navigation"],
+    sourceDocument: "docs/development-package/mol-1-media-onboarding-lifecycle-production-uat.md",
+    followUp:
+      "Continue with MOL-2 stage gates and data governance: populate empty qualification, contract, pilot, and scale stages, and normalize mixed-language next actions."
   }
 ];
 

@@ -83,16 +83,19 @@ describe("uatHistoryExportService", () => {
     expect(csv).toContain(
       '"commercial_test.conclude; publisher.commercial_test_passed; trusted_supply.evaluate; trusted_supply.score_evaluated; trusted_supply.pool.confirm; trusted_supply.pool_confirmed; trusted_supply.package.create; trusted_supply.package_created; trusted_supply.package.activate; trusted_supply.package_activated"'
     );
+    expect(csv).toContain('"MOL-1"');
+    expect(csv).toContain('"production route smoke; lifecycle projection; stage filter; cross-module navigation"');
     expect(JSON.parse(json)).toMatchObject({
       ledger: expect.arrayContaining([
         expect.objectContaining({ phase: "Phase 37" }),
         expect.objectContaining({ phase: "CM-4B" }),
         expect.objectContaining({ phase: "CM-5A" }),
-        expect.objectContaining({ phase: "CM-5D-5H" })
+        expect.objectContaining({ phase: "CM-5D-5H" }),
+        expect.objectContaining({ phase: "MOL-1" })
       ])
     });
     expect(createUatAcceptanceLedgerFileName(productionUatAcceptanceLedger, "csv")).toBe(
-      "pgos-production-uat-acceptance-ledger-2026-07-17.csv"
+      "pgos-production-uat-acceptance-ledger-2026-07-26.csv"
     );
   });
 });

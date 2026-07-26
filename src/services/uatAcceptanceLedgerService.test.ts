@@ -11,22 +11,23 @@ describe("uatAcceptanceLedgerService", () => {
     const summary = summarizeAcceptanceLedger(productionUatAcceptanceLedger);
 
     expect(summary).toMatchObject({
-      total: 9,
-      passed: 9,
+      total: 10,
+      passed: 10,
       failed: 0,
       blocked: 0,
-      phaseCount: 6,
+      phaseCount: 7,
       auditProofCount: 8
     });
     expect(summary.businessDomainCount).toBeGreaterThanOrEqual(5);
-    expect(summary.latestRecordedAt).toBe("2026-07-17T09:22:26.000Z");
+    expect(summary.latestRecordedAt).toBe("2026-07-26T14:12:32.000Z");
   });
 
-  it("keeps Phase 37-CM-5H and the core business domains visible", () => {
+  it("keeps Phase 37-MOL-1 and the core business domains visible", () => {
     expect(getAcceptanceLedgerPhases(productionUatAcceptanceLedger)).toEqual([
       "CM-4B",
       "CM-5A",
       "CM-5D-5H",
+      "MOL-1",
       "Phase 37",
       "Phase 38",
       "Phase 39"
