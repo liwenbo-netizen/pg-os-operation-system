@@ -46,6 +46,7 @@ import {
 import { trustedSupplyNetworkService } from "../../services/trustedSupplyNetworkService";
 import type {
   AuditEvent,
+  BusinessContract,
   BusinessUser,
   EntityId,
   IntegrationEvidenceType,
@@ -98,12 +99,14 @@ import {
   type PublisherQueueStatusFilter
 } from "./publisherQueueModel";
 import { formatUtcPlus8Date, formatUtcPlus8DateTime } from "../../lib/time";
+import { MediaOnboardingLifecyclePage } from "./MediaOnboardingLifecyclePage";
 
 type MediaExperiencePageProps = {
   route: AppRoute;
   role: RoleDefinition;
   user: BusinessUser;
   state: MediaWorkflowState;
+  contracts: BusinessContract[];
   selectedObjectId?: EntityId;
   onStateChange: (state: MediaWorkflowState) => void;
   onAuditEvent: (event: AuditEvent) => void;
@@ -317,6 +320,7 @@ export function MediaExperiencePage({
   role,
   user,
   state,
+  contracts,
   selectedObjectId,
   onStateChange,
   onAuditEvent,
@@ -414,6 +418,10 @@ export function MediaExperiencePage({
       return "ecosystem";
     }
 
+    if (route.path === "/media/onboarding-lifecycle") {
+      return "lifecycle";
+    }
+
     if (route.path === "/media/integration-wizard/:id") {
       return "integration";
     }
@@ -424,6 +432,18 @@ export function MediaExperiencePage({
 
     return "publisher";
   }, [route.path]);
+
+  if (page === "lifecycle") {
+    return (
+      <MediaOnboardingLifecyclePage
+        route={route}
+        role={role}
+        mediaState={state}
+        contracts={contracts}
+        onRouteChange={onRouteChange}
+      />
+    );
+  }
 
   return (
     <section className="space-y-6">

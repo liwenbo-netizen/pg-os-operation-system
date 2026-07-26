@@ -24,6 +24,21 @@ describe("canViewRoute", () => {
     });
   });
 
+  it("opens the media onboarding lifecycle to its cross-functional stage owners", () => {
+    expect(canViewRoute("media_manager", "/media/onboarding-lifecycle")).toMatchObject({
+      allowed: true,
+      reason_code: "ROUTE_ALLOWED"
+    });
+    expect(canViewRoute("legal_manager", "/media/onboarding-lifecycle")).toMatchObject({
+      allowed: true,
+      reason_code: "ROUTE_ALLOWED"
+    });
+    expect(canViewRoute("sales_manager", "/media/onboarding-lifecycle")).toMatchObject({
+      allowed: false,
+      reason_code: "ROLE_ROUTE_FORBIDDEN"
+    });
+  });
+
   it("allows media managers to hand a Publisher 360 record into technical integration", () => {
     expect(canViewRoute("media_manager", "/media/integration-wizard/:id")).toMatchObject({
       allowed: true,

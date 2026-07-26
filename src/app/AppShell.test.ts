@@ -30,4 +30,11 @@ describe("AppShell business navigation", () => {
     expect(results[0].routes.map((route) => route.path)).toEqual(["/media/china-ecosystem"]);
     expect(groupRoutesForNavigation(mediaRoutes, "系统管理", "zh-CN")).toEqual([]);
   });
+
+  it("places the media onboarding lifecycle in the supply navigation group", () => {
+    const route = routeDefinitions.find((item) => item.path === "/media/onboarding-lifecycle");
+
+    expect(route).toBeDefined();
+    expect(getNavigationGroup(route!)).toBe("supply");
+  });
 });

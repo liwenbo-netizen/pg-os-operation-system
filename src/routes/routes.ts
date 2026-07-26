@@ -114,6 +114,30 @@ export const routeDefinitions: AppRoute[] = [
     ]
   },
   {
+    path: "/media/onboarding-lifecycle",
+    title: "Media Onboarding Lifecycle",
+    module: "Media",
+    pageType: "Lifecycle Command Center",
+    priority: "P0",
+    allowedRoles: [
+      "ceo",
+      "operations_director",
+      "media_director",
+      "media_manager",
+      "integration_manager",
+      "adops_manager",
+      "data_analyst",
+      "finance_manager",
+      "legal_manager"
+    ],
+    service: "MediaOnboardingLifecycleService",
+    guard: "canViewRoute",
+    uat: "UAT-MEDIA-LIFECYCLE",
+    primaryAction: "Open the next stage action",
+    summarySignals: ["Lifecycle media", "Blocked gates", "Pilots active", "Live and scaling"],
+    sections: ["Nine-stage lifecycle", "Stage gates", "Cross-module records", "Blockers", "Next actions"]
+  },
+  {
     path: "/media/publishers/:id",
     title: "Publisher 360",
     module: "Media",
@@ -329,4 +353,34 @@ export function getDefaultRouteForRole(roleCode: RoleCode) {
   return roleCode === "system_admin"
     ? "/admin"
     : routeDefinitions.find((route) => route.allowedRoles.includes(roleCode))?.path ?? "/workbench";
+}
+
+export function resolveRouteLocation(pathname: string) {
+  const normalizedPath = pathname.replace(/\/+$/, "") || "/";
+
+  for (const route of routeDefinitions) {
+    const routeSegments = route.path.split("/").filter(Boolean);
+    const pathSegments = normalizedPath.split("/").filter(Boolean);
+    const hasObjectId = routeSegments[routeSegments.length - 1] === ":id";
+    const expectedLength = hasObjectId ? routeSegments.length - 1 : routeSegments.length;
+
+    if (pathSegments.length !== routeSegments.length && !(hasObjectId && pathSegments.length === expectedLength)) {
+      continue;
+    }
+
+    const staticSegmentsMatch = routeSegments.every((segment, index) => segment === ":id" || segment === pathSegments[index]);
+    if (!staticSegmentsMatch) continue;
+
+    const objectId = hasObjectId && pathSegments.length === routeSegments.length
+      ? decodeURIComponent(pathSegments[pathSegments.length - 1])
+      : undefined;
+    return { path: route.path, objectId };
+  }
+
+  return undefined;
+}
+
+export function buildRouteLocation(path: string, objectId?: string) {
+  if (!path.endsWith("/:id")) return path;
+  return objectId ? path.replace(":id", encodeURIComponent(objectId)) : path.slice(0, -4);
 }

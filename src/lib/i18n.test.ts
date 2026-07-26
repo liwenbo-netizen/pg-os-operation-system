@@ -24,6 +24,9 @@ describe("PG OS localization", () => {
     expect(getRouteDisplayTitle({ path: "/media/china-ecosystem", title: "China Media Ecosystem Expansion" }, "zh-CN")).toBe(
       "中国媒体生态拓展"
     );
+    expect(getRouteDisplayTitle({ path: "/media/onboarding-lifecycle", title: "Media Onboarding Lifecycle" }, "zh-CN")).toBe(
+      "媒体接入生命周期"
+    );
   });
 
   it("selects Chinese for Chinese browser locales and English otherwise", () => {

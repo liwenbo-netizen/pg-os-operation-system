@@ -14,7 +14,12 @@ import { UatResultHistoryPage } from "./pages/uat/UatResultHistoryPage";
 import { UatScriptCenterPage } from "./pages/uat/UatScriptCenterPage";
 import { WorkbenchOperationsPage } from "./pages/workbench/WorkbenchOperationsPage";
 import { roleCodes, roleDefinitions, type RoleCode } from "./constants/roles";
-import { getDefaultRouteForRole, routeDefinitions } from "./routes/routes";
+import {
+  buildRouteLocation,
+  getDefaultRouteForRole,
+  resolveRouteLocation,
+  routeDefinitions
+} from "./routes/routes";
 import { canViewRoute } from "./routes/routeGuards";
 import { createInitialContractWorkflowState } from "./services/contractService";
 import { createInitialFinanceWorkflowState } from "./services/financeSettlementService";
@@ -39,9 +44,10 @@ import { getRoleDisplayName, useLocale } from "./lib/i18n";
 
 export function App() {
   const { locale, t } = useLocale();
+  const initialRouteLocation = resolveRouteLocation(typeof window === "undefined" ? "/" : window.location.pathname);
   const [activeRole, setActiveRole] = useState<RoleCode>("ceo");
-  const [activePath, setActivePath] = useState(getDefaultRouteForRole("ceo"));
-  const [activeObjectId, setActiveObjectId] = useState<EntityId | undefined>();
+  const [activePath, setActivePath] = useState(() => initialRouteLocation?.path ?? getDefaultRouteForRole("ceo"));
+  const [activeObjectId, setActiveObjectId] = useState<EntityId | undefined>(() => initialRouteLocation?.objectId);
   const [activeUser, setActiveUser] = useState<BusinessUser | null>(null);
   const [authMode, setAuthMode] = useState<AuthSessionMode>("mock");
   const [authLoading, setAuthLoading] = useState(false);
@@ -132,6 +138,24 @@ export function App() {
 
   const activeRoute =
     visibleRoutes.find((route) => route.path === activePath) ?? visibleRoutes[0] ?? routeDefinitions[0];
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const location = resolveRouteLocation(window.location.pathname);
+      if (location && canViewRoute(activeRole, location.path).allowed) {
+        setActivePath(location.path);
+        setActiveObjectId(location.objectId);
+        return;
+      }
+
+      const fallbackPath = getDefaultRouteForRole(activeRole);
+      setActivePath(fallbackPath);
+      setActiveObjectId(undefined);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [activeRole]);
 
   useEffect(() => {
     if (!authSessionRepository.supportsSupabase) {
@@ -262,12 +286,19 @@ export function App() {
     setAuthWarnings(result.warnings);
 
     if (result.status === "authenticated" && result.user) {
+      const requestedLocation = resolveRouteLocation(window.location.pathname);
+      const allowedLocation =
+        requestedLocation && canViewRoute(result.user.activeRole, requestedLocation.path).allowed
+          ? requestedLocation
+          : undefined;
+      const nextPath = allowedLocation?.path ?? getDefaultRouteForRole(result.user.activeRole);
       setActiveUser(result.user);
       setAuthMode(result.mode);
       setAuthError(undefined);
       setActiveRole(result.user.activeRole);
-      setActivePath(getDefaultRouteForRole(result.user.activeRole));
-      setActiveObjectId(undefined);
+      setActivePath(nextPath);
+      setActiveObjectId(allowedLocation?.objectId);
+      window.history.replaceState(null, "", buildRouteLocation(nextPath, allowedLocation?.objectId));
       return;
     }
 
@@ -395,6 +426,7 @@ export function App() {
         : currentUser
     );
     setActivePath(getDefaultRouteForRole(nextRole));
+    window.history.replaceState(null, "", getDefaultRouteForRole(nextRole));
   }
 
   function handleRouteChange(nextPath: string, objectId?: EntityId) {
@@ -436,6 +468,7 @@ export function App() {
     }
 
     setActivePath(nextPath);
+    window.history.pushState(null, "", buildRouteLocation(nextPath, objectId));
   }
 
   function handleOpenWorkbenchTask(task: WorkbenchTask) {
@@ -545,6 +578,7 @@ export function App() {
           role={roleDefinitions[activeRole]}
           user={activeUser}
           state={mediaWorkflowState}
+          contracts={contractWorkflowState.contracts}
           selectedObjectId={activeObjectId}
           onStateChange={setMediaWorkflowState}
           onAuditEvent={handleWorkflowAuditEvent}
