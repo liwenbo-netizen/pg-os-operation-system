@@ -74,6 +74,12 @@ describe("businessAuditCoverage", () => {
           module: "Media",
           criticality: "P0"
         }),
+        expect.objectContaining({
+          action: "media_onboarding.stage_gate.approve",
+          objectType: "media_onboarding_stage_gate",
+          module: "Media",
+          criticality: "P0"
+        }),
         expect.objectContaining({ action: "proposal.approve", module: "Sales", criticality: "P0" }),
         expect.objectContaining({ action: "campaign.launch.approve", module: "Campaigns", criticality: "P0" }),
         expect.objectContaining({ action: "settlement.confirm", module: "Finance", criticality: "P0" }),

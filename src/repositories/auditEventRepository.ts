@@ -100,7 +100,13 @@ export function inferObservabilityModule(objectType: string, code = "") {
     return "System";
   }
 
-  if (["publisher"].includes(normalizedObjectType) || normalizedCode.includes("publisher")) {
+  if (
+    ["publisher", "media_ecosystem_lead", "trusted_supply_candidate", "media_onboarding_stage_gate"].includes(
+      normalizedObjectType
+    ) ||
+    normalizedCode.includes("publisher") ||
+    normalizedCode.startsWith("media_onboarding.")
+  ) {
     return "Media";
   }
 

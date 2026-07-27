@@ -4,6 +4,8 @@ import type {
   EntityId,
   IntegrationProject,
   MediaEcosystemLead,
+  MediaOnboardingStage,
+  MediaOnboardingStageGate,
   MediaSupplyPackage,
   MediaWorkflowState,
   Publisher,
@@ -21,9 +23,9 @@ export const mediaOnboardingLifecycleStages = [
   "PILOT",
   "PRODUCTION_LAUNCH",
   "SCALE_OPERATION"
-] as const;
+] as const satisfies readonly MediaOnboardingStage[];
 
-export type MediaOnboardingLifecycleStage = (typeof mediaOnboardingLifecycleStages)[number];
+export type MediaOnboardingLifecycleStage = MediaOnboardingStage;
 export type MediaOnboardingLifecycleStatus = "ready" | "in_progress" | "blocked" | "on_hold" | "rejected" | "operating";
 
 export type MediaOnboardingLifecycleItem = {
@@ -37,6 +39,10 @@ export type MediaOnboardingLifecycleItem = {
   nextAction: string;
   blockers: string[];
   source: "ecosystem" | "trusted_candidate" | "publisher";
+  lifecycleObjectType: MediaOnboardingStageGate["lifecycle_object_type"];
+  lifecycleObjectId: EntityId;
+  stageGate?: MediaOnboardingStageGate;
+  stageGates: MediaOnboardingStageGate[];
   priorityScore?: number;
   lead?: MediaEcosystemLead;
   candidate?: TrustedSupplyCandidate;
@@ -116,11 +122,19 @@ function stageForPublisher(records: LinkedRecords): MediaOnboardingLifecycleStag
   return "TECHNICAL_QUALIFICATION";
 }
 
-function lifecycleStatus(records: LinkedRecords, stage: MediaOnboardingLifecycleStage, blockers: string[]): MediaOnboardingLifecycleStatus {
+function lifecycleStatus(
+  records: LinkedRecords,
+  stage: MediaOnboardingLifecycleStage,
+  blockers: string[],
+  stageGate?: MediaOnboardingStageGate
+): MediaOnboardingLifecycleStatus {
   if (records.lead?.stage === "REJECTED") return "rejected";
   if (records.lead?.stage === "ON_HOLD") return "on_hold";
+  if (stageGate?.status === "rejected") return "rejected";
+  if (stageGate?.status === "blocked") return "blocked";
   if (blockers.length > 0) return "blocked";
   if (stage === "SCALE_OPERATION") return "operating";
+  if (stageGate?.status === "approved" || stageGate?.status === "ready_for_approval") return "ready";
   if (stage === "PRODUCTION_LAUNCH" && records.publisher?.sales_scale_status === "scale_ready") return "ready";
   if (stage === "QA_CERTIFICATION" || stage === "COMMERCIAL_AGREEMENT") return "ready";
   return "in_progress";
@@ -178,9 +192,20 @@ function nextActionFor(records: LinkedRecords, stage: MediaOnboardingLifecycleSt
 function itemFromRecords(records: LinkedRecords, state: MediaWorkflowState): MediaOnboardingLifecycleItem {
   const stage = records.publisher ? stageForPublisher(records) : records.lead ? stageForLead(records.lead) : "TECHNICAL_QUALIFICATION";
   const blockers = blockersFor(records, stage, state);
+  const lifecycleObjectType: MediaOnboardingStageGate["lifecycle_object_type"] = records.lead
+    ? "media_ecosystem_lead"
+    : records.candidate
+      ? "trusted_supply_candidate"
+      : "publisher";
+  const lifecycleObjectId = records.lead?.id ?? records.candidate?.id ?? records.publisher?.id ?? "unknown";
+  const stageGates = state.mediaOnboardingStageGates.filter(
+    (gate) => gate.lifecycle_object_type === lifecycleObjectType && gate.lifecycle_object_id === lifecycleObjectId
+  );
+  const stageGate = stageGates.find((gate) => gate.stage === stage);
+  if (stageGate?.blocker && !blockers.includes(stageGate.blocker)) blockers.push(stageGate.blocker);
   const ownerRole = records.candidate?.owner_role ?? records.lead?.owner_role ?? records.commercialTest?.owner_role ?? records.contract?.owner_role;
   const ownerUserId = records.candidate?.owner_user_id ?? records.lead?.owner_user_id ?? records.commercialTest?.owner_user_id;
-  const id = records.lead?.id ?? records.candidate?.id ?? records.publisher?.id ?? "unknown";
+  const id = lifecycleObjectId;
   const mediaName = records.lead?.media_name ?? records.candidate?.media_name ?? records.publisher?.name ?? "Unnamed media";
 
   return {
@@ -188,12 +213,16 @@ function itemFromRecords(records: LinkedRecords, state: MediaWorkflowState): Med
     mediaName,
     stage,
     stageIndex: stageIndex[stage],
-    status: lifecycleStatus(records, stage, blockers),
-    ownerRole,
-    ownerUserId,
+    status: lifecycleStatus(records, stage, blockers, stageGate),
+    ownerRole: stageGate?.owner_role ?? ownerRole,
+    ownerUserId: stageGate?.owner_user_id ?? ownerUserId,
     nextAction: nextActionFor(records, stage),
     blockers,
     source: records.publisher ? "publisher" : records.candidate ? "trusted_candidate" : "ecosystem",
+    lifecycleObjectType,
+    lifecycleObjectId,
+    stageGate,
+    stageGates,
     priorityScore: records.lead?.priority_score ?? records.candidate?.priority_score,
     ...records
   };

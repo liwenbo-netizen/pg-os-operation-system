@@ -218,5 +218,8 @@ describe("auditEventRepository", () => {
     expect(inferObservabilityModule("route", "route.visit")).toBe("System");
     expect(inferObservabilityModule("route", "role.switch")).toBe("System");
     expect(inferObservabilityModule("workbench_task")).toBe("Workbench");
+    expect(inferObservabilityModule("media_onboarding_stage_gate", "media_onboarding.stage_gate.approve")).toBe(
+      "Media"
+    );
   });
 });

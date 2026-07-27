@@ -807,6 +807,83 @@ describe("workflow repositories", () => {
     expect(fakeSupabase.writes.advertisers).toBeUndefined();
   });
 
+  it("loads and dirty saves a media onboarding stage gate with actor bindings", async () => {
+    const gateId = uuid(70);
+    const leadId = uuid(71);
+    const ownerId = uuid(72);
+    const actorId = uuid(73);
+    const fakeSupabase = new FakeSupabase({
+      media_onboarding_stage_gates: [
+        {
+          id: gateId,
+          lifecycle_object_type: "media_ecosystem_lead",
+          lifecycle_object_id: leadId,
+          stage: "MEDIA_DISCOVERY",
+          status: "in_progress",
+          owner_user_id: ownerId,
+          owner_role: "media_manager",
+          target_date: "2026-08-15",
+          deliverables: [
+            {
+              code: "media_profile",
+              title: "Media profile and source verified",
+              required: true,
+              completed: false
+            }
+          ],
+          kpi_evidence: [
+            {
+              code: "priority_score",
+              label: "Priority score",
+              required: true,
+              unit: "/100"
+            }
+          ],
+          created_by: ownerId,
+          updated_by: ownerId,
+          created_at: "2026-07-26T08:00:00.000Z",
+          updated_at: "2026-07-26T08:00:00.000Z"
+        }
+      ]
+    });
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const { snapshot } = await repository.loadSnapshot();
+
+    expect(snapshot.mediaState.mediaOnboardingStageGates[0]).toMatchObject({
+      id: gateId,
+      lifecycle_object_id: leadId,
+      stage: "MEDIA_DISCOVERY",
+      status: "in_progress",
+      target_date: "2026-08-15",
+      created_by: ownerId,
+      updated_by: ownerId
+    });
+
+    snapshot.mediaState.mediaOnboardingStageGates[0] = {
+      ...snapshot.mediaState.mediaOnboardingStageGates[0],
+      notes: "Source verification is ready for review.",
+      updated_by: actorId,
+      updated_at: "2026-07-26T09:00:00.000Z"
+    };
+
+    const result = await repository.saveSnapshot(snapshot, {
+      actor: { id: actorId, activeRole: "media_manager" }
+    });
+
+    expect(result.savedTables).toEqual(["media_onboarding_stage_gates"]);
+    expect(fakeSupabase.writes.media_onboarding_stage_gates).toEqual([
+      expect.objectContaining({
+        id: gateId,
+        lifecycle_object_id: leadId,
+        stage: "MEDIA_DISCOVERY",
+        owner_user_id: ownerId,
+        created_by: ownerId,
+        updated_by: actorId,
+        notes: "Source verification is ready for review."
+      })
+    ]);
+  });
+
   it("dirty saves a publisher traffic evidence date nested in metadata", async () => {
     const publisherId = uuid(76);
     const fakeSupabase = new FakeSupabase({

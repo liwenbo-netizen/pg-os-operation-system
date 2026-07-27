@@ -104,4 +104,51 @@ describe("mediaOnboardingLifecycleService", () => {
 
     expect(item).toMatchObject({ stage: "SCALE_OPERATION", status: "operating" });
   });
+
+  it("overlays the current explicit stage gate without advancing authoritative lifecycle facts", () => {
+    const mediaState = createInitialMediaWorkflowState();
+    const lead = mediaState.mediaEcosystemLeads.find((item) => item.stage === "PRIORITY_SCREENED");
+    if (!lead) throw new Error("Fixture ecosystem lead missing");
+
+    const gateState = {
+      ...mediaState,
+      mediaOnboardingStageGates: [
+        {
+          id: "gate-discovery-approved",
+          lifecycle_object_type: "media_ecosystem_lead" as const,
+          lifecycle_object_id: lead.id,
+          stage: "MEDIA_DISCOVERY" as const,
+          status: "approved" as const,
+          owner_role: "media_director" as const,
+          target_date: "2026-08-15",
+          deliverables: [],
+          kpi_evidence: [],
+          submitted_at: "2026-07-26T10:00:00.000Z",
+          approved_by: "mock-media-director",
+          approved_by_role: "media_director" as const,
+          approved_at: "2026-07-26T11:00:00.000Z",
+          created_at: "2026-07-26T09:00:00.000Z",
+          updated_at: "2026-07-26T11:00:00.000Z"
+        }
+      ]
+    };
+
+    const item = mediaOnboardingLifecycleService
+      .getCases({
+        mediaState: gateState,
+        contracts: createInitialContractWorkflowState().contracts
+      })
+      .find((entry) => entry.lead?.id === lead.id);
+
+    expect(item).toMatchObject({
+      stage: "MEDIA_DISCOVERY",
+      status: "ready",
+      ownerRole: "media_director",
+      stageGate: {
+        id: "gate-discovery-approved",
+        status: "approved",
+        target_date: "2026-08-15"
+      }
+    });
+  });
 });

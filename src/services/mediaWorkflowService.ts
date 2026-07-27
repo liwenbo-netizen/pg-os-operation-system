@@ -132,6 +132,7 @@ export function createInitialMediaWorkflowState(): MediaWorkflowState {
   return {
     publishers: fixtureRepository.publishers.map((publisher) => ({ ...publisher })),
     publisherTrafficEvidenceHistory: [],
+    mediaOnboardingStageGates: [],
     publisherContacts: fixtureRepository.publisherContacts.map((contact) => ({ ...contact })),
     publisherAdSlots: fixtureRepository.publisherAdSlots.map((slot) => ({ ...slot })),
     publisherContractTerms: fixtureRepository.publisherContractTerms.map((term) => ({ ...term })),

@@ -12,6 +12,7 @@ import type {
   IntegrationEvidence,
   IntegrationProject,
   MediaEcosystemLead,
+  MediaOnboardingStageGate,
   MediaOutreachActivity,
   MediaSupplyPackage,
   MediaTrustProfile,
@@ -87,6 +88,7 @@ const TABLES_TO_LOAD = [
   "media_trust_profiles",
   "media_trust_score_history",
   "media_supply_packages",
+  "media_onboarding_stage_gates",
   "media_ecosystem_opportunities",
   "media_ecosystem_outreach_activities",
   "trusted_supply_candidates",
@@ -117,6 +119,7 @@ const AUDIT_FIELD_CONFIG: Record<string, AuditFieldConfig> = {
   commercial_tests: { ownerUserId: true },
   media_trust_profiles: { ownerUserId: true },
   media_supply_packages: { ownerUserId: true, createdBy: true, updatedBy: true },
+  media_onboarding_stage_gates: { ownerUserId: true, createdBy: true, updatedBy: true },
   media_ecosystem_opportunities: { ownerUserId: true, createdBy: true, updatedBy: true },
   media_ecosystem_outreach_activities: { actorUserId: true },
   trusted_supply_candidates: { ownerUserId: true, createdBy: true, updatedBy: true },
@@ -391,6 +394,34 @@ function mapMediaSupplyPackage(row: Row): MediaSupplyPackage {
     created_at: stringValue(row.created_at, new Date().toISOString()),
     updated_at: stringValue(row.updated_at, new Date().toISOString()),
     activated_at: optionalString(row.activated_at)
+  };
+}
+
+function mapMediaOnboardingStageGate(row: Row): MediaOnboardingStageGate {
+  return {
+    id: stringValue(row.id),
+    lifecycle_object_type: stringValue(
+      row.lifecycle_object_type,
+      "publisher"
+    ) as MediaOnboardingStageGate["lifecycle_object_type"],
+    lifecycle_object_id: stringValue(row.lifecycle_object_id),
+    stage: stringValue(row.stage, "MEDIA_DISCOVERY") as MediaOnboardingStageGate["stage"],
+    status: stringValue(row.status, "not_started") as MediaOnboardingStageGate["status"],
+    owner_user_id: optionalString(row.owner_user_id),
+    owner_role: roleCode(row.owner_role, "media_manager"),
+    target_date: dateOnly(row.target_date),
+    deliverables: arrayValue<MediaOnboardingStageGate["deliverables"][number]>(row.deliverables),
+    kpi_evidence: arrayValue<MediaOnboardingStageGate["kpi_evidence"][number]>(row.kpi_evidence),
+    blocker: optionalString(row.blocker),
+    notes: optionalString(row.notes),
+    submitted_at: optionalString(row.submitted_at),
+    approved_by: optionalString(row.approved_by),
+    approved_by_role: optionalString(row.approved_by_role) as MediaOnboardingStageGate["approved_by_role"],
+    approved_at: optionalString(row.approved_at),
+    created_by: optionalString(row.created_by),
+    updated_by: optionalString(row.updated_by),
+    created_at: stringValue(row.created_at, new Date().toISOString()),
+    updated_at: stringValue(row.updated_at, new Date().toISOString())
   };
 }
 
@@ -1030,6 +1061,11 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           fallback.mediaState.mediaSupplyPackages,
           mapMediaSupplyPackage
         ),
+        mediaOnboardingStageGates: rowsOrFallback(
+          loadedRows.media_onboarding_stage_gates,
+          fallback.mediaState.mediaOnboardingStageGates,
+          mapMediaOnboardingStageGate
+        ),
         mediaEcosystemLeads: rowsOrFallback(
           loadedRows.media_ecosystem_opportunities,
           fallback.mediaState.mediaEcosystemLeads,
@@ -1273,6 +1309,32 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           updated_at: packageRecord.updated_at
         })),
         uuidFields: ["publisher_id"]
+      },
+      {
+        table: "media_onboarding_stage_gates",
+        rows: snapshot.mediaState.mediaOnboardingStageGates.map((gate) => ({
+          id: gate.id,
+          lifecycle_object_type: gate.lifecycle_object_type,
+          lifecycle_object_id: gate.lifecycle_object_id,
+          stage: gate.stage,
+          status: gate.status,
+          owner_user_id: optionalUuid(gate.owner_user_id),
+          owner_role: gate.owner_role,
+          target_date: gate.target_date,
+          deliverables: gate.deliverables,
+          kpi_evidence: gate.kpi_evidence,
+          blocker: gate.blocker,
+          notes: gate.notes,
+          submitted_at: gate.submitted_at,
+          approved_by: optionalUuid(gate.approved_by),
+          approved_by_role: gate.approved_by_role,
+          approved_at: gate.approved_at,
+          created_by: optionalUuid(gate.created_by),
+          updated_by: optionalUuid(gate.updated_by),
+          created_at: gate.created_at,
+          updated_at: gate.updated_at
+        })),
+        uuidFields: ["lifecycle_object_id"]
       },
       {
         table: "media_ecosystem_opportunities",

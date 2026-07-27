@@ -293,6 +293,41 @@ export const CORE_BUSINESS_AUDIT_ACTIONS: CoreBusinessAuditAction[] = [
     criticality: "P0"
   },
   {
+    action: "media_onboarding.stage_gate.start",
+    objectType: "media_onboarding_stage_gate",
+    module: "Media",
+    workflowSurface: "Media Onboarding Stage Gate",
+    criticality: "P1"
+  },
+  {
+    action: "media_onboarding.stage_gate.update",
+    objectType: "media_onboarding_stage_gate",
+    module: "Media",
+    workflowSurface: "Media Onboarding Stage Gate",
+    criticality: "P1"
+  },
+  {
+    action: "media_onboarding.stage_gate.submit",
+    objectType: "media_onboarding_stage_gate",
+    module: "Media",
+    workflowSurface: "Media Onboarding Stage Gate Approval",
+    criticality: "P0"
+  },
+  {
+    action: "media_onboarding.stage_gate.approve",
+    objectType: "media_onboarding_stage_gate",
+    module: "Media",
+    workflowSurface: "Media Onboarding Stage Gate Approval",
+    criticality: "P0"
+  },
+  {
+    action: "media_onboarding.stage_gate.reject",
+    objectType: "media_onboarding_stage_gate",
+    module: "Media",
+    workflowSurface: "Media Onboarding Stage Gate Approval",
+    criticality: "P0"
+  },
+  {
     action: "advertiser.create",
     objectType: "advertiser",
     module: "Sales",

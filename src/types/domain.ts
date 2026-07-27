@@ -28,6 +28,7 @@ export type ObjectType =
   | "publisher"
   | "media_ecosystem_lead"
   | "trusted_supply_candidate"
+  | "media_onboarding_stage_gate"
   | "proposal"
   | "campaign"
   | "contract"
@@ -108,6 +109,64 @@ export type PublisherTrafficEvidenceRecord = {
   recorded_by_role?: RoleCode;
   recorded_via: "publisher_onboarding_created" | "publisher_profile_updated" | "migration_backfill";
   created_at: string;
+};
+
+export type MediaOnboardingStage =
+  | "MEDIA_DISCOVERY"
+  | "BUSINESS_QUALIFICATION"
+  | "COMMERCIAL_AGREEMENT"
+  | "TECHNICAL_QUALIFICATION"
+  | "SDK_INTEGRATION"
+  | "QA_CERTIFICATION"
+  | "PILOT"
+  | "PRODUCTION_LAUNCH"
+  | "SCALE_OPERATION";
+
+export type MediaOnboardingStageGateStatus =
+  | "not_started"
+  | "in_progress"
+  | "blocked"
+  | "ready_for_approval"
+  | "approved"
+  | "rejected";
+
+export type MediaOnboardingGateDeliverable = {
+  code: string;
+  title: string;
+  required: boolean;
+  completed: boolean;
+  evidence?: string;
+};
+
+export type MediaOnboardingGateKpiEvidence = {
+  code: string;
+  label: string;
+  required: boolean;
+  value?: string;
+  unit?: string;
+};
+
+export type MediaOnboardingStageGate = {
+  id: EntityId;
+  lifecycle_object_type: "media_ecosystem_lead" | "trusted_supply_candidate" | "publisher";
+  lifecycle_object_id: EntityId;
+  stage: MediaOnboardingStage;
+  status: MediaOnboardingStageGateStatus;
+  owner_user_id?: UserId;
+  owner_role: RoleCode;
+  target_date?: string;
+  deliverables: MediaOnboardingGateDeliverable[];
+  kpi_evidence: MediaOnboardingGateKpiEvidence[];
+  blocker?: string;
+  notes?: string;
+  submitted_at?: string;
+  approved_by?: UserId;
+  approved_by_role?: RoleCode;
+  approved_at?: string;
+  created_by?: UserId;
+  updated_by?: UserId;
+  created_at: string;
+  updated_at: string;
 };
 
 export type IntegrationProject = {
@@ -604,6 +663,7 @@ export type ModuleBusinessEvent = {
 export type MediaWorkflowState = {
   publishers: Publisher[];
   publisherTrafficEvidenceHistory: PublisherTrafficEvidenceRecord[];
+  mediaOnboardingStageGates: MediaOnboardingStageGate[];
   publisherContacts: PublisherContact[];
   publisherAdSlots: PublisherAdSlot[];
   publisherContractTerms: PublisherContractTerm[];

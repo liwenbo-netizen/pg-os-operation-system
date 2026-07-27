@@ -438,8 +438,11 @@ export function MediaExperiencePage({
       <MediaOnboardingLifecyclePage
         route={route}
         role={role}
+        user={user}
         mediaState={state}
         contracts={contracts}
+        onStateChange={onStateChange}
+        onAuditEvent={onAuditEvent}
         onRouteChange={onRouteChange}
       />
     );
