@@ -195,6 +195,83 @@ export type IntegrationEvidence = {
   recorded_by_role: RoleCode;
 };
 
+export type IntegrationPlaybookCode =
+  | "origin_ads_android_1_2"
+  | "origin_ivt_android_v11"
+  | "fangge_android_reference"
+  | "sigmob_android_reference"
+  | "tobid_android_reference"
+  | "beizi_android_reference";
+
+export type IntegrationPlatform = "android" | "android_tv" | "other";
+
+export type IntegrationAdFormat =
+  | "splash"
+  | "interstitial"
+  | "rewarded"
+  | "native"
+  | "banner"
+  | "display";
+
+export type IntegrationPrivacyProfile = {
+  consent_before_init: boolean;
+  personalized_ads: boolean;
+  gaid: boolean;
+  oaid: boolean;
+  android_id: boolean;
+  telephony_id: boolean;
+  location: boolean;
+  installed_apps: boolean;
+};
+
+export type IntegrationProjectProfile = {
+  id: EntityId;
+  integration_project_id: EntityId;
+  platform: IntegrationPlatform;
+  property_identifier: string;
+  playbook_codes: IntegrationPlaybookCode[];
+  min_sdk?: number;
+  target_sdk?: number;
+  compile_sdk?: number;
+  agp_version?: string;
+  gradle_version?: string;
+  language?: "java" | "kotlin" | "mixed";
+  process_model?: "single_process" | "multi_process";
+  media_engineering_contact: string;
+  planned_formats: IntegrationAdFormat[];
+  privacy_profile: IntegrationPrivacyProfile;
+  target_pilot_date?: string;
+  secret_reference?: string;
+  created_by?: UserId;
+  updated_by?: UserId;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type IntegrationCheckStatus =
+  | "not_started"
+  | "in_progress"
+  | "blocked"
+  | "passed"
+  | "failed"
+  | "waived";
+
+export type IntegrationCheckResult = {
+  id: EntityId;
+  integration_project_id: EntityId;
+  item_code: string;
+  status: IntegrationCheckStatus;
+  owner_role: RoleCode;
+  responsible_party?: "MEDIA_ENGINEERING" | "PG_OS";
+  due_date?: string;
+  evidence_reference?: string;
+  blocker?: string;
+  waiver_reason?: string;
+  updated_by?: UserId;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type CommercialTest = {
   id: EntityId;
   publisher_id: EntityId;
@@ -607,6 +684,8 @@ export type WorkbenchTask = {
   module: "Media" | "Sales" | "Campaigns" | "Diagnostics" | "Finance" | "Contracts" | "Guide" | "Admin" | "Workbench";
   owner_role: RoleCode;
   related_route: string;
+  focus_item_code?: string;
+  allow_open_when_blocked?: boolean;
   priority: "P0" | "P1" | "P2";
   status: "open" | "in_progress" | "done" | "blocked";
   due_date?: string;
@@ -668,6 +747,8 @@ export type MediaWorkflowState = {
   publisherAdSlots: PublisherAdSlot[];
   publisherContractTerms: PublisherContractTerm[];
   integrationProjects: IntegrationProject[];
+  integrationProjectProfiles: IntegrationProjectProfile[];
+  integrationCheckResults: IntegrationCheckResult[];
   commercialTests: CommercialTest[];
   mediaTrustProfiles: MediaTrustProfile[];
   mediaTrustScoreHistory: MediaTrustScoreRecord[];

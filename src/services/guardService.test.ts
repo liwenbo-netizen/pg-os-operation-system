@@ -119,5 +119,16 @@ describe("RLS policy mirror", () => {
   it("allows finance_manager to write settlements", () => {
     expect(rlsService.canWriteTable(user("finance_manager"), "settlements")).toBe(true);
   });
-});
 
+  it("keeps profile ownership with integration leadership", () => {
+    expect(rlsService.canWriteTable(user("integration_manager"), "integration_project_profiles")).toBe(true);
+    expect(rlsService.canWriteTable(user("media_director"), "integration_project_profiles")).toBe(true);
+    expect(rlsService.canWriteTable(user("media_manager"), "integration_project_profiles")).toBe(false);
+  });
+
+  it("allows legal and data owners to update their technical checklist rows", () => {
+    expect(rlsService.canWriteTable(user("legal_manager"), "integration_check_results")).toBe(true);
+    expect(rlsService.canWriteTable(user("data_analyst"), "integration_check_results")).toBe(true);
+    expect(rlsService.canWriteTable(user("sales_manager"), "integration_check_results")).toBe(false);
+  });
+});

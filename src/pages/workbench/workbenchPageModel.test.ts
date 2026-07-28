@@ -25,6 +25,10 @@ describe("Workbench page guidance", () => {
     expect(getWorkbenchTaskAction(task("open"))).toEqual({ kind: "start", disabled: false });
     expect(getWorkbenchTaskAction(task("in_progress"))).toEqual({ kind: "continue", disabled: false });
     expect(getWorkbenchTaskAction(task("blocked"))).toEqual({ kind: "blocked", disabled: true });
+    expect(getWorkbenchTaskAction({ ...task("blocked"), allow_open_when_blocked: true })).toEqual({
+      kind: "continue",
+      disabled: false
+    });
     expect(getWorkbenchTaskAction()).toEqual({ kind: "none", disabled: true });
   });
 
@@ -43,5 +47,20 @@ describe("Workbench page guidance", () => {
     expect(getWorkbenchTaskDisplayTitle(commercialTask, "zh-CN")).toBe("完成商业验证：QuZhi Campus");
     expect(getWorkbenchTaskDisplayTitle(commercialTask, "en-US")).toBe(commercialTask.title);
     expect(getWorkbenchModuleDisplayName(commercialTask.module, "zh-CN")).toBe("媒体");
+  });
+
+  it("localizes generated technical profile and checklist tasks", () => {
+    expect(
+      getWorkbenchTaskDisplayTitle(
+        { ...task("open"), title: "Configure technical profile: Demo Media", module: "Media" },
+        "zh-CN"
+      )
+    ).toBe("配置技术画像：Demo Media");
+    expect(
+      getWorkbenchTaskDisplayTitle(
+        { ...task("open"), title: "Complete technical check TQ-007: Demo Media", module: "Media" },
+        "zh-CN"
+      )
+    ).toBe("完成技术检查 TQ-007：Demo Media");
   });
 });

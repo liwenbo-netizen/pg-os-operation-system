@@ -44,10 +44,15 @@ import { getRoleDisplayName, useLocale } from "./lib/i18n";
 
 export function App() {
   const { locale, t } = useLocale();
-  const initialRouteLocation = resolveRouteLocation(typeof window === "undefined" ? "/" : window.location.pathname);
+  const initialRouteLocation = resolveRouteLocation(
+    typeof window === "undefined" ? "/" : `${window.location.pathname}${window.location.search}`
+  );
   const [activeRole, setActiveRole] = useState<RoleCode>("ceo");
   const [activePath, setActivePath] = useState(() => initialRouteLocation?.path ?? getDefaultRouteForRole("ceo"));
   const [activeObjectId, setActiveObjectId] = useState<EntityId | undefined>(() => initialRouteLocation?.objectId);
+  const [activeFocusItemCode, setActiveFocusItemCode] = useState<string | undefined>(
+    () => initialRouteLocation?.focusItemCode
+  );
   const [activeUser, setActiveUser] = useState<BusinessUser | null>(null);
   const [authMode, setAuthMode] = useState<AuthSessionMode>("mock");
   const [authLoading, setAuthLoading] = useState(false);
@@ -141,16 +146,18 @@ export function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      const location = resolveRouteLocation(window.location.pathname);
+      const location = resolveRouteLocation(`${window.location.pathname}${window.location.search}`);
       if (location && canViewRoute(activeRole, location.path).allowed) {
         setActivePath(location.path);
         setActiveObjectId(location.objectId);
+        setActiveFocusItemCode(location.focusItemCode);
         return;
       }
 
       const fallbackPath = getDefaultRouteForRole(activeRole);
       setActivePath(fallbackPath);
       setActiveObjectId(undefined);
+      setActiveFocusItemCode(undefined);
     };
 
     window.addEventListener("popstate", handlePopState);
@@ -286,7 +293,7 @@ export function App() {
     setAuthWarnings(result.warnings);
 
     if (result.status === "authenticated" && result.user) {
-      const requestedLocation = resolveRouteLocation(window.location.pathname);
+      const requestedLocation = resolveRouteLocation(`${window.location.pathname}${window.location.search}`);
       const allowedLocation =
         requestedLocation && canViewRoute(result.user.activeRole, requestedLocation.path).allowed
           ? requestedLocation
@@ -298,7 +305,12 @@ export function App() {
       setActiveRole(result.user.activeRole);
       setActivePath(nextPath);
       setActiveObjectId(allowedLocation?.objectId);
-      window.history.replaceState(null, "", buildRouteLocation(nextPath, allowedLocation?.objectId));
+      setActiveFocusItemCode(allowedLocation?.focusItemCode);
+      window.history.replaceState(
+        null,
+        "",
+        buildRouteLocation(nextPath, allowedLocation?.objectId, allowedLocation?.focusItemCode)
+      );
       return;
     }
 
@@ -426,10 +438,12 @@ export function App() {
         : currentUser
     );
     setActivePath(getDefaultRouteForRole(nextRole));
+    setActiveObjectId(undefined);
+    setActiveFocusItemCode(undefined);
     window.history.replaceState(null, "", getDefaultRouteForRole(nextRole));
   }
 
-  function handleRouteChange(nextPath: string, objectId?: EntityId) {
+  function handleRouteChange(nextPath: string, objectId?: EntityId, focusItemCode?: string) {
     const guardResult = canViewRoute(activeRole, nextPath);
     const route = routeDefinitions.find((definition) => definition.path === nextPath);
 
@@ -451,6 +465,7 @@ export function App() {
     }
 
     setActiveObjectId(objectId);
+    setActiveFocusItemCode(focusItemCode);
 
     if (activeUser) {
       void recordAuditLogForUser(activeUser, {
@@ -468,11 +483,11 @@ export function App() {
     }
 
     setActivePath(nextPath);
-    window.history.pushState(null, "", buildRouteLocation(nextPath, objectId));
+    window.history.pushState(null, "", buildRouteLocation(nextPath, objectId, focusItemCode));
   }
 
   function handleOpenWorkbenchTask(task: WorkbenchTask) {
-    handleRouteChange(task.related_route, task.source_object_id);
+    handleRouteChange(task.related_route, task.source_object_id, task.focus_item_code);
   }
 
   function handleWorkflowAuditEvent(event: AuditEvent) {
@@ -580,6 +595,7 @@ export function App() {
           state={mediaWorkflowState}
           contracts={contractWorkflowState.contracts}
           selectedObjectId={activeObjectId}
+          selectedChecklistCode={activeFocusItemCode}
           onStateChange={setMediaWorkflowState}
           onAuditEvent={handleWorkflowAuditEvent}
           onRouteChange={handleRouteChange}

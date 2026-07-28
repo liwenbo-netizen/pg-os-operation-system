@@ -100,6 +100,8 @@ import {
 } from "./publisherQueueModel";
 import { formatUtcPlus8Date, formatUtcPlus8DateTime } from "../../lib/time";
 import { MediaOnboardingLifecyclePage } from "./MediaOnboardingLifecyclePage";
+import { TechnicalIntegrationWorkspace } from "./TechnicalIntegrationWorkspace";
+import { sdkIntegrationService } from "../../services/sdkIntegrationService";
 
 type MediaExperiencePageProps = {
   route: AppRoute;
@@ -108,6 +110,7 @@ type MediaExperiencePageProps = {
   state: MediaWorkflowState;
   contracts: BusinessContract[];
   selectedObjectId?: EntityId;
+  selectedChecklistCode?: string;
   onStateChange: (state: MediaWorkflowState) => void;
   onAuditEvent: (event: AuditEvent) => void;
   onRouteChange: (path: string, objectId?: EntityId) => void;
@@ -322,6 +325,7 @@ export function MediaExperiencePage({
   state,
   contracts,
   selectedObjectId,
+  selectedChecklistCode,
   onStateChange,
   onAuditEvent,
   onRouteChange
@@ -489,7 +493,7 @@ export function MediaExperiencePage({
           ]}
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
           <SummaryCard label={t("media.publishers")} value={String(summary.total)} />
           <SummaryCard label={t("media.techLive")} value={String(summary.technicalLive)} tone="success" />
           <SummaryCard label={t("media.testPassed")} value={String(summary.testPassed)} tone="success" />
@@ -510,12 +514,14 @@ export function MediaExperiencePage({
         />
       ) : (
         <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
-        <PublisherSelector
-          publishers={state.publishers}
-          selectedPublisherId={selectedPublisher?.id}
-          onSelect={(publisherId) => setSelectedPublisherId(publisherId)}
-          onOpen360={() => onRouteChange("/media/publishers/:id", selectedPublisher?.id)}
-        />
+        <div className={page === "integration" ? "order-2 xl:order-1" : ""}>
+          <PublisherSelector
+            publishers={state.publishers}
+            selectedPublisherId={selectedPublisher?.id}
+            onSelect={(publisherId) => setSelectedPublisherId(publisherId)}
+            onOpen360={() => onRouteChange("/media/publishers/:id", selectedPublisher?.id)}
+          />
+        </div>
 
         {page === "manager" ? (
           <MediaManagerWorkbench
@@ -605,35 +611,49 @@ export function MediaExperiencePage({
         ) : null}
 
         {page === "integration" && selectedPublisher ? (
-          <IntegrationWizard
-            publisher={selectedPublisher}
-            state={state}
-            onStart={() =>
-              runAction(t("integration.startExecution"), () =>
-                mediaWorkflowService.startTechnicalExecution(state, user, selectedPublisher.id)
-              )
-            }
-            onRecordEvidence={(input) =>
-              runAction(t("integration.recordEvidence"), () =>
-                mediaWorkflowService.recordTechnicalEvidence(state, user, selectedPublisher.id, input)
-              )
-            }
-            onSetBlocker={(blocker) =>
-              runAction(t("integration.setBlocker"), () =>
-                mediaWorkflowService.setTechnicalBlocker(state, user, selectedPublisher.id, blocker)
-              )
-            }
-            onResolveBlocker={() =>
-              runAction(t("integration.resolveBlocker"), () =>
-                mediaWorkflowService.resolveTechnicalBlocker(state, user, selectedPublisher.id)
-              )
-            }
-            onSubmit={() =>
-              runAction(t("integration.submitReadiness"), () =>
-                mediaWorkflowService.submitTechnicalValidation(state, user, selectedPublisher.id)
-              )
-            }
-          />
+          <div className="order-1 min-w-0 xl:order-2">
+            <TechnicalIntegrationWorkspace
+              publisher={selectedPublisher}
+              state={state}
+              user={user}
+              initialCheckCode={selectedChecklistCode}
+              onSaveProfile={(input) =>
+                runAction(locale === "zh-CN" ? "保存技术画像" : "Save technical profile", () =>
+                  sdkIntegrationService.saveProjectProfile(state, user, selectedPublisher.id, input)
+                )
+              }
+              onUpdateCheck={(input) =>
+                runAction(locale === "zh-CN" ? "更新技术检查项" : "Update integration check", () =>
+                  sdkIntegrationService.updateCheckResult(state, user, selectedPublisher.id, input)
+                )
+              }
+              onStart={() =>
+                runAction(t("integration.startExecution"), () =>
+                  mediaWorkflowService.startTechnicalExecution(state, user, selectedPublisher.id)
+                )
+              }
+              onRecordEvidence={(input) =>
+                runAction(t("integration.recordEvidence"), () =>
+                  mediaWorkflowService.recordTechnicalEvidence(state, user, selectedPublisher.id, input)
+                )
+              }
+              onSetBlocker={(blocker) =>
+                runAction(t("integration.setBlocker"), () =>
+                  mediaWorkflowService.setTechnicalBlocker(state, user, selectedPublisher.id, blocker)
+                )
+              }
+              onResolveBlocker={() =>
+                runAction(t("integration.resolveBlocker"), () =>
+                  mediaWorkflowService.resolveTechnicalBlocker(state, user, selectedPublisher.id)
+                )
+              }
+              onSubmit={() =>
+                runAction(t("integration.submitReadiness"), () =>
+                  mediaWorkflowService.submitTechnicalValidation(state, user, selectedPublisher.id)
+                )
+              }
+            />
+          </div>
         ) : null}
 
         {page === "commercial" && selectedPublisher ? (

@@ -1290,4 +1290,100 @@ describe("workflow repositories", () => {
       })
     ]);
   });
+
+  it("round-trips SDK integration profiles and executable checklist results", async () => {
+    const projectId = uuid(80);
+    const profileId = uuid(81);
+    const checkId = uuid(82);
+    const actorId = uuid(83);
+    const fakeSupabase = new FakeSupabase({
+      integration_project_profiles: [
+        {
+          id: profileId,
+          integration_project_id: projectId,
+          platform: "android",
+          property_identifier: "com.example.publisher",
+          playbook_codes: ["origin_ads_android_1_2", "origin_ivt_android_v11"],
+          min_sdk: 23,
+          target_sdk: 35,
+          compile_sdk: 35,
+          agp_version: "8.7.3",
+          gradle_version: "8.9",
+          language: "kotlin",
+          process_model: "multi_process",
+          media_engineering_contact: "engineering@example.com",
+          planned_formats: ["rewarded", "interstitial"],
+          privacy_profile: {
+            consent_before_init: true,
+            personalized_ads: false,
+            gaid: true,
+            oaid: true,
+            android_id: false,
+            telephony_id: false,
+            location: false,
+            installed_apps: false
+          },
+          target_pilot_date: "2026-08-15",
+          secret_reference: "vault://pgos/media/example",
+          created_by: actorId,
+          updated_by: actorId,
+          created_at: "2026-07-27T08:00:00.000Z",
+          updated_at: "2026-07-27T08:00:00.000Z"
+        }
+      ],
+      integration_check_results: [
+        {
+          id: checkId,
+          integration_project_id: projectId,
+          item_code: "TQ-001",
+          status: "passed",
+          owner_role: "integration_manager",
+          responsible_party: "PG_OS",
+          due_date: "2026-08-01",
+          evidence_reference: "CONTACT-2026-001",
+          updated_by: actorId,
+          created_at: "2026-07-27T08:00:00.000Z",
+          updated_at: "2026-07-27T08:00:00.000Z"
+        }
+      ]
+    });
+    const repository = new SupabaseWorkflowRepository(fakeSupabase);
+    const { snapshot } = await repository.loadSnapshot();
+
+    expect(snapshot.mediaState.integrationProjectProfiles[0]).toMatchObject({
+      id: profileId,
+      property_identifier: "com.example.publisher",
+      planned_formats: ["rewarded", "interstitial"],
+      privacy_profile: expect.objectContaining({ consent_before_init: true, oaid: true })
+    });
+    expect(snapshot.mediaState.integrationCheckResults[0]).toMatchObject({
+      item_code: "TQ-001",
+      status: "passed",
+      evidence_reference: "CONTACT-2026-001"
+    });
+
+    snapshot.mediaState.integrationProjectProfiles[0].target_pilot_date = "2026-08-20";
+    snapshot.mediaState.integrationCheckResults[0].status = "in_progress";
+    snapshot.mediaState.integrationCheckResults[0].evidence_reference = undefined;
+
+    await repository.saveSnapshot(snapshot, {
+      actor: { id: actorId, activeRole: "integration_manager" }
+    });
+
+    expect(fakeSupabase.writes.integration_project_profiles).toEqual([
+      expect.objectContaining({
+        id: profileId,
+        integration_project_id: projectId,
+        target_pilot_date: "2026-08-20",
+        secret_reference: "vault://pgos/media/example"
+      })
+    ]);
+    expect(fakeSupabase.writes.integration_check_results).toEqual([
+      expect.objectContaining({
+        id: checkId,
+        item_code: "TQ-001",
+        status: "in_progress"
+      })
+    ]);
+  });
 });

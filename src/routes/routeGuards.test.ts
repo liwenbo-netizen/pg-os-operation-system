@@ -46,6 +46,17 @@ describe("canViewRoute", () => {
     });
   });
 
+  it("opens the technical integration workspace to legal and data checklist owners", () => {
+    expect(canViewRoute("legal_manager", "/media/integration-wizard/:id")).toMatchObject({
+      allowed: true,
+      reason_code: "ROUTE_ALLOWED"
+    });
+    expect(canViewRoute("data_analyst", "/media/integration-wizard/:id")).toMatchObject({
+      allowed: true,
+      reason_code: "ROUTE_ALLOWED"
+    });
+  });
+
   it("does not give system admin business approval routes by default", () => {
     expect(canViewRoute("system_admin", "/media/director-command-center")).toMatchObject({
       allowed: false,

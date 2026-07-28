@@ -451,7 +451,7 @@ describe("MediaWorkflowService P0 mainline", () => {
       state = evidence.state;
     }
 
-    const technical = mediaWorkflowService.submitTechnicalValidation(state, user("integration_manager"), "publisher-new-ctv");
+    const technical = mediaWorkflowService.submitTechnicalValidation(state, user("media_director"), "publisher-new-ctv");
     expect(technical.guard).toMatchObject({
       allowed: true,
       reason_code: "TECHNICAL_READINESS_ALLOWED"
@@ -512,7 +512,7 @@ describe("MediaWorkflowService P0 mainline", () => {
     expect(mediaWorkflowService.submitTechnicalValidation(state, user("media_manager"), "publisher-new-ctv").guard).toMatchObject({
       allowed: false,
       reason_code: "INTEGRATION_READINESS_FORBIDDEN",
-      required_approval_role: "integration_manager"
+      required_approval_role: "media_director"
     });
 
     expect(mediaWorkflowService.approveSalesReadiness(state, user("media_manager"), "publisher-233", "scale_ready").guard).toMatchObject({
@@ -525,8 +525,9 @@ describe("MediaWorkflowService P0 mainline", () => {
   it("requires complete evidence, supports blocker resolution, and updates duplicate evidence", () => {
     let state = createInitialMediaWorkflowState();
     const integrationUser = user("integration_manager");
+    const readinessReviewer = user("media_director");
 
-    expect(mediaWorkflowService.submitTechnicalValidation(state, integrationUser, "publisher-new-ctv").guard).toMatchObject({
+    expect(mediaWorkflowService.submitTechnicalValidation(state, readinessReviewer, "publisher-new-ctv").guard).toMatchObject({
       allowed: false,
       reason_code: "TECHNICAL_EVIDENCE_INCOMPLETE"
     });
@@ -557,7 +558,7 @@ describe("MediaWorkflowService P0 mainline", () => {
     );
     expect(blocked.guard).toMatchObject({ allowed: true, reason_code: "INTEGRATION_BLOCKER_SET" });
     state = blocked.state;
-    expect(mediaWorkflowService.submitTechnicalValidation(state, integrationUser, "publisher-new-ctv").guard).toMatchObject({
+    expect(mediaWorkflowService.submitTechnicalValidation(state, readinessReviewer, "publisher-new-ctv").guard).toMatchObject({
       allowed: false,
       reason_code: "TECHNICAL_BLOCKER_ACTIVE"
     });

@@ -9,8 +9,10 @@ import type {
   CommercialTest,
   DiagnosticCase,
   DiagnosticEvidence,
+  IntegrationCheckResult,
   IntegrationEvidence,
   IntegrationProject,
+  IntegrationProjectProfile,
   MediaEcosystemLead,
   MediaOnboardingStageGate,
   MediaOutreachActivity,
@@ -84,6 +86,8 @@ const TABLES_TO_LOAD = [
   "publisher_ad_slots",
   "publisher_contract_terms",
   "integration_projects",
+  "integration_project_profiles",
+  "integration_check_results",
   "commercial_tests",
   "media_trust_profiles",
   "media_trust_score_history",
@@ -116,6 +120,8 @@ const AUDIT_FIELD_CONFIG: Record<string, AuditFieldConfig> = {
   publishers: { ownerUserId: true, createdBy: true, updatedBy: true },
   publisher_traffic_evidence_history: { actorUserId: true },
   integration_projects: { ownerUserId: true },
+  integration_project_profiles: { createdBy: true, updatedBy: true },
+  integration_check_results: { updatedBy: true },
   commercial_tests: { ownerUserId: true },
   media_trust_profiles: { ownerUserId: true },
   media_supply_packages: { ownerUserId: true, createdBy: true, updatedBy: true },
@@ -310,6 +316,61 @@ function mapIntegrationProject(row: Row): IntegrationProject {
     next_action: optionalString(row.next_action),
     readiness_reviewed_at: optionalString(row.readiness_reviewed_at),
     go_live_date: optionalString(row.go_live_date)
+  };
+}
+
+function mapIntegrationProjectProfile(row: Row): IntegrationProjectProfile {
+  const privacyProfile = objectValue(row.privacy_profile);
+
+  return {
+    id: stringValue(row.id),
+    integration_project_id: stringValue(row.integration_project_id),
+    platform: stringValue(row.platform, "android") as IntegrationProjectProfile["platform"],
+    property_identifier: stringValue(row.property_identifier),
+    playbook_codes: arrayValue<IntegrationProjectProfile["playbook_codes"][number]>(row.playbook_codes),
+    min_sdk: optionalNumber(row.min_sdk),
+    target_sdk: optionalNumber(row.target_sdk),
+    compile_sdk: optionalNumber(row.compile_sdk),
+    agp_version: optionalString(row.agp_version),
+    gradle_version: optionalString(row.gradle_version),
+    language: optionalString(row.language) as IntegrationProjectProfile["language"],
+    process_model: optionalString(row.process_model) as IntegrationProjectProfile["process_model"],
+    media_engineering_contact: stringValue(row.media_engineering_contact),
+    planned_formats: arrayValue<IntegrationProjectProfile["planned_formats"][number]>(row.planned_formats),
+    privacy_profile: {
+      consent_before_init: booleanValue(privacyProfile.consent_before_init),
+      personalized_ads: booleanValue(privacyProfile.personalized_ads),
+      gaid: booleanValue(privacyProfile.gaid),
+      oaid: booleanValue(privacyProfile.oaid),
+      android_id: booleanValue(privacyProfile.android_id),
+      telephony_id: booleanValue(privacyProfile.telephony_id),
+      location: booleanValue(privacyProfile.location),
+      installed_apps: booleanValue(privacyProfile.installed_apps)
+    },
+    target_pilot_date: dateOnly(row.target_pilot_date),
+    secret_reference: optionalString(row.secret_reference),
+    created_by: optionalString(row.created_by),
+    updated_by: optionalString(row.updated_by),
+    created_at: optionalString(row.created_at),
+    updated_at: optionalString(row.updated_at)
+  };
+}
+
+function mapIntegrationCheckResult(row: Row): IntegrationCheckResult {
+  return {
+    id: stringValue(row.id),
+    integration_project_id: stringValue(row.integration_project_id),
+    item_code: stringValue(row.item_code),
+    status: stringValue(row.status, "not_started") as IntegrationCheckResult["status"],
+    owner_role: roleCode(row.owner_role, "integration_manager"),
+    responsible_party: optionalString(row.responsible_party) as IntegrationCheckResult["responsible_party"],
+    due_date: dateOnly(row.due_date),
+    evidence_reference: optionalString(row.evidence_reference),
+    blocker: optionalString(row.blocker),
+    waiver_reason: optionalString(row.waiver_reason),
+    updated_by: optionalString(row.updated_by),
+    created_at: optionalString(row.created_at),
+    updated_at: optionalString(row.updated_at)
   };
 }
 
@@ -735,13 +796,15 @@ function mapWorkbenchTask(row: Row): WorkbenchTask {
     module: stringValue(metadata.module, "Workbench") as WorkbenchTask["module"],
     owner_role: roleCode(row.owner_role, "operations_director"),
     related_route: stringValue(metadata.related_route, "/workbench"),
+    focus_item_code: optionalString(metadata.focus_item_code),
+    allow_open_when_blocked: Boolean(metadata.allow_open_when_blocked),
     priority: priority === "critical" || priority === "high" ? "P0" : priority === "low" ? "P2" : "P1",
     status: stringValue(row.status, "open") === "waiting_external" ? "blocked" : (stringValue(row.status, "open") as WorkbenchTask["status"]),
     due_date: dateOnly(row.due_at),
     blocker: optionalString(metadata.blocker),
     next_action: stringValue(metadata.next_action, stringValue(row.description, "Continue task.")),
     source_object_type: optionalString(row.object_type) as WorkbenchTask["source_object_type"],
-    source_object_id: optionalString(row.object_id)
+    source_object_id: optionalString(row.object_id) ?? optionalString(metadata.source_object_id)
   };
 }
 
@@ -1045,6 +1108,16 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           mapPublisherContractTerm
         ),
         integrationProjects: rowsOrFallback(loadedRows.integration_projects, fallback.mediaState.integrationProjects, mapIntegrationProject),
+        integrationProjectProfiles: rowsOrFallback(
+          loadedRows.integration_project_profiles,
+          fallback.mediaState.integrationProjectProfiles,
+          mapIntegrationProjectProfile
+        ),
+        integrationCheckResults: rowsOrFallback(
+          loadedRows.integration_check_results,
+          fallback.mediaState.integrationCheckResults,
+          mapIntegrationCheckResult
+        ),
         commercialTests: rowsOrFallback(loadedRows.commercial_tests, fallback.mediaState.commercialTests, mapCommercialTest),
         mediaTrustProfiles: rowsOrFallback(
           loadedRows.media_trust_profiles,
@@ -1223,6 +1296,52 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           go_live_date: project.go_live_date
         })),
         uuidFields: ["publisher_id"]
+      },
+      {
+        table: "integration_project_profiles",
+        rows: snapshot.mediaState.integrationProjectProfiles.map((profile) => ({
+          id: profile.id,
+          integration_project_id: profile.integration_project_id,
+          platform: profile.platform,
+          property_identifier: profile.property_identifier,
+          playbook_codes: profile.playbook_codes,
+          min_sdk: profile.min_sdk,
+          target_sdk: profile.target_sdk,
+          compile_sdk: profile.compile_sdk,
+          agp_version: profile.agp_version,
+          gradle_version: profile.gradle_version,
+          language: profile.language,
+          process_model: profile.process_model,
+          media_engineering_contact: profile.media_engineering_contact,
+          planned_formats: profile.planned_formats,
+          privacy_profile: profile.privacy_profile,
+          target_pilot_date: profile.target_pilot_date,
+          secret_reference: profile.secret_reference,
+          created_by: optionalUuid(profile.created_by),
+          updated_by: optionalUuid(profile.updated_by),
+          created_at: profile.created_at,
+          updated_at: profile.updated_at
+        })),
+        uuidFields: ["integration_project_id", "created_by", "updated_by"]
+      },
+      {
+        table: "integration_check_results",
+        rows: snapshot.mediaState.integrationCheckResults.map((result) => ({
+          id: result.id,
+          integration_project_id: result.integration_project_id,
+          item_code: result.item_code,
+          status: result.status,
+          owner_role: result.owner_role,
+          responsible_party: result.responsible_party,
+          due_date: result.due_date,
+          evidence_reference: result.evidence_reference,
+          blocker: result.blocker,
+          waiver_reason: result.waiver_reason,
+          updated_by: optionalUuid(result.updated_by),
+          created_at: result.created_at,
+          updated_at: result.updated_at
+        })),
+        uuidFields: ["integration_project_id", "updated_by"]
       },
       {
         table: "commercial_tests",
@@ -1583,6 +1702,8 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           metadata: {
             module: task.module,
             related_route: task.related_route,
+            focus_item_code: task.focus_item_code,
+            allow_open_when_blocked: task.allow_open_when_blocked,
             blocker: task.blocker,
             next_action: task.next_action,
             source_object_id: task.source_object_id

@@ -18,6 +18,7 @@ import { auditService } from "./auditService";
 import { mediaEcosystemHandoffActivityEvent } from "./chinaMediaEcosystemService";
 import { fixtureRepository } from "./fixtures";
 import { rbacService } from "./rbacService";
+import { integrationChecklistForProfile } from "./sdkIntegrationService";
 import { trustedSupplyNetworkService } from "./trustedSupplyNetworkService";
 
 type WorkbenchResult = {
@@ -47,6 +48,22 @@ function isUuid(value: unknown): value is string {
 
 function createDerivedTaskId(prefix: string, sourceObjectId: EntityId) {
   return isUuid(sourceObjectId) ? sourceObjectId : `derived-${prefix}-${sourceObjectId}`;
+}
+
+function createStableDerivedUuid(scope: string, ...parts: string[]) {
+  const value = [scope, ...parts].join(":");
+  const seeds = [0x811c9dc5, 0x9e3779b9, 0x85ebca6b, 0xc2b2ae35];
+  const hex = seeds
+    .map((seed) => {
+      let hash = seed;
+      for (let index = 0; index < value.length; index += 1) {
+        hash = Math.imul(hash ^ value.charCodeAt(index), 0x01000193);
+      }
+      return (hash >>> 0).toString(16).padStart(8, "0");
+    })
+    .join("");
+  const versioned = `${hex.slice(0, 12)}5${hex.slice(13, 16)}8${hex.slice(17)}`;
+  return `${versioned.slice(0, 8)}-${versioned.slice(8, 12)}-${versioned.slice(12, 16)}-${versioned.slice(16, 20)}-${versioned.slice(20, 32)}`;
 }
 
 function createAllowed(message: string, reasonCode: string): GuardResult {
@@ -297,7 +314,7 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
 
   const onboardingTasks = context.mediaState.trustedSupplyCandidates
     .filter((candidate) => candidate.status === "onboarding_project_created" && candidate.publisher_id)
-    .flatMap<WorkbenchTask>((candidate) => {
+    .map<WorkbenchTask>((candidate) => {
       const publisher = context.mediaState.publishers.find((item) => item.id === candidate.publisher_id);
       const integrationProject = context.mediaState.integrationProjects.find(
         (item) => item.publisher_id === candidate.publisher_id
@@ -327,34 +344,96 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
         source_object_id: candidate.id
       };
 
-      if (!integrationProject || !candidate.publisher_id) {
-        return [handoffTask];
+      return handoffTask;
+    });
+
+  const integrationChecklistTasks = context.mediaState.integrationProjects
+    .filter((project) => project.status !== "technical_live_passed")
+    .flatMap<WorkbenchTask>((project) => {
+      const publisher = context.mediaState.publishers.find((item) => item.id === project.publisher_id);
+      if (!publisher) {
+        return [];
       }
 
-      const integrationDone = integrationProject.status === "technical_live_passed";
-      const integrationBlocked = !handoffConfirmed || integrationProject.status === "technical_blocked";
-      const integrationTask: WorkbenchTask = {
-        id: integrationProject.id,
-        title: `Start technical integration: ${candidate.media_name}`,
-        module: "Media",
-        owner_role: "integration_manager",
-        related_route: "/media/integration-wizard/:id",
-        priority: "P0",
-        status: integrationDone ? "done" : integrationBlocked ? "blocked" : "open",
-        due_date: dueDateAfter(candidate.onboarding_ready_at ?? candidate.created_at, 10),
-        blocker: !handoffConfirmed
-          ? "Media owner must confirm the onboarding handoff first."
-          : integrationProject.status === "technical_blocked"
-            ? "Integration project is technically blocked."
-            : undefined,
-        next_action: integrationDone
-          ? "Technical integration passed."
-          : "Open the Technical Integration Wizard and record connection evidence.",
-        source_object_type: "publisher",
-        source_object_id: candidate.publisher_id
-      };
+      const candidate = context.mediaState.trustedSupplyCandidates.find(
+        (item) => item.publisher_id === publisher.id
+      );
+      const handoffConfirmed =
+        !candidate ||
+        context.mediaState.mediaOutreachActivities.some(
+          (activity) =>
+            activity.lead_id === candidate.lead_id &&
+            activity.event === mediaEcosystemHandoffActivityEvent
+        );
+      const profile = context.mediaState.integrationProjectProfiles.find(
+        (item) => item.integration_project_id === project.id
+      );
 
-      return [handoffTask, integrationTask];
+      if (!profile) {
+        const handoffBlocked = !handoffConfirmed;
+        return [
+          {
+            id: isUuid(project.id)
+              ? project.id
+              : createStableDerivedUuid("integration-profile", project.id),
+            title: `Configure technical profile: ${publisher.name}`,
+            module: "Media",
+            owner_role: "integration_manager",
+            related_route: "/media/integration-wizard/:id",
+            priority: "P0",
+            status: handoffBlocked || project.status === "technical_blocked" ? "blocked" : "open",
+            due_date: dueDateAfter(
+              candidate?.onboarding_ready_at ?? candidate?.created_at,
+              10
+            ),
+            blocker: handoffBlocked
+              ? "Media owner must confirm the onboarding handoff first."
+              : project.blocker,
+            next_action: "Complete the technical profile and lock the applicable SDK playbooks.",
+            allow_open_when_blocked: !handoffBlocked,
+            source_object_type: "publisher",
+            source_object_id: publisher.id
+          }
+        ];
+      }
+
+      const resultByCode = new Map(
+        context.mediaState.integrationCheckResults
+          .filter((result) => result.integration_project_id === project.id)
+          .map((result) => [result.item_code, result])
+      );
+
+      return integrationChecklistForProfile(profile)
+        .filter((template) => {
+          const status = resultByCode.get(template.code)?.status ?? "not_started";
+          return template.blocking && !["passed", "waived"].includes(status);
+        })
+        .map<WorkbenchTask>((template) => {
+          const result = resultByCode.get(template.code);
+          const status =
+            result?.status === "blocked" || result?.status === "failed"
+              ? "blocked"
+              : result?.status === "in_progress"
+                ? "in_progress"
+                : "open";
+
+          return {
+            id: createStableDerivedUuid("integration-check", project.id, template.code),
+            title: `Complete technical check ${template.code}: ${publisher.name}`,
+            module: "Media",
+            owner_role: template.ownerRole,
+            related_route: "/media/integration-wizard/:id",
+            focus_item_code: template.code,
+            allow_open_when_blocked: true,
+            priority: "P0",
+            status,
+            due_date: result?.due_date ?? profile.target_pilot_date,
+            blocker: result?.blocker,
+            next_action: `${template.code}: ${template.title}`,
+            source_object_type: "publisher",
+            source_object_id: publisher.id
+          };
+        });
     });
 
   const commercialValidationTasks = context.mediaState.publishers
@@ -500,6 +579,7 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
     ...settlementTasks,
     ...contractTasks,
     ...onboardingTasks,
+    ...integrationChecklistTasks,
     ...commercialValidationTasks,
     ...trustQualificationTasks,
     ...sopTasks
@@ -599,6 +679,40 @@ export class WorkbenchService {
     }
 
     if (task.status === "blocked") {
+      if (task.allow_open_when_blocked) {
+        const nextState = appendTaskActivity(
+          resolved.state,
+          taskId,
+          user,
+          "Blocked task opened for resolution."
+        );
+        const guard = createAllowed(
+          "Blocked workbench task opened for resolution.",
+          "WORKBENCH_BLOCKED_TASK_OPENED"
+        );
+        const businessEvent = createBusinessEvent(
+          "workbench.blocked_task_opened",
+          taskId,
+          user.activeRole,
+          { focusItemCode: task.focus_item_code }
+        );
+        const eventState = appendEvents(
+          nextState,
+          user,
+          "workbench.task.open_blocked",
+          taskId,
+          guard,
+          businessEvent
+        );
+
+        return {
+          state: eventState,
+          guard,
+          auditEvent: eventState.auditEvents[0],
+          businessEvent
+        };
+      }
+
       const guard = createBlocked("Blocked tasks cannot start before the blocker is resolved.", "WORKBENCH_TASK_BLOCKED", task.owner_role);
       return { state: appendEvents(resolved.state, user, "workbench.task.start", taskId, guard), guard };
     }

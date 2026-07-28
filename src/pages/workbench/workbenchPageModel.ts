@@ -12,7 +12,9 @@ export function getWorkbenchTaskAction(task?: WorkbenchTask): {
   }
 
   if (task.status === "blocked") {
-    return { kind: "blocked", disabled: true };
+    return task.allow_open_when_blocked
+      ? { kind: "continue", disabled: false }
+      : { kind: "blocked", disabled: true };
   }
 
   return {
@@ -62,6 +64,8 @@ const chineseTaskTitlePatterns: Array<[RegExp, string]> = [
   [/^Process settlement: (.+)$/, "处理结算：$1"],
   [/^Confirm onboarding handoff: (.+)$/, "确认准入交接：$1"],
   [/^Start technical integration: (.+)$/, "启动技术集成：$1"],
+  [/^Configure technical profile: (.+)$/, "配置技术画像：$1"],
+  [/^Complete technical check ((?:TQ|SDK)-\d{3}): (.+)$/, "完成技术检查 $1：$2"],
   [/^Evaluate trusted supply: (.+)$/, "评估可信供给：$1"],
   [/^Confirm trusted supply pool: (.+)$/, "确认可信供给池：$1"],
   [/^Create controlled supply package: (.+)$/, "创建受控供给包：$1"],

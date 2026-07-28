@@ -1,0 +1,92 @@
+code,stage,category,item,owner_role,requirement,blocking,expected_output,applies_to,responsible_party
+DISC-001,MEDIA_DISCOVERY,media_profile,Confirm publisher and media property identity,media_manager,required,true,Publisher/property record,COMMON
+DISC-002,MEDIA_DISCOVERY,property_identity,Record package bundle domain or platform identifier,media_manager,required,true,Unique property identifier,COMMON
+DISC-003,MEDIA_DISCOVERY,traffic,Record DAU MAU daily requests evidence date and source,media_manager,required,true,Traffic evidence,COMMON
+DISC-004,MEDIA_DISCOVERY,inventory,Identify initial ad inventory and intended formats,media_manager,required,true,Inventory summary,COMMON
+DISC-005,MEDIA_DISCOVERY,ownership,Assign owner priority next action and target date,media_director,required,true,Owned discovery record,COMMON
+BQUAL-001,BUSINESS_QUALIFICATION,assessment,Complete media assessment and commercial-fit review,media_manager,required,true,Media Assessment Report,COMMON
+BQUAL-002,BUSINESS_QUALIFICATION,architecture,Record current ad stack and mediation providers,integration_manager,required,true,Current-state architecture,COMMON
+BQUAL-003,BUSINESS_QUALIFICATION,integration_mode,Select direct mediation Origin Ads IVT or hybrid direction,integration_manager,required,true,Integration direction,COMMON
+BQUAL-004,BUSINESS_QUALIFICATION,contacts,Confirm business engineering privacy and operations contacts,media_manager,required,true,Participant list,COMMON
+BQUAL-005,BUSINESS_QUALIFICATION,forecast,Record request eCPM fill revenue and timing assumptions,sales_manager,required,true,Commercial forecast,COMMON
+COMM-001,COMMERCIAL_AGREEMENT,legal,Confirm NDA MSA SOW and DPA scope,legal_manager,required,true,Agreement scope,COMMON
+COMM-002,COMMERCIAL_AGREEMENT,commercial,Approve revenue share billing settlement and reporting terms,media_director,required,true,Approved commercial terms,COMMON
+COMM-003,COMMERCIAL_AGREEMENT,privacy,Approve data-processing roles region retention and subprocessors,legal_manager,required,true,Approved data scope,COMMON
+COMM-004,COMMERCIAL_AGREEMENT,pilot,Agree Pilot traffic limits responsibilities and exit conditions,operations_director,required,true,Pilot commercial scope,COMMON
+TQ-001,TECHNICAL_QUALIFICATION,ownership,Assign internal integration owner and media engineering contact,integration_manager,required,true,Owner assignment,COMMON
+TQ-002,TECHNICAL_QUALIFICATION,platform,Record minSdk targetSdk compileSdk AGP Gradle and Java or Kotlin versions,integration_manager,required,true,Toolchain profile,COMMON
+TQ-003,TECHNICAL_QUALIFICATION,process,Record main process and secondary process architecture,integration_manager,required,true,Process architecture,COMMON
+TQ-004,TECHNICAL_QUALIFICATION,dependencies,Review dependency tree AndroidX R8 and resource shrinking,integration_manager,required,true,Compatibility assessment,COMMON
+TQ-005,TECHNICAL_QUALIFICATION,playbook,Assign versioned SDK playbook and source version,integration_manager,required,true,Pinned playbook version,COMMON
+TQ-006,TECHNICAL_QUALIFICATION,formats,Map planned ad formats to logical placements,integration_manager,required,true,Placement implementation plan,ADS
+TQ-007,TECHNICAL_QUALIFICATION,mediation,Record mediation networks and required adapter versions,integration_manager,conditional,true,Adapter matrix,MEDIATION
+TQ-008,TECHNICAL_QUALIFICATION,privacy,Complete privacy data-category profile,legal_manager,required,true,Privacy data confirmation,COMMON
+TQ-009,TECHNICAL_QUALIFICATION,consent,Confirm consent timing and personalized-ad setting,legal_manager,required,true,Consent implementation plan,COMMON
+TQ-010,TECHNICAL_QUALIFICATION,device_ids,Decide GAID OAID Android ID telephony ID and fallback behavior,legal_manager,required,true,Device-ID profile,COMMON
+TQ-011,TECHNICAL_QUALIFICATION,testing,Define real-device API-level and environment test matrix,integration_manager,required,true,Test matrix,COMMON
+TQ-012,TECHNICAL_QUALIFICATION,security,Define secret manager and credential provisioning path,integration_manager,required,true,Secret reference plan,COMMON
+TQ-013,TECHNICAL_QUALIFICATION,delivery,Record delivery plan target dates and known blockers,integration_manager,required,true,Integration plan,COMMON
+SDK-001,SDK_INTEGRATION,release,Record SDK artifact version source and SHA-256,integration_manager,required,true,Release manifest,COMMON
+SDK-002,SDK_INTEGRATION,dependency,Import Maven or AAR dependencies and adapters,integration_manager,required,true,Build configuration evidence,COMMON,MEDIA_ENGINEERING
+SDK-003,SDK_INTEGRATION,manifest,Configure required manifest components and providers,integration_manager,required,true,Merged manifest evidence,COMMON,MEDIA_ENGINEERING
+SDK-004,SDK_INTEGRATION,permissions,Apply minimum permission set and document every optional permission,integration_manager,required,true,Permission review,COMMON,MEDIA_ENGINEERING
+SDK-005,SDK_INTEGRATION,network,Configure network security endpoints and allowlists,integration_manager,conditional,true,Network configuration evidence,COMMON,MEDIA_ENGINEERING
+SDK-006,SDK_INTEGRATION,obfuscation,Apply R8 ProGuard and resource keep rules,integration_manager,required,true,Release build evidence,COMMON,MEDIA_ENGINEERING
+SDK-007,SDK_INTEGRATION,credentials,Bind AppId publisher ID or application ID using masked values,integration_manager,required,true,Credential provisioning record,COMMON
+SDK-008,SDK_INTEGRATION,secrets,Bind AppSecret or API key by external secret reference,integration_manager,conditional,true,Masked secret reference,COMMON
+SDK-009,SDK_INTEGRATION,placements,Create and map test placement IDs to logical placements,adops_manager,conditional,true,Placement mapping,ADS
+SDK-010,SDK_INTEGRATION,initialization,Initialize only after required user consent,integration_manager,required,true,Initialization evidence,COMMON,MEDIA_ENGINEERING
+SDK-011,SDK_INTEGRATION,initialization,Verify once-only initialization in the intended process,integration_manager,required,true,Process log evidence,COMMON,MEDIA_ENGINEERING
+SDK-012,SDK_INTEGRATION,multiprocess,Prevent or control initialization in secondary processes,integration_manager,conditional,true,Multiprocess evidence,COMMON,MEDIA_ENGINEERING
+SDK-013,SDK_INTEGRATION,privacy,Implement selected privacy controller and identifier settings,integration_manager,required,true,Privacy configuration evidence,COMMON,MEDIA_ENGINEERING
+SDK-014,SDK_INTEGRATION,logging,Enable diagnostic logs for test and define production-off behavior,integration_manager,required,true,Logging plan,COMMON,MEDIA_ENGINEERING
+SDK-015,SDK_INTEGRATION,splash,Implement splash placement lifecycle and navigation,integration_manager,conditional,true,Splash implementation evidence,ADS_SPLASH,MEDIA_ENGINEERING
+SDK-016,SDK_INTEGRATION,interstitial,Implement interstitial load show close and cleanup,integration_manager,conditional,true,Interstitial implementation evidence,ADS_INTERSTITIAL,MEDIA_ENGINEERING
+SDK-017,SDK_INTEGRATION,rewarded,Implement rewarded flow with idempotent reward handling,integration_manager,conditional,true,Rewarded implementation evidence,ADS_REWARDED,MEDIA_ENGINEERING
+SDK-018,SDK_INTEGRATION,native,Implement template or self-rendered native registration and cleanup,integration_manager,conditional,true,Native implementation evidence,ADS_NATIVE,MEDIA_ENGINEERING
+SDK-019,SDK_INTEGRATION,banner,Implement banner sizing visibility refresh and cleanup,integration_manager,conditional,true,Banner implementation evidence,ADS_BANNER,MEDIA_ENGINEERING
+SDK-020,SDK_INTEGRATION,callbacks,Implement load render show impression click close and error callbacks,integration_manager,required,true,Callback matrix evidence,ADS,MEDIA_ENGINEERING
+SDK-021,SDK_INTEGRATION,bidding,Record eCPM unit currency and second-price semantics,integration_manager,conditional,true,Bidding contract,BIDDING
+SDK-022,SDK_INTEGRATION,bidding,Implement idempotent bid win and loss notifications,integration_manager,conditional,true,Win/loss implementation evidence,BIDDING,MEDIA_ENGINEERING
+SDK-023,SDK_INTEGRATION,s2s,Bind request token and response token when server bidding is used,integration_manager,conditional,true,S2S token evidence,S2S_BIDDING,MEDIA_ENGINEERING
+SDK-024,SDK_INTEGRATION,mediation,Configure each network adapter and app/placement mapping,integration_manager,conditional,true,Adapter configuration evidence,MEDIATION,MEDIA_ENGINEERING
+SDK-025,SDK_INTEGRATION,mediation,Propagate or separately implement privacy settings for each channel,integration_manager,conditional,true,Channel privacy evidence,MEDIATION,MEDIA_ENGINEERING
+SDK-026,SDK_INTEGRATION,ivt,Enable Origin antifraud capability,integration_manager,conditional,true,IVT capability evidence,ORIGIN_IVT
+SDK-027,SDK_INTEGRATION,ivt,Implement Unknown Human and NonHuman without unsafe defaulting,integration_manager,conditional,true,IVT state-handling evidence,ORIGIN_IVT,MEDIA_ENGINEERING
+SDK-028,SDK_INTEGRATION,ivt,Implement server-directed recheck and fallback schedule,integration_manager,conditional,true,IVT scheduling evidence,ORIGIN_IVT,MEDIA_ENGINEERING
+SDK-029,SDK_INTEGRATION,build,Produce test build with version hash and release notes,integration_manager,required,true,Test build artifact,COMMON,MEDIA_ENGINEERING
+SDK-030,SDK_INTEGRATION,evidence,Attach configuration request callback and diagnostic-log evidence,integration_manager,required,true,Integration evidence bundle,COMMON
+QA-001,QA_CERTIFICATION,build,Install and launch clean release build on real devices,integration_manager,required,true,Device test evidence,COMMON
+QA-002,QA_CERTIFICATION,compatibility,Execute selected API-level and device matrix,integration_manager,required,true,Compatibility test results,COMMON
+QA-003,QA_CERTIFICATION,initialization,Verify initialization success failure once-only and process behavior,integration_manager,required,true,Initialization test results,COMMON
+QA-004,QA_CERTIFICATION,resilience,Verify no-network timeout retry and network recovery,integration_manager,required,true,Resilience test results,COMMON
+QA-005,QA_CERTIFICATION,formats,Verify load render show impression click close and error for every planned format,integration_manager,conditional,true,Format test results,ADS
+QA-006,QA_CERTIFICATION,splash,Verify splash skip countdown click landing-page and return navigation,integration_manager,conditional,true,Splash test results,ADS_SPLASH
+QA-007,QA_CERTIFICATION,rewarded,Verify complete incomplete close error and exactly-once reward paths,integration_manager,conditional,true,Reward test results,ADS_REWARDED
+QA-008,QA_CERTIFICATION,native,Verify native render registration visibility interaction and recycle cleanup,integration_manager,conditional,true,Native test results,ADS_NATIVE
+QA-009,QA_CERTIFICATION,bidding,Verify price win loss timeout no-bid and notification idempotency,integration_manager,conditional,true,Bidding test results,BIDDING
+QA-010,QA_CERTIFICATION,s2s,Verify server token response token nurl and lurl behavior,integration_manager,conditional,true,S2S bidding test results,S2S_BIDDING
+QA-011,QA_CERTIFICATION,mediation,Verify each selected adapter and fallback when one channel fails,integration_manager,conditional,true,Adapter test results,MEDIATION
+QA-012,QA_CERTIFICATION,ivt,Verify initial Unknown Human NonHuman and 204 or retained-state behavior,data_analyst,conditional,true,IVT verdict test results,ORIGIN_IVT
+QA-013,QA_CERTIFICATION,ivt,Verify offline recovery multiprocess and 24-hour request frequency,data_analyst,conditional,true,IVT stability evidence,ORIGIN_IVT
+QA-014,QA_CERTIFICATION,privacy,Verify merged permissions consent timing identifiers and SDK disclosures,legal_manager,required,true,Privacy certification,COMMON
+QA-015,QA_CERTIFICATION,performance,Verify crash ANR memory startup and rendering impact,integration_manager,required,true,Performance report,COMMON
+QA-016,QA_CERTIFICATION,diagnostics,Verify logs contain required diagnostics and exclude secrets,integration_manager,required,true,Sanitized log bundle,COMMON
+QA-017,QA_CERTIFICATION,defects,Close all P0 and P1 defects,integration_manager,required,true,Closed critical issue list,COMMON
+QA-018,QA_CERTIFICATION,report,Complete and submit Certification Report,integration_manager,required,true,Certification Report,COMMON
+PILOT-001,PILOT,configuration,Provision production credentials placements and masked secret references,integration_manager,required,true,Production provisioning record,COMMON
+PILOT-002,PILOT,scope,Approve traffic cap percentage date range and rollback owner,adops_manager,required,true,Pilot plan,COMMON
+PILOT-003,PILOT,kpi,Set request success fill latency crash IVT eCPM and revenue thresholds,data_analyst,required,true,Pilot KPI plan,COMMON
+PILOT-004,PILOT,monitoring,Configure dashboards alerts logs and escalation channel,adops_manager,required,true,Monitoring evidence,COMMON
+PILOT-005,PILOT,rollback,Test rollback or kill-switch procedure,operations_director,required,true,Rollback evidence,COMMON
+PILOT-006,PILOT,report,Complete Pilot report and launch recommendation,adops_manager,required,true,Pilot Report,COMMON
+PROD-001,PRODUCTION_LAUNCH,release,Approve final artifact version checksum and release manifest,operations_director,required,true,Approved release manifest,COMMON
+PROD-002,PRODUCTION_LAUNCH,configuration,Verify production IDs endpoints flags and debug-off setting,integration_manager,required,true,Production configuration review,COMMON
+PROD-003,PRODUCTION_LAUNCH,privacy,Verify production privacy disclosure and app-store declaration,legal_manager,required,true,Production privacy approval,COMMON
+PROD-004,PRODUCTION_LAUNCH,operations,Accept support monitoring incident and rollback handoff,adops_manager,required,true,Operations handoff,COMMON
+PROD-005,PRODUCTION_LAUNCH,approval,Record production launch approval date and accountable owner,operations_director,required,true,Launch approval,COMMON
+SCALE-001,SCALE_OPERATION,kpi,Review request fill eCPM revenue latency and callback trends,data_analyst,required,false,Scale KPI review,COMMON
+SCALE-002,SCALE_OPERATION,quality,Review IVT verdict distribution policy incidents and traffic quality,data_analyst,conditional,false,Traffic quality review,ORIGIN_IVT
+SCALE-003,SCALE_OPERATION,release,Track SDK and adapter versions deprecations and upgrade due dates,integration_manager,required,false,Version health record,COMMON
+SCALE-004,SCALE_OPERATION,reliability,Track crashes ANRs errors and open integration incidents,integration_manager,required,false,Reliability review,COMMON
+SCALE-005,SCALE_OPERATION,growth,Approve placement traffic and format expansion based on evidence,media_director,required,false,Scale decision,COMMON

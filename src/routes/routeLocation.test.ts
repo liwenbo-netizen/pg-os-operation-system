@@ -25,4 +25,32 @@ describe("route location mapping", () => {
     expect(buildRouteLocation("/media/publishers/:id")).toBe("/media/publishers");
     expect(buildRouteLocation("/media/onboarding-lifecycle")).toBe("/media/onboarding-lifecycle");
   });
+
+  it("round-trips a focused integration checklist item", () => {
+    const location = buildRouteLocation(
+      "/media/integration-wizard/:id",
+      "publisher-new-ctv",
+      "TQ-007"
+    );
+
+    expect(location).toBe(
+      "/media/integration-wizard/publisher-new-ctv?check=TQ-007"
+    );
+    expect(resolveRouteLocation(location)).toEqual({
+      path: "/media/integration-wizard/:id",
+      objectId: "publisher-new-ctv",
+      focusItemCode: "TQ-007"
+    });
+  });
+
+  it("ignores unsupported checklist focus values", () => {
+    expect(
+      resolveRouteLocation(
+        "/media/integration-wizard/publisher-new-ctv?check=DROP-TABLE"
+      )
+    ).toEqual({
+      path: "/media/integration-wizard/:id",
+      objectId: "publisher-new-ctv"
+    });
+  });
 });

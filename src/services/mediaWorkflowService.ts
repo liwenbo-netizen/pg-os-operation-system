@@ -20,6 +20,7 @@ import { fixtureRepository } from "./fixtures";
 import { GuardService } from "./guardService";
 import { rbacService } from "./rbacService";
 import { rlsService } from "./rlsService";
+import { incompleteIntegrationChecks } from "./sdkIntegrationService";
 
 type WorkflowResult = {
   state: MediaWorkflowState;
@@ -141,6 +142,8 @@ export function createInitialMediaWorkflowState(): MediaWorkflowState {
       checklist: { ...project.checklist },
       evidence: project.evidence?.map((evidence) => ({ ...evidence })) ?? []
     })),
+    integrationProjectProfiles: [],
+    integrationCheckResults: [],
     commercialTests: fixtureRepository.commercialTests.map((test) => ({ ...test })),
     mediaTrustProfiles: [],
     mediaTrustScoreHistory: [],
@@ -1444,17 +1447,35 @@ export class MediaWorkflowService {
       const guard = createBlocked("Technical readiness has already passed.", "TECHNICAL_READINESS_ALREADY_PASSED");
       return { state: appendEvents(state, user, "publisher.technical_live.submit", publisherId, guard), guard };
     }
-    if (!canManageTechnicalExecution(user)) {
+    if (!rbacService.hasAnyRole(user, ["media_director", "operations_director"])) {
       const guard = createBlocked(
         "Current role cannot submit technical readiness.",
         "INTEGRATION_READINESS_FORBIDDEN",
-        "integration_manager"
+        "media_director"
       );
       return { state: appendEvents(state, user, "publisher.technical_live.submit", publisherId, guard), guard };
     }
     if (project.blocker || project.status === "technical_blocked") {
       const guard = createBlocked("Resolve the active technical blocker before readiness review.", "TECHNICAL_BLOCKER_ACTIVE");
       return { state: appendEvents(state, user, "publisher.technical_live.submit", publisherId, guard), guard };
+    }
+    const integrationProfile = state.integrationProjectProfiles.find(
+      (profile) => profile.integration_project_id === project.id
+    );
+    if (integrationProfile) {
+      const incompleteChecks = incompleteIntegrationChecks(state, project.id, integrationProfile);
+      if (incompleteChecks.length > 0) {
+        const firstItems = incompleteChecks
+          .slice(0, 4)
+          .map((item) => item.code)
+          .join(", ");
+        const guard = createBlocked(
+          `Technical readiness requires ${incompleteChecks.length} blocking checklist item(s): ${firstItems}${incompleteChecks.length > 4 ? ", ..." : ""}.`,
+          "INTEGRATION_CHECKLIST_INCOMPLETE",
+          "integration_manager"
+        );
+        return { state: appendEvents(state, user, "publisher.technical_live.submit", publisherId, guard), guard };
+      }
     }
     const evidenceTypes = new Set((project.evidence ?? []).map((item) => item.evidence_type));
     const missing = integrationEvidenceDefinitions.filter(

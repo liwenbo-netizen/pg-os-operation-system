@@ -8,6 +8,7 @@ import { createInitialSalesWorkflowState } from "./salesWorkflowService";
 import { createInitialGuideWorkflowState } from "./sopService";
 import { trustedSupplyNetworkService } from "./trustedSupplyNetworkService";
 import { createInitialWorkbenchWorkflowState, workbenchService } from "./workbenchService";
+import { sdkIntegrationService, type IntegrationProjectProfileInput } from "./sdkIntegrationService";
 
 function context() {
   return {
@@ -17,6 +18,35 @@ function context() {
     financeState: createInitialFinanceWorkflowState(),
     contractState: createInitialContractWorkflowState(),
     guideState: createInitialGuideWorkflowState()
+  };
+}
+
+function validIntegrationProfile(): IntegrationProjectProfileInput {
+  return {
+    platform: "android_tv",
+    propertyIdentifier: "com.example.ctv",
+    playbookCodes: ["origin_ads_android_1_2", "origin_ivt_android_v11"],
+    minSdk: 23,
+    targetSdk: 35,
+    compileSdk: 35,
+    agpVersion: "8.7.3",
+    gradleVersion: "8.9",
+    language: "kotlin",
+    processModel: "multi_process",
+    mediaEngineeringContact: "engineering@example.com",
+    plannedFormats: ["interstitial", "rewarded"],
+    privacyProfile: {
+      consent_before_init: true,
+      personalized_ads: false,
+      gaid: true,
+      oaid: true,
+      android_id: false,
+      telephony_id: false,
+      location: false,
+      installed_apps: false
+    },
+    targetPilotDate: "2026-08-15",
+    secretReference: "vault://pgos/media/new-ctv"
   };
 }
 
@@ -259,6 +289,97 @@ describe("workbenchService phase 10", () => {
     expect(startResult.state.tasks.find((task) => task.id === integrationProjectId)).toMatchObject({
       status: "in_progress",
       source_object_id: publisherId
+    });
+  });
+
+  it("derives owner-specific SDK checklist tasks with focused deep links", () => {
+    const snapshotContext = context();
+    snapshotContext.mediaState = sdkIntegrationService.saveProjectProfile(
+      snapshotContext.mediaState,
+      authService.createMockUser("integration_manager"),
+      "publisher-new-ctv",
+      validIntegrationProfile()
+    ).state;
+
+    const legalSnapshot = workbenchService.getSnapshot(
+      snapshotContext,
+      authService.createMockUser("legal_manager")
+    );
+    const dataSnapshot = workbenchService.getSnapshot(
+      snapshotContext,
+      authService.createMockUser("data_analyst")
+    );
+
+    expect(legalSnapshot.tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: "Complete technical check TQ-007: New CTV Partner",
+          owner_role: "legal_manager",
+          related_route: "/media/integration-wizard/:id",
+          source_object_id: "publisher-new-ctv",
+          focus_item_code: "TQ-007"
+        }),
+        expect.objectContaining({ focus_item_code: "TQ-008" }),
+        expect.objectContaining({ focus_item_code: "SDK-007" })
+      ])
+    );
+    expect(dataSnapshot.tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: "Complete technical check SDK-017: New CTV Partner",
+          owner_role: "data_analyst",
+          source_object_id: "publisher-new-ctv",
+          focus_item_code: "SDK-017"
+        })
+      ])
+    );
+  });
+
+  it("opens an owned blocked SDK task for resolution and records trace events", () => {
+    const snapshotContext = context();
+    const integrationUser = authService.createMockUser("integration_manager");
+    const legalUser = authService.createMockUser("legal_manager");
+    snapshotContext.mediaState = sdkIntegrationService.saveProjectProfile(
+      snapshotContext.mediaState,
+      integrationUser,
+      "publisher-new-ctv",
+      validIntegrationProfile()
+    ).state;
+    snapshotContext.mediaState = sdkIntegrationService.updateCheckResult(
+      snapshotContext.mediaState,
+      legalUser,
+      "publisher-new-ctv",
+      {
+        itemCode: "TQ-007",
+        status: "blocked",
+        blocker: "Privacy assessment is waiting for the media data inventory."
+      }
+    ).state;
+
+    const legalSnapshot = workbenchService.getSnapshot(snapshotContext, legalUser);
+    const blockedTask = legalSnapshot.tasks.find((task) => task.focus_item_code === "TQ-007");
+
+    expect(blockedTask).toMatchObject({
+      status: "blocked",
+      allow_open_when_blocked: true,
+      blocker: "Privacy assessment is waiting for the media data inventory."
+    });
+
+    const result = workbenchService.startTask(
+      snapshotContext.workbenchState,
+      legalUser,
+      blockedTask!.id,
+      legalSnapshot.tasks
+    );
+
+    expect(result.guard.reason_code).toBe("WORKBENCH_BLOCKED_TASK_OPENED");
+    expect(result.businessEvent).toMatchObject({
+      eventCode: "workbench.blocked_task_opened",
+      payload: { focusItemCode: "TQ-007" }
+    });
+    expect(result.auditEvent).toMatchObject({
+      action: "workbench.task.open_blocked",
+      allowed: true
     });
   });
 

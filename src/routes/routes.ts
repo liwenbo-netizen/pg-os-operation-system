@@ -153,17 +153,31 @@ export const routeDefinitions: AppRoute[] = [
   },
   {
     path: "/media/integration-wizard/:id",
-    title: "Technical Integration Wizard",
+    title: "Technical Integration Workspace",
     module: "Media",
-    pageType: "Wizard",
+    pageType: "Execution Workspace",
     priority: "P0",
-    allowedRoles: ["integration_manager", "media_director", "media_manager", "operations_director"],
+    allowedRoles: [
+      "integration_manager",
+      "media_director",
+      "media_manager",
+      "operations_director",
+      "legal_manager",
+      "data_analyst"
+    ],
     service: "IntegrationService",
     guard: "canUpdatePublisherReadiness",
     uat: "UAT-003",
-    primaryAction: "Submit production validation",
-    summarySignals: ["Step 4 of 5", "Callbacks verified", "Logs pending", "Owner Integration"],
-    sections: ["Connection checklist", "Test request evidence", "Callback logs", "Production validation", "Next owner"]
+    primaryAction: "Complete SDK checklist and submit readiness",
+    summarySignals: ["Profile configured", "Blocking checks passed", "Summary evidence complete", "No active blocker"],
+    sections: [
+      "Technical profile",
+      "SDK playbooks",
+      "Qualification checklist",
+      "SDK execution checklist",
+      "Summary evidence",
+      "Readiness gate"
+    ]
   },
   {
     path: "/media/commercial-tests/:id",
@@ -355,8 +369,14 @@ export function getDefaultRouteForRole(roleCode: RoleCode) {
     : routeDefinitions.find((route) => route.allowedRoles.includes(roleCode))?.path ?? "/workbench";
 }
 
-export function resolveRouteLocation(pathname: string) {
+export function resolveRouteLocation(location: string) {
+  const [pathname, search = ""] = location.split("?");
   const normalizedPath = pathname.replace(/\/+$/, "") || "/";
+  const requestedFocusItemCode = new URLSearchParams(search).get("check") ?? undefined;
+  const focusItemCode =
+    requestedFocusItemCode && /^(TQ|SDK)-\d{3}$/.test(requestedFocusItemCode)
+      ? requestedFocusItemCode
+      : undefined;
 
   for (const route of routeDefinitions) {
     const routeSegments = route.path.split("/").filter(Boolean);
@@ -374,13 +394,24 @@ export function resolveRouteLocation(pathname: string) {
     const objectId = hasObjectId && pathSegments.length === routeSegments.length
       ? decodeURIComponent(pathSegments[pathSegments.length - 1])
       : undefined;
-    return { path: route.path, objectId };
+    return {
+      path: route.path,
+      objectId,
+      ...(focusItemCode ? { focusItemCode } : {})
+    };
   }
 
   return undefined;
 }
 
-export function buildRouteLocation(path: string, objectId?: string) {
-  if (!path.endsWith("/:id")) return path;
-  return objectId ? path.replace(":id", encodeURIComponent(objectId)) : path.slice(0, -4);
+export function buildRouteLocation(path: string, objectId?: string, focusItemCode?: string) {
+  const basePath = path.endsWith("/:id")
+    ? objectId
+      ? path.replace(":id", encodeURIComponent(objectId))
+      : path.slice(0, -4)
+    : path;
+
+  return focusItemCode
+    ? `${basePath}?check=${encodeURIComponent(focusItemCode)}`
+    : basePath;
 }
