@@ -2230,7 +2230,7 @@ export function integrationRouteIssues(input: IntegrationProjectProfileInput) {
   return issues;
 }
 
-function profileIssues(input: IntegrationProjectProfileInput) {
+export function integrationProfileIssues(input: IntegrationProjectProfileInput) {
   const issues = integrationRouteIssues(input);
   const hasAdsPlaybook = input.playbookCodes.some(
     (code) => integrationPlaybooks.find((playbook) => playbook.code === code)?.kind !== "origin_ivt"
@@ -2467,7 +2467,9 @@ export class SdkIntegrationService {
     });
     const currentPhases = phases.filter((phase) => phase.status === "current");
     const nextBlockingItem = readinessPassed ? operationalIncomplete : prelaunchIncomplete;
-    const profileValidationIssues = profile ? profileIssues(profileToInput(profile)) : ["Technical profile is not configured."];
+    const profileValidationIssues = profile
+      ? integrationProfileIssues(profileToInput(profile))
+      : ["Technical profile is not configured."];
     const primaryContact =
       state.publisherContacts.find(
         (contact) => contact.publisher_id === publisherId && contact.is_primary
@@ -2691,7 +2693,7 @@ export class SdkIntegrationService {
       return { state: nextState, guard, auditEvent };
     }
 
-    const issues = profileIssues(input);
+    const issues = integrationProfileIssues(input);
     if (issues.length > 0) {
       const guard = blocked(issues.join(" "), "INTEGRATION_PROFILE_INCOMPLETE", "integration_manager");
       const { nextState, auditEvent } = appendEvents(

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   ArrowRight,
   CalendarDays,
   CheckCircle2,
@@ -26,6 +27,7 @@ import {
   integrationChannels,
   integrationModes,
   integrationProtocols,
+  integrationProfileIssues,
   integrationRouteIssues,
   getIntegrationCheckGuidance,
   getIntegrationGateExecutionContract,
@@ -103,10 +105,16 @@ function createProfileDraft(
       gradleVersion: profile.gradle_version,
       language: profile.language,
       processModel: profile.process_model,
-      mediaEngineeringContact: profile.media_engineering_contact,
+      mediaEngineeringContact:
+        profile.media_engineering_contact ||
+        project?.handoff_package?.media_engineering_contact ||
+        primaryContact?.email ||
+        "",
       plannedFormats: profile.planned_formats,
       privacyProfile: { ...profile.privacy_profile },
-      targetPilotDate: profile.target_pilot_date,
+      targetPilotDate:
+        profile.target_pilot_date ||
+        project?.handoff_package?.target_pilot_date,
       secretReference: profile.secret_reference
     };
   }
@@ -136,7 +144,10 @@ function createProfileDraft(
     compileSdk: 35,
     language: "mixed",
     processModel: "single_process",
-    mediaEngineeringContact: primaryContact?.email ?? "",
+    mediaEngineeringContact:
+      project?.handoff_package?.media_engineering_contact ??
+      primaryContact?.email ??
+      "",
     plannedFormats: [],
     privacyProfile: {
       consent_before_init: false,
@@ -148,6 +159,7 @@ function createProfileDraft(
       location: false,
       installed_apps: false
     },
+    targetPilotDate: project?.handoff_package?.target_pilot_date,
     secretReference: ""
   };
 }
@@ -240,6 +252,7 @@ export function TechnicalIntegrationWorkspace({
   const [activeWorkspaceView, setActiveWorkspaceView] = useState<
     "handoff" | "guided" | "profile" | "overview" | "gates" | "evidence"
   >("handoff");
+  const [activeProfileStep, setActiveProfileStep] = useState(0);
   const [activeWorkflowPhase, setActiveWorkflowPhase] = useState<IntegrationWorkflowPhaseIndex>(0);
   const [selectedCheckCode, setSelectedCheckCode] = useState("");
   const [checkEvidence, setCheckEvidence] = useState("");
@@ -497,6 +510,124 @@ export function TechnicalIntegrationWorkspace({
     accepts_ivt_sdk: ["允许接入 IVT SDK", "IVT SDK accepted"],
     requires_pg_full_sdk: ["需要 PG 全套 SDK", "PG full SDK required"]
   };
+  const draftProfileIssues = integrationProfileIssues(profileDraft);
+  const routeStepIssues = integrationRouteIssues(profileDraft);
+  const privacyStepIssues = draftProfileIssues.filter((issue) =>
+    issue.includes("Consent-before-initialization")
+  );
+  const deliveryStepIssues = draftProfileIssues.filter(
+    (issue) => issue.includes("playbook") || issue.includes("ad format")
+  );
+  const environmentStepIssues = draftProfileIssues.filter(
+    (issue) =>
+      !routeStepIssues.includes(issue) &&
+      !privacyStepIssues.includes(issue) &&
+      !deliveryStepIssues.includes(issue)
+  );
+  const capabilityConfirmed = Object.values(profileDraft.capabilityProfile).some(Boolean);
+  const profileSteps = [
+    {
+      key: "capabilities",
+      gate: "Gate 03",
+      title: zh ? "盘点媒体现有能力" : "Assess media capabilities",
+      summary: zh
+        ? "先确认媒体已经具备哪些广告能力，避免直接套用错误的 SDK 方案。"
+        : "Confirm the media's existing advertising capabilities before choosing an SDK route.",
+      requiredInput: zh
+        ? "媒体现有 Ad Server、播放器、SDK、API、VAST、生命周期事件及 IVT 接受情况。"
+        : "Existing ad server, player, SDK, API, VAST, lifecycle events, and IVT acceptance.",
+      output: zh
+        ? "系统生成建议接入模式。"
+        : "A system-recommended integration mode.",
+      completion: zh
+        ? "至少确认一项现有能力或明确需要 PG 全套 SDK。"
+        : "Confirm at least one capability or explicitly require the PG full SDK.",
+      complete: capabilityConfirmed,
+      issues: capabilityConfirmed
+        ? []
+        : [zh ? "尚未确认任何媒体技术能力。" : "No media technical capability has been confirmed."]
+    },
+    {
+      key: "route",
+      gate: "Gate 03",
+      title: zh ? "确定接入路线与协议" : "Approve route and protocols",
+      summary: zh
+        ? "根据能力盘点选择流量渠道、接入模式和交付协议，并处理系统提示的路线冲突。"
+        : "Choose the channel, integration mode, and delivery protocols, then resolve route conflicts.",
+      requiredInput: zh
+        ? "流量渠道、接入模式、Native SDK/API/OpenRTB/VAST 等交付协议。"
+        : "Traffic channel, integration mode, and Native SDK/API/OpenRTB/VAST protocols.",
+      output: zh
+        ? "形成可执行的技术接入路线。"
+        : "An executable technical integration route.",
+      completion: zh
+        ? "至少选择一种协议，且路线评估无冲突。"
+        : "Select at least one protocol and clear all route conflicts.",
+      complete: routeStepIssues.length === 0,
+      issues: routeStepIssues.map((issue) => localizedIntegrationIssue(issue, zh))
+    },
+    {
+      key: "privacy",
+      gate: "Gate 06",
+      title: zh ? "确认隐私与数据边界" : "Confirm privacy and data boundaries",
+      summary: zh
+        ? "明确 SDK 初始化时机、个性化广告和设备标识符边界，作为开发前硬门禁。"
+        : "Define SDK initialization, personalization, and identifier boundaries before development.",
+      requiredInput: zh
+        ? "授权后初始化、个性化广告及 GAID/OAID/Android ID 等标识符使用范围。"
+        : "Consent-before-init, personalized ads, and GAID/OAID/Android ID boundaries.",
+      output: zh
+        ? "形成隐私与数据使用结论。"
+        : "An approved privacy and data-use boundary.",
+      completion: zh
+        ? "确认必须在用户授权后初始化 SDK。"
+        : "Confirm that SDK initialization occurs only after user consent.",
+      complete: privacyStepIssues.length === 0,
+      issues: privacyStepIssues.map((issue) => localizedIntegrationIssue(issue, zh))
+    },
+    {
+      key: "delivery",
+      gate: "Gate 08",
+      title: zh ? "选择交付 Playbook 与广告形式" : "Select delivery playbooks and formats",
+      summary: zh
+        ? "把已批准路线转换成具体 SDK 文档、版本和广告形式范围。"
+        : "Translate the approved route into concrete SDK documents, versions, and ad formats.",
+      requiredInput: zh
+        ? "Origin Ads / IVT Playbook 及 Splash、Native、Rewarded 等计划广告形式。"
+        : "Origin Ads / IVT playbooks and planned Splash, Native, Rewarded, or other formats.",
+      output: zh
+        ? "系统按 Playbook 生成定向技术清单。"
+        : "A scoped technical checklist generated from the selected playbooks.",
+      completion: zh
+        ? "Playbook 与接入路线匹配；广告型 Playbook 已选择广告形式。"
+        : "Playbooks match the route and advertising playbooks include at least one format.",
+      complete: deliveryStepIssues.length === 0,
+      issues: deliveryStepIssues.map((issue) => localizedIntegrationIssue(issue, zh))
+    },
+    {
+      key: "environment",
+      gate: "Gate 08",
+      title: zh ? "补齐工程环境并保存" : "Complete engineering environment",
+      summary: zh
+        ? "填写技术经理真正开工所需的包名、SDK 版本、构建环境、联系人、排期和密钥引用。"
+        : "Record the package, SDK levels, build environment, contact, schedule, and secret reference.",
+      requiredInput: zh
+        ? "平台标识、min/target/compileSdk、AGP/Gradle、语言、进程模型、研发联系人及 Pilot 日期。"
+        : "Property ID, SDK levels, AGP/Gradle, language, process model, engineering contact, and pilot date.",
+      output: zh
+        ? "保存技术画像并生成可执行检查清单。"
+        : "A saved technical profile with an executable checklist.",
+      completion: zh
+        ? "所有方案资料校验通过后保存。"
+        : "Save after all solution data validations pass.",
+      complete: environmentStepIssues.length === 0 && draftProfileIssues.length === 0,
+      issues: draftProfileIssues.map((issue) => localizedIntegrationIssue(issue, zh))
+    }
+  ];
+  const currentProfileStep = profileSteps[activeProfileStep] ?? profileSteps[0];
+  const completedProfileSteps = profileSteps.filter((step) => step.complete).length;
+  const canAdvanceProfileStep =
+    activeProfileStep < profileSteps.length - 1 && currentProfileStep.complete;
 
   return (
     <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
@@ -1817,40 +1948,95 @@ export function TechnicalIntegrationWorkspace({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div>
             <h2 className="text-base font-semibold text-slate-950">
-              {zh ? "Gate 3 / 6 / 8 方案与技术资料" : "Gate 3 / 6 / 8 solution and technical data"}
+              {zh ? "技术方案配置向导" : "Technical solution setup"}
             </h2>
             <p className="mt-1 text-sm text-slate-500">
               {zh
-                ? "这些字段只在接入方案、隐私边界和技术环境 Gate 中验证，不再作为 Gate 0–2 的通用前置条件。"
-                : "These fields are validated only in the route, privacy, and technical-environment gates; they no longer block Gates 0-2."}
+                ? "按业务顺序完成能力盘点、路线决策、隐私边界、交付方案和工程环境。"
+                : "Complete capability assessment, route approval, privacy, delivery, and engineering setup in sequence."}
             </p>
           </div>
-          <button
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-            type="button"
-            onClick={() => onSaveProfile(profileDraft)}
-            disabled={!sdkIntegrationService.canManageProfile(user)}
-          >
-            <Save className="size-4" aria-hidden="true" />
-            {zh ? "保存方案与技术资料" : "Save solution data"}
-          </button>
+          <div className="text-right">
+            <p className="text-xs font-semibold text-slate-500">{zh ? "配置进度" : "Configuration progress"}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-950">
+              {completedProfileSteps} / {profileSteps.length}
+            </p>
+          </div>
         </div>
 
         {!profileEditable ? (
           <p className="border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs text-slate-600">
             {zh
-              ? "技术画像由 Integration Manager、Media Director 或 Operations 维护。"
+              ? "技术画像由技术集成经理、媒体总监或运营总监维护。"
               : "The technical profile is maintained by Integration Manager, Media Director, or Operations."}
           </p>
         ) : null}
 
-        <fieldset className="contents" disabled={!profileEditable}>
-          <div className="border-b border-slate-200 bg-slate-50/40 p-5">
-            <p className="mb-4 text-xs font-semibold text-blue-700">
-              Gate 03 · {zh ? "接入模式及渠道方案选择" : "Integration route and channel solution"}
-            </p>
-            <div className="grid gap-5 2xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-              <div className="grid content-start gap-4 sm:grid-cols-2">
+        <div className="grid md:grid-cols-[230px_minmax(0,1fr)]">
+          <nav className="border-b border-slate-200 bg-slate-50/70 p-4 md:border-b-0 md:border-r" aria-label={zh ? "方案配置步骤" : "Solution setup steps"}>
+            <ol className="space-y-1">
+              {profileSteps.map((step, index) => {
+                const selected = index === activeProfileStep;
+                const available = !profileEditable || index <= activeProfileStep || step.complete;
+                return (
+                  <li key={step.key}>
+                    <button
+                      className={`flex min-h-14 w-full items-center gap-3 rounded-lg px-3 py-2 text-left ${
+                        selected
+                          ? "bg-blue-50 text-blue-900"
+                          : available
+                            ? "text-slate-700 hover:bg-white"
+                            : "cursor-not-allowed text-slate-400"
+                      }`}
+                      type="button"
+                      disabled={!available}
+                      onClick={() => setActiveProfileStep(index)}
+                    >
+                      <span className={`inline-flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
+                        step.complete
+                          ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                          : selected
+                            ? "border-blue-300 bg-white text-blue-700"
+                            : "border-slate-200 bg-white text-slate-400"
+                      }`}>
+                        {step.complete ? <CheckCircle2 className="size-4" aria-hidden="true" /> : index + 1}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[11px] font-semibold">{step.gate}</span>
+                        <span className="mt-0.5 block text-sm font-semibold leading-5">{step.title}</span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+
+          <div className="min-w-0">
+            <div className="grid border-b border-slate-200 bg-white xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <StatusBadge tone={currentProfileStep.complete ? "success" : "warning"}>
+                    {currentProfileStep.complete
+                      ? (zh ? "本步已完成" : "Step complete")
+                      : (zh ? "需要处理" : "Action required")}
+                  </StatusBadge>
+                  <span className="text-xs font-semibold text-blue-700">{currentProfileStep.gate}</span>
+                </div>
+                <h3 className="mt-3 text-lg font-semibold text-slate-950">{currentProfileStep.title}</h3>
+                <p className="mt-1 text-sm leading-6 text-slate-600">{currentProfileStep.summary}</p>
+              </div>
+              <aside className="border-t border-slate-200 bg-slate-50/70 px-5 py-4 text-xs leading-5 xl:border-l xl:border-t-0">
+                <p><strong className="text-slate-900">{zh ? "需要输入：" : "Input: "}</strong>{currentProfileStep.requiredInput}</p>
+                <p className="mt-2"><strong className="text-slate-900">{zh ? "系统输出：" : "Output: "}</strong>{currentProfileStep.output}</p>
+                <p className="mt-2"><strong className="text-slate-900">{zh ? "完成条件：" : "Done when: "}</strong>{currentProfileStep.completion}</p>
+              </aside>
+            </div>
+
+            <fieldset disabled={!profileEditable}>
+          <div className={activeProfileStep <= 1 ? "border-b border-slate-200 bg-white p-5" : "hidden"}>
+            <div>
+              <div className={activeProfileStep === 1 ? "grid content-start gap-4 sm:grid-cols-2" : "hidden"}>
                 <label>
                   <FieldLabel>{zh ? "流量渠道" : "Traffic channel"}</FieldLabel>
                   <select
@@ -1936,7 +2122,7 @@ export function TechnicalIntegrationWorkspace({
                 </div>
               </div>
 
-              <div>
+              <div className={activeProfileStep === 0 ? "" : "hidden"}>
                 <p className="text-xs font-semibold text-slate-600">{zh ? "媒体现有技术能力" : "Existing media capabilities"}</p>
                 <div className="mt-3 grid gap-x-5 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                   {(Object.keys(capabilityLabels) as (keyof IntegrationCapabilityProfile)[]).map((capability) => (
@@ -1951,31 +2137,23 @@ export function TechnicalIntegrationWorkspace({
                     </label>
                   ))}
                 </div>
-                <div className={`mt-4 border-l-4 px-4 py-3 ${routeIssues.length ? "border-amber-400 bg-amber-50" : "border-emerald-500 bg-emerald-50"}`}>
-                  <p className={`text-sm font-semibold ${routeIssues.length ? "text-amber-900" : "text-emerald-900"}`}>
-                    {routeIssues.length
-                      ? zh
-                        ? `路径评估仍有 ${routeIssues.length} 项待确认`
-                        : `${routeIssues.length} route assessment item(s) remain`
-                      : zh
-                        ? "接入路径前置条件已满足"
-                        : "Integration route prerequisites are satisfied"}
+                <div className="mt-4 border-l-4 border-blue-400 bg-blue-50 px-4 py-3">
+                  <p className="text-xs font-semibold text-blue-700">
+                    {zh ? "系统建议接入模式" : "Recommended integration mode"}
                   </p>
-                  {routeIssues.length ? (
-                    <ul className="mt-2 space-y-1 text-xs leading-5 text-amber-800">
-                      {routeIssues.map((issue) => <li key={issue}>· {localizedIntegrationIssue(issue, zh)}</li>)}
-                    </ul>
-                  ) : null}
+                  <p className="mt-1 text-sm font-semibold text-blue-950">
+                    {zh ? recommendedModeDefinition?.nameZh : recommendedModeDefinition?.name}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-blue-800">
+                    {zh ? recommendedModeDefinition?.descriptionZh : recommendedModeDefinition?.description}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-5 p-5 2xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
-          <div>
-          <p className="mb-4 text-xs font-semibold text-blue-700">
-            Gate 08 · {zh ? "技术规格及环境准备" : "Technical specification and environment"}
-          </p>
+          <div className={activeProfileStep >= 2 ? "border-b border-slate-200 bg-white p-5" : "hidden"}>
+          <div className={activeProfileStep === 4 ? "" : "hidden"}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <label>
               <FieldLabel>{zh ? "平台" : "Platform"}</FieldLabel>
@@ -2133,8 +2311,8 @@ export function TechnicalIntegrationWorkspace({
           </div>
           </div>
 
-          <div className="space-y-5 border-slate-200 2xl:border-l 2xl:pl-5">
-            <div>
+          <div className="space-y-5">
+            <div className={activeProfileStep === 3 ? "" : "hidden"}>
               <h3 className="text-sm font-semibold text-slate-950">{zh ? "技术 Playbook" : "Technical playbooks"}</h3>
               <div className="mt-3 divide-y divide-slate-100 border-y border-slate-200">
                 {workspace.availablePlaybooks.map((playbook) => (
@@ -2158,7 +2336,7 @@ export function TechnicalIntegrationWorkspace({
               </div>
             </div>
 
-            <div>
+            <div className={activeProfileStep === 3 ? "" : "hidden"}>
               <h3 className="text-sm font-semibold text-slate-950">{zh ? "计划广告形式" : "Planned ad formats"}</h3>
               <div className="mt-3 flex flex-wrap gap-2">
                 {adFormats.map((format) => (
@@ -2182,7 +2360,7 @@ export function TechnicalIntegrationWorkspace({
               </div>
             </div>
 
-            <div>
+            <div className={activeProfileStep === 2 ? "" : "hidden"}>
               <p className="text-xs font-semibold text-blue-700">
                 Gate 06 · {zh ? "隐私、数据及监管边界" : "Privacy, data, and regulatory boundary"}
               </p>
@@ -2215,22 +2393,62 @@ export function TechnicalIntegrationWorkspace({
           </div>
         </fieldset>
 
-        {!workspace.profileComplete ? (
-          <div className="border-t border-amber-200 bg-amber-50 px-5 py-3">
-            <p className="flex items-center gap-2 text-sm font-semibold text-amber-900">
-              <AlertTriangle className="size-4" aria-hidden="true" />
-              {zh ? "Gate 3 / 6 / 8 仍有资料待补充：" : "Gate 3 / 6 / 8 data is incomplete:"}
-            </p>
-            <p className="mt-1 text-sm text-amber-800">
-              {workspace.profileValidationIssues.map((issue) => localizedIntegrationIssue(issue, zh)).join(" ")}
-            </p>
-            <p className="mt-1 text-xs leading-5 text-amber-700">
-              {zh
-                ? "这些缺口仅在对应 Gate 关闭时检查，不阻断媒体主体、商业可行性或广告场景评估。"
-                : "These gaps are checked only when their assigned gate closes; they do not block entity, feasibility, or placement assessment."}
-            </p>
+            <div className={`px-5 py-4 ${currentProfileStep.issues.length ? "bg-amber-50" : "bg-emerald-50/60"}`}>
+              {currentProfileStep.issues.length ? (
+                <div>
+                  <p className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                    <AlertTriangle className="size-4" aria-hidden="true" />
+                    {zh ? "完成本步前还需要：" : "Before continuing:"}
+                  </p>
+                  <ul className="mt-2 space-y-1 text-sm leading-5 text-amber-800">
+                    {currentProfileStep.issues.map((issue) => <li key={issue}>· {issue}</li>)}
+                  </ul>
+                </div>
+              ) : (
+                <p className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                  <CheckCircle2 className="size-4" aria-hidden="true" />
+                  {activeProfileStep === profileSteps.length - 1
+                    ? (zh ? "技术方案资料已通过校验，可以保存并生成清单。" : "The solution data is valid and ready to save.")
+                    : (zh ? "本步条件已满足，可以继续下一步。" : "This step is complete. Continue to the next step.")}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-4">
+              <button
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300"
+                type="button"
+                disabled={activeProfileStep === 0}
+                onClick={() => setActiveProfileStep((current) => Math.max(0, current - 1))}
+              >
+                <ArrowLeft className="size-4" aria-hidden="true" />
+                {zh ? "上一步" : "Previous"}
+              </button>
+
+              {activeProfileStep < profileSteps.length - 1 ? (
+                <button
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                  type="button"
+                  disabled={profileEditable && !canAdvanceProfileStep}
+                  onClick={() => setActiveProfileStep((current) => Math.min(profileSteps.length - 1, current + 1))}
+                >
+                  {zh ? "继续下一步" : "Continue"}
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </button>
+              ) : (
+                <button
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+                  type="button"
+                  onClick={() => onSaveProfile(profileDraft)}
+                  disabled={!profileEditable || draftProfileIssues.length > 0}
+                >
+                  <Save className="size-4" aria-hidden="true" />
+                  {zh ? "保存并生成技术清单" : "Save and generate checklist"}
+                </button>
+              )}
+            </div>
           </div>
-        ) : null}
+        </div>
       </section>
 
       <section className={activeWorkspaceView === "gates" ? "border-b border-slate-200" : "hidden"}>
