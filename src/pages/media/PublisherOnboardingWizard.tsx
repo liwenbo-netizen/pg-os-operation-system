@@ -123,7 +123,8 @@ export function PublisherOnboardingWizard({
     identity: t("media.onboardingIdentity"),
     traffic: t("media.onboardingTraffic"),
     inventory: t("media.onboardingInventory"),
-    commercial: t("media.onboardingCommercial")
+    commercial: t("media.onboardingCommercial"),
+    handoff: locale === "zh-CN" ? "技术交接" : "Technical handoff"
   };
 
   useEffect(() => {
@@ -218,7 +219,7 @@ export function PublisherOnboardingWizard({
           </button>
         </header>
 
-        <nav className="grid grid-cols-4 border-b border-slate-200 bg-slate-50" aria-label={t("media.onboardingProgress")}>
+        <nav className="grid grid-cols-5 border-b border-slate-200 bg-slate-50" aria-label={t("media.onboardingProgress")}>
           {publisherOnboardingSteps.map((step, index) => (
             <button
               key={step}
@@ -304,6 +305,68 @@ export function PublisherOnboardingWizard({
                     <TextField id="publisher-revenue-share" type="number" min="0" max="100" step="0.01" label={t("media.onboardingRevenueShare")} value={draft.revenueSharePercent} error={errorText("revenueSharePercent")} onChange={(value) => setField("revenueSharePercent", value)} />
                   </FormGrid>
                 </FieldSection>
+              </div>
+            ) : null}
+
+            {currentStep === "handoff" ? (
+              <div className="space-y-5">
+                <div className="border-l-4 border-blue-500 bg-blue-50 px-4 py-3">
+                  <p className="text-sm font-semibold text-blue-950">
+                    {locale === "zh-CN" ? "媒体经理提交给技术经理的接入需求包" : "Publisher-to-engineering handoff package"}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-blue-800">
+                    {locale === "zh-CN"
+                      ? "这里填写媒体研发联系人、上线目标和接入约束。创建后先保存为草稿，资料齐全后在 Publisher 360 正式提交给技术经理接单。"
+                      : "Capture the publisher engineering contact, launch timing, and integration constraints. The package is saved as a draft and submitted from Publisher 360 when ready."}
+                  </p>
+                </div>
+                <FormGrid>
+                  <TextField
+                    id="publisher-engineering-contact"
+                    label={locale === "zh-CN" ? "媒体侧研发联系人" : "Publisher engineering contact"}
+                    value={draft.mediaEngineeringContact}
+                    error={errorText("mediaEngineeringContact")}
+                    required
+                    placeholder={locale === "zh-CN" ? "姓名 / 职位 / 邮箱或企业微信" : "Name / role / email"}
+                    onChange={(value) => setField("mediaEngineeringContact", value)}
+                  />
+                  <TextField
+                    id="publisher-target-pilot"
+                    type="date"
+                    label={locale === "zh-CN" ? "目标联调 / Pilot 日期" : "Target integration / pilot date"}
+                    value={draft.targetPilotDate}
+                    error={errorText("targetPilotDate")}
+                    required
+                    onChange={(value) => setField("targetPilotDate", value)}
+                  />
+                  <TextField
+                    id="publisher-target-live"
+                    type="date"
+                    label={locale === "zh-CN" ? "期望正式上线日期" : "Expected production launch date"}
+                    value={draft.targetGoLiveDate}
+                    error={errorText("targetGoLiveDate")}
+                    required
+                    onChange={(value) => setField("targetGoLiveDate", value)}
+                  />
+                </FormGrid>
+                <TextAreaField
+                  id="publisher-launch-requirements"
+                  label={locale === "zh-CN" ? "媒体上线要求" : "Publisher launch requirements"}
+                  value={draft.launchRequirements}
+                  error={errorText("launchRequirements")}
+                  required
+                  placeholder={locale === "zh-CN" ? "审核周期、隐私要求、素材限制、频控、灰度范围、验收标准等" : "Review lead time, privacy, creative rules, frequency caps, pilot scope, acceptance criteria"}
+                  onChange={(value) => setField("launchRequirements", value)}
+                />
+                <TextAreaField
+                  id="publisher-integration-expectations"
+                  label={locale === "zh-CN" ? "接入方式与技术期望" : "Integration expectations"}
+                  value={draft.integrationExpectations}
+                  error={errorText("integrationExpectations")}
+                  required
+                  placeholder={locale === "zh-CN" ? "媒体期望的 SDK/API/VAST 方式、现有广告系统、测试环境、需 PG 协助事项" : "Expected SDK/API/VAST route, current ad stack, test environment, and required PG support"}
+                  onChange={(value) => setField("integrationExpectations", value)}
+                />
               </div>
             ) : null}
           </div>
@@ -423,6 +486,30 @@ function SelectField({ id, label, value, options, onChange, error }: {
       >
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
+    </FieldShell>
+  );
+}
+
+function TextAreaField({ id, label, value, onChange, error, required, placeholder }: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  required?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <FieldShell id={id} label={label} required={required} error={error}>
+      <textarea
+        id={id}
+        className={`min-h-24 w-full resize-y rounded-lg border bg-white px-3 py-2 text-sm leading-6 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 ${error ? "border-rose-300" : "border-slate-200"}`}
+        value={value}
+        required={required}
+        placeholder={placeholder}
+        aria-invalid={Boolean(error)}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </FieldShell>
   );
 }

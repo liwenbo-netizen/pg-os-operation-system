@@ -60,6 +60,9 @@ export type Publisher = {
     monthly_active_users?: number;
     traffic_data_as_of?: string;
     traffic_source?: string;
+    archived_at?: string;
+    archived_by_role?: RoleCode;
+    archive_reason?: string;
   };
 };
 
@@ -181,6 +184,27 @@ export type IntegrationProject = {
   next_action?: string;
   readiness_reviewed_at?: string;
   go_live_date?: string;
+  handoff_status?: IntegrationHandoffStatus;
+  handoff_package?: IntegrationHandoffPackage;
+  handoff_submitted_at?: string;
+  handoff_submitted_by?: UserId;
+  handoff_accepted_at?: string;
+  handoff_accepted_by?: UserId;
+  handoff_feedback?: string;
+};
+
+export type IntegrationHandoffStatus =
+  | "draft"
+  | "submitted"
+  | "accepted"
+  | "changes_requested";
+
+export type IntegrationHandoffPackage = {
+  media_engineering_contact: string;
+  target_pilot_date: string;
+  target_go_live_date: string;
+  launch_requirements: string;
+  integration_expectations: string;
 };
 
 export type IntegrationEvidenceType = "connection_config" | "test_request" | "callback_log" | "production_log";
@@ -205,6 +229,23 @@ export type IntegrationPlaybookCode =
 
 export type IntegrationPlatform = "android" | "android_tv" | "other";
 
+export type IntegrationTrafficChannel = "mobile" | "ctv" | "dooh" | "pc" | "connected_device";
+
+export type IntegrationMode =
+  | "ivt_sdk_api"
+  | "full_sdk"
+  | "lightweight_sdk_api"
+  | "player_component";
+
+export type IntegrationProtocol =
+  | "api"
+  | "openrtb"
+  | "vast"
+  | "private_protocol"
+  | "javascript_sdk"
+  | "native_sdk"
+  | "device_protocol";
+
 export type IntegrationAdFormat =
   | "splash"
   | "interstitial"
@@ -224,10 +265,26 @@ export type IntegrationPrivacyProfile = {
   installed_apps: boolean;
 };
 
+export type IntegrationCapabilityProfile = {
+  has_ad_server: boolean;
+  has_ad_player: boolean;
+  has_ad_sdk: boolean;
+  supports_api: boolean;
+  supports_openrtb: boolean;
+  supports_vast: boolean;
+  supports_lifecycle_events: boolean;
+  accepts_ivt_sdk: boolean;
+  requires_pg_full_sdk: boolean;
+};
+
 export type IntegrationProjectProfile = {
   id: EntityId;
   integration_project_id: EntityId;
   platform: IntegrationPlatform;
+  traffic_channel: IntegrationTrafficChannel;
+  integration_mode: IntegrationMode;
+  protocol_codes: IntegrationProtocol[];
+  capability_profile: IntegrationCapabilityProfile;
   property_identifier: string;
   playbook_codes: IntegrationPlaybookCode[];
   min_sdk?: number;

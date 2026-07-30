@@ -23,7 +23,12 @@ function completeDraft() {
     creativeSpec: "1200x627",
     contactName: "Li Ming",
     contactEmail: "li.ming@example.com",
-    revenueSharePercent: "65"
+    revenueSharePercent: "65",
+    mediaEngineeringContact: "Zhang Wei / Android Lead",
+    targetPilotDate: "2026-08-10",
+    targetGoLiveDate: "2026-08-24",
+    launchRequirements: "5% controlled pilot and two-week review lead time.",
+    integrationExpectations: "Origin Android SDK with a sandbox environment."
   };
 }
 
@@ -135,7 +140,15 @@ describe("publisher onboarding model", () => {
           integration_type: "OpenRTB",
           status: "pending_integration",
           checklist: {},
-          notes: "Pending"
+          notes: "Pending",
+          handoff_status: "draft",
+          handoff_package: {
+            media_engineering_contact: "Chen Gong / Android Lead",
+            target_pilot_date: "2026-08-12",
+            target_go_live_date: "2026-08-28",
+            launch_requirements: "Controlled launch and material review.",
+            integration_expectations: "Origin Android SDK."
+          }
         }
       ]
     });
@@ -148,7 +161,10 @@ describe("publisher onboarding model", () => {
       contactName: "Chen Yu",
       slotName: "Home Feed",
       paymentTerms: "Net 45",
-      revenueSharePercent: "68"
+      revenueSharePercent: "68",
+      mediaEngineeringContact: "Chen Gong / Android Lead",
+      targetPilotDate: "2026-08-12",
+      targetGoLiveDate: "2026-08-28"
     });
     expect(validatePublisherOnboarding(draft)).toEqual({});
   });

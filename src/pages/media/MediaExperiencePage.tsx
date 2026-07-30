@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Archive,
   ArrowRight,
   BarChart3,
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
   Map,
   Pencil,
   Plus,
+  RotateCcw,
   Search,
   Send,
   ShieldCheck,
@@ -22,7 +24,8 @@ import {
   TrendingUp,
   type LucideIcon,
   UserCheck,
-  Wrench
+  Wrench,
+  X
 } from "lucide-react";
 import { GuidedEmptyState, MetricStrip, NextActionBar, OperatingPageHeader } from "../../components/OperatingPage";
 import { BusinessStagePath } from "../../components/BusinessStagePath";
@@ -39,6 +42,7 @@ import {
 } from "../../services/chinaMediaEcosystemService";
 import {
   integrationEvidenceDefinitions,
+  isPublisherArchived,
   mediaWorkflowService,
   type PublisherOnboardingChangeArea,
   type PublisherOnboardingInput
@@ -454,7 +458,7 @@ export function MediaExperiencePage({
 
   return (
     <section className="space-y-6">
-      {page === "ecosystem" ? (
+      {page === "integration" ? null : page === "ecosystem" ? (
         <OperatingPageHeader
           title={getRouteDisplayTitle(route, locale)}
           description={t("media.ecosystemDescription")}
@@ -482,7 +486,7 @@ export function MediaExperiencePage({
         </div>
       )}
 
-      {page === "ecosystem" ? (
+      {page === "integration" ? null : page === "ecosystem" ? (
         <MetricStrip
           label={getRouteDisplayTitle(route, locale)}
           items={[
@@ -513,12 +517,24 @@ export function MediaExperiencePage({
           onRouteChange={onRouteChange}
         />
       ) : (
-        <div className="grid gap-6 xl:grid-cols-[320px_1fr]">
-        <div className={page === "integration" ? "order-2 xl:order-1" : ""}>
+        <div
+          className={
+            page === "integration"
+              ? "space-y-4"
+              : "grid gap-6 xl:grid-cols-[320px_1fr]"
+          }
+        >
+        <div>
           <PublisherSelector
             publishers={state.publishers}
             selectedPublisherId={selectedPublisher?.id}
-            onSelect={(publisherId) => setSelectedPublisherId(publisherId)}
+            compact={page === "integration"}
+            onSelect={(publisherId) => {
+              setSelectedPublisherId(publisherId);
+              if (page === "integration") {
+                onRouteChange("/media/integration-wizard/:id", publisherId);
+              }
+            }}
             onOpen360={() => onRouteChange("/media/publishers/:id", selectedPublisher?.id)}
           />
         </div>
@@ -561,8 +577,50 @@ export function MediaExperiencePage({
           <Publisher360
             snapshot={selectedSnapshot}
             trustedSnapshot={trustedSupplyNetworkService.getSnapshot(state, selectedSnapshot.publisher!.id)}
+            archiveSnapshot={mediaWorkflowService.getPublisherArchiveSnapshot(
+              state,
+              selectedSnapshot.publisher!.id
+            )}
+            handoffSnapshot={mediaWorkflowService.getPublisherTechnicalHandoff(
+              state,
+              selectedSnapshot.publisher!.id
+            )}
             ownerRole={user.activeRole}
             onEditProfile={openPublisherEditor}
+            onArchive={(reason) =>
+              runAction(
+                locale === "zh-CN" ? "归档媒体" : "Archive publisher",
+                () =>
+                  mediaWorkflowService.archivePublisher(
+                    state,
+                    user,
+                    selectedSnapshot.publisher!.id,
+                    reason
+                  )
+              )
+            }
+            onRestore={() =>
+              runAction(
+                locale === "zh-CN" ? "恢复媒体" : "Restore publisher",
+                () =>
+                  mediaWorkflowService.restorePublisher(
+                    state,
+                    user,
+                    selectedSnapshot.publisher!.id
+                  )
+              )
+            }
+            onArchiveDuplicates={() =>
+              runAction(
+                locale === "zh-CN" ? "清理同名测试媒体" : "Clean duplicate test publishers",
+                () =>
+                  mediaWorkflowService.archiveDuplicateTestPublishers(
+                    state,
+                    user,
+                    selectedSnapshot.publisher!.id
+                  )
+              )
+            }
             onAddSlot={() =>
               runAction(t("media.addAdSlot"), () =>
                 mediaWorkflowService.addAdSlot(state, user, selectedSnapshot.publisher!.id, {
@@ -586,6 +644,17 @@ export function MediaExperiencePage({
               )
             }
             onOpenIntegration={() => onRouteChange("/media/integration-wizard/:id", selectedSnapshot.publisher!.id)}
+            onSubmitHandoff={() =>
+              runAction(
+                locale === "zh-CN" ? "提交技术交接" : "Submit technical handoff",
+                () =>
+                  mediaWorkflowService.submitTechnicalHandoff(
+                    state,
+                    user,
+                    selectedSnapshot.publisher!.id
+                  )
+              )
+            }
             onOpenTest={() => onRouteChange("/media/commercial-tests/:id", selectedSnapshot.publisher!.id)}
             onEvaluateTrust={() =>
               runAction(t("trusted.evaluate"), () =>
@@ -611,7 +680,7 @@ export function MediaExperiencePage({
         ) : null}
 
         {page === "integration" && selectedPublisher ? (
-          <div className="order-1 min-w-0 xl:order-2">
+          <div className="min-w-0">
             <TechnicalIntegrationWorkspace
               publisher={selectedPublisher}
               state={state}
@@ -650,6 +719,29 @@ export function MediaExperiencePage({
               onSubmit={() =>
                 runAction(t("integration.submitReadiness"), () =>
                   mediaWorkflowService.submitTechnicalValidation(state, user, selectedPublisher.id)
+                )
+              }
+              onAcceptHandoff={() =>
+                runAction(
+                  locale === "zh-CN" ? "技术经理接单" : "Accept technical handoff",
+                  () =>
+                    mediaWorkflowService.acceptTechnicalHandoff(
+                      state,
+                      user,
+                      selectedPublisher.id
+                    )
+                )
+              }
+              onRequestHandoffChanges={(feedback) =>
+                runAction(
+                  locale === "zh-CN" ? "退回补充资料" : "Request handoff changes",
+                  () =>
+                    mediaWorkflowService.requestTechnicalHandoffChanges(
+                      state,
+                      user,
+                      selectedPublisher.id,
+                      feedback
+                    )
                 )
               }
             />
@@ -1932,11 +2024,13 @@ function GateRow({ label, passed }: { label: string; passed: boolean }) {
 function PublisherSelector({
   publishers,
   selectedPublisherId,
+  compact = false,
   onSelect,
   onOpen360
 }: {
   publishers: Publisher[];
   selectedPublisherId?: EntityId;
+  compact?: boolean;
   onSelect: (publisherId: EntityId) => void;
   onOpen360: () => void;
 }) {
@@ -1944,11 +2038,70 @@ function PublisherSelector({
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<PublisherQueueStatusFilter>("all");
   const [sort, setSort] = useState<PublisherQueueSort>("recent");
+  const [showArchived, setShowArchived] = useState(false);
+  const selectedPublisher = publishers.find((publisher) => publisher.id === selectedPublisherId);
+  const archivedCount = publishers.filter(isPublisherArchived).length;
+  const scopedPublishers = useMemo(() => {
+    const filtered = showArchived
+      ? publishers
+      : publishers.filter((publisher) => !isPublisherArchived(publisher));
+    if (
+      !showArchived &&
+      selectedPublisher &&
+      isPublisherArchived(selectedPublisher) &&
+      !filtered.some((publisher) => publisher.id === selectedPublisher.id)
+    ) {
+      return [selectedPublisher, ...filtered];
+    }
+    return filtered;
+  }, [publishers, selectedPublisher, showArchived]);
   const visiblePublishers = useMemo(
-    () => filterAndSortPublisherQueue(publishers, { query, status: statusFilter, sort }),
-    [publishers, query, sort, statusFilter]
+    () => filterAndSortPublisherQueue(scopedPublishers, { query, status: statusFilter, sort }),
+    [query, scopedPublishers, sort, statusFilter]
   );
   const hasFilters = query.trim().length > 0 || statusFilter !== "all";
+
+  if (compact) {
+    return (
+      <aside className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-card">
+        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <label className="block min-w-0">
+            <span className="text-xs font-semibold text-slate-500">
+              {locale === "zh-CN" ? "当前技术接入项目" : "Current integration project"}
+            </span>
+            <select
+              className="mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              value={selectedPublisherId ?? ""}
+              onChange={(event) => onSelect(event.target.value)}
+            >
+              {scopedPublishers.map((publisher) => (
+                <option key={publisher.id} value={publisher.id}>
+                  {isPublisherArchived(publisher)
+                    ? `${publisher.name} · ${locale === "zh-CN" ? "已归档" : "Archived"}`
+                    : publisher.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex min-w-0 items-center gap-2">
+            {selectedPublisher ? (
+              <StatusBadge tone={toneForStatus(selectedPublisher.sales_scale_status)}>
+                {getPublisherStatusLabel(selectedPublisher.sales_scale_status, locale)}
+              </StatusBadge>
+            ) : null}
+            <button
+              className="h-10 shrink-0 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+              type="button"
+              disabled={!selectedPublisherId}
+              onClick={onOpen360}
+            >
+              {t("media.open360")}
+            </button>
+          </div>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <aside className="space-y-3">
@@ -1958,7 +2111,25 @@ function PublisherSelector({
             <p className="text-sm font-semibold text-slate-900">{t("media.publisherQueue")}</p>
             <p className="mt-1 text-xs leading-5 text-slate-500">{t("media.publisherQueueDescription")}</p>
           </div>
-          <StatusBadge tone="neutral">{t("media.publisherQueueCount", { visible: visiblePublishers.length, total: publishers.length })}</StatusBadge>
+          <div className="flex flex-col items-end gap-2">
+            <StatusBadge tone="neutral">
+              {t("media.publisherQueueCount", {
+                visible: visiblePublishers.length,
+                total: scopedPublishers.length
+              })}
+            </StatusBadge>
+            {archivedCount > 0 ? (
+              <button
+                className="text-xs font-semibold text-slate-500 hover:text-blue-700"
+                type="button"
+                onClick={() => setShowArchived((visible) => !visible)}
+              >
+                {showArchived
+                  ? (locale === "zh-CN" ? "隐藏已归档" : "Hide archived")
+                  : (locale === "zh-CN" ? `查看已归档 ${archivedCount}` : `Show archived ${archivedCount}`)}
+              </button>
+            ) : null}
+          </div>
         </div>
         <label className="relative mt-4 block">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" aria-hidden="true" />
@@ -2013,7 +2184,11 @@ function PublisherSelector({
           >
             <div className="flex items-start justify-between gap-3">
               <p className="min-w-0 break-words text-sm font-semibold text-slate-900">{publisher.name}</p>
-              <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{getPublisherStatusLabel(publisher.sales_scale_status, locale)}</StatusBadge>
+              <StatusBadge tone={isPublisherArchived(publisher) ? "neutral" : toneForStatus(publisher.sales_scale_status)}>
+                {isPublisherArchived(publisher)
+                  ? (locale === "zh-CN" ? "已归档" : "Archived")
+                  : getPublisherStatusLabel(publisher.sales_scale_status, locale)}
+              </StatusBadge>
             </div>
             <p className="mt-2 truncate text-xs text-slate-500">
               {publisher.metadata?.property_identifier ?? publisher.metadata?.property_name ?? `${publisher.media_type ?? "Media"} / ${publisher.integration_type ?? "Integration"}`}
@@ -2217,11 +2392,17 @@ function DirectorSignal({ label, value }: { label: string; value: string }) {
 function Publisher360({
   snapshot,
   trustedSnapshot,
+  archiveSnapshot,
+  handoffSnapshot,
   ownerRole,
   onEditProfile,
+  onArchive,
+  onRestore,
+  onArchiveDuplicates,
   onAddSlot,
   onAddTerm,
   onOpenIntegration,
+  onSubmitHandoff,
   onOpenTest,
   onEvaluateTrust,
   onConfirmPool,
@@ -2230,11 +2411,17 @@ function Publisher360({
 }: {
   snapshot: ReturnType<typeof mediaWorkflowService.getPublisherSnapshot>;
   trustedSnapshot: ReturnType<typeof trustedSupplyNetworkService.getSnapshot>;
+  archiveSnapshot: ReturnType<typeof mediaWorkflowService.getPublisherArchiveSnapshot>;
+  handoffSnapshot: ReturnType<typeof mediaWorkflowService.getPublisherTechnicalHandoff>;
   ownerRole: BusinessUser["activeRole"];
   onEditProfile: () => void;
+  onArchive: (reason: string) => void;
+  onRestore: () => void;
+  onArchiveDuplicates: () => void;
   onAddSlot: () => void;
   onAddTerm: () => void;
   onOpenIntegration: () => void;
+  onSubmitHandoff: () => void;
   onOpenTest: () => void;
   onEvaluateTrust: () => void;
   onConfirmPool: () => void;
@@ -2243,7 +2430,26 @@ function Publisher360({
 }) {
   const { locale, t } = useLocale();
   const [workspaceView, setWorkspaceView] = useState<PublisherWorkspaceView>("readiness");
+  const [archivePanelOpen, setArchivePanelOpen] = useState(false);
+  const [archiveReason, setArchiveReason] = useState("");
+  const [archiveConfirmation, setArchiveConfirmation] = useState<
+    "publisher" | "duplicates" | null
+  >(null);
   const publisher = snapshot.publisher;
+
+  useEffect(() => {
+    if (archiveSnapshot?.archived) {
+      setWorkspaceView("evidence");
+      setArchivePanelOpen(false);
+      setArchiveConfirmation(null);
+    }
+  }, [archiveSnapshot?.archived]);
+
+  useEffect(() => {
+    setArchivePanelOpen(false);
+    setArchiveConfirmation(null);
+    setArchiveReason("");
+  }, [publisher?.id]);
 
   if (!publisher) {
     return <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">{t("media.publisherNotFound")}</div>;
@@ -2257,14 +2463,17 @@ function Publisher360({
     trustProfile: trustedSnapshot.profile,
     packages: trustedSnapshot.packages
   };
+  const archived = Boolean(archiveSnapshot?.archived);
   const readinessSteps = getPublisherReadinessSteps(readinessInput);
-  const primaryAction = getPublisherPrimaryAction(readinessInput);
+  const primaryAction = archived ? undefined : getPublisherPrimaryAction(readinessInput);
   const draftPackage = trustedSnapshot.packages.find((item) => item.status === "draft");
   const blockingCase = snapshot.diagnosticCases.find(
     (item) => item.is_blocking_sales_scale && !["closed", "rejected"].includes(item.status)
   );
   const integrationBlocker = snapshot.integrationProjects.find((item) => item.blocker)?.blocker;
   const blocker = blockingCase?.current_blocker ?? integrationBlocker;
+  const canManageArchive = ["media_director", "operations_director"].includes(ownerRole);
+  const canSubmitHandoff = ["media_manager", "media_director", "operations_director"].includes(ownerRole);
   const overallState: PublisherReadinessState = readinessSteps.some((step) => step.state === "blocked")
     ? "blocked"
     : readinessSteps.every((step) => step.state === "complete")
@@ -2326,6 +2535,17 @@ function Publisher360({
     }
   }
 
+  function confirmArchiveAction() {
+    if (archiveConfirmation === "publisher") {
+      onArchive(archiveReason);
+      setArchiveReason("");
+    } else if (archiveConfirmation === "duplicates") {
+      onArchiveDuplicates();
+    }
+    setArchiveConfirmation(null);
+    setArchivePanelOpen(false);
+  }
+
   return (
     <div className="min-w-0 space-y-5">
       <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-card">
@@ -2338,6 +2558,11 @@ function Publisher360({
           </div>
           <div className="flex flex-col items-end gap-3">
             <div className="flex flex-wrap justify-end gap-2">
+              {archived ? (
+                <StatusBadge tone="neutral">
+                  {locale === "zh-CN" ? "已归档" : "Archived"}
+                </StatusBadge>
+              ) : null}
               <StatusBadge tone={toneForStatus(publisher.technical_live_status)}>{getPublisherStatusLabel(publisher.technical_live_status, locale)}</StatusBadge>
               <StatusBadge tone={toneForStatus(publisher.commercial_test_status)}>{getPublisherStatusLabel(publisher.commercial_test_status, locale)}</StatusBadge>
               <StatusBadge tone={toneForStatus(publisher.sales_scale_status)}>{getPublisherStatusLabel(publisher.sales_scale_status, locale)}</StatusBadge>
@@ -2347,14 +2572,42 @@ function Publisher360({
                 className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 type="button"
                 onClick={onEditProfile}
+                disabled={archived}
               >
                 <Pencil className="size-4" aria-hidden="true" />
                 {t("media.editProfile")}
               </button>
+              {canManageArchive ? (
+                <button
+                  className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-semibold ${
+                    archived
+                      ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                      : "border-amber-200 text-amber-700 hover:bg-amber-50"
+                  }`}
+                  type="button"
+                  onClick={() => {
+                    if (archived) {
+                      onRestore();
+                      return;
+                    }
+                    setArchivePanelOpen((open) => !open);
+                  }}
+                >
+                  {archived ? (
+                    <RotateCcw className="size-4" aria-hidden="true" />
+                  ) : (
+                    <Archive className="size-4" aria-hidden="true" />
+                  )}
+                  {archived
+                    ? (locale === "zh-CN" ? "恢复媒体" : "Restore")
+                    : (locale === "zh-CN" ? "归档 / 清理" : "Archive / cleanup")}
+                </button>
+              ) : null}
               <button
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700"
                 type="button"
                 onClick={onOpenIntegration}
+                disabled={archived}
               >
                 <Wrench className="size-4" aria-hidden="true" />
                 {t("media.openIntegrationWizard")}
@@ -2362,22 +2615,244 @@ function Publisher360({
             </div>
           </div>
         </div>
+        {archived ? (
+          <div className="mt-4 border-l-4 border-slate-400 bg-slate-50 px-4 py-3">
+            <p className="text-sm font-semibold text-slate-900">
+              {locale === "zh-CN" ? "该媒体已从日常运营队列归档" : "This publisher is archived from active operations"}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-slate-600">
+              {locale === "zh-CN"
+                ? `所有联系人、广告位、接入项目、测试和审计记录仍被保留。原因：${archiveSnapshot?.archiveReason ?? "未填写"}`
+                : `Contacts, inventory, integration, tests, and audit history are retained. Reason: ${archiveSnapshot?.archiveReason ?? "Not provided"}`}
+            </p>
+          </div>
+        ) : null}
+        {archivePanelOpen && !archived ? (
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            <div className="flex items-start gap-3">
+              <Archive className="mt-0.5 size-5 shrink-0 text-amber-600" aria-hidden="true" />
+              <div>
+                <h2 className="text-sm font-semibold text-slate-950">
+                  {locale === "zh-CN" ? "媒体归档与测试数据清理" : "Publisher archive and test-data cleanup"}
+                </h2>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  {locale === "zh-CN"
+                    ? "归档不会删除数据库记录，只会从运营队列、工作台任务和可售媒体中隐藏，可随时恢复。"
+                    : "Archiving keeps database records but hides the publisher from operational queues, tasks, and sellable supply. It can be restored."}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 border-y border-slate-200 py-3 sm:grid-cols-4">
+              <div>
+                <p className="text-xs text-slate-500">{locale === "zh-CN" ? "联系人" : "Contacts"}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{archiveSnapshot?.contacts ?? 0}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">{locale === "zh-CN" ? "广告位 / 条款" : "Slots / terms"}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  {archiveSnapshot?.adSlots ?? 0} / {archiveSnapshot?.contractTerms ?? 0}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">{locale === "zh-CN" ? "接入 / 商测" : "Integration / tests"}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  {archiveSnapshot?.integrationProjects ?? 0} / {archiveSnapshot?.commercialTests ?? 0}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">{locale === "zh-CN" ? "同名测试记录" : "Duplicate test records"}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{archiveSnapshot?.duplicateTestRecords ?? 0}</p>
+              </div>
+            </div>
+            {archiveSnapshot?.productionProtected ? (
+              <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-800">
+                {locale === "zh-CN"
+                  ? "该媒体已通过技术上线、商业测试或进入可售状态，测试数据清理动作已锁定。"
+                  : "This publisher is technically live, test-passed, or sellable, so cleanup actions are locked."}
+              </div>
+            ) : (
+              <>
+                <label className="mt-4 block">
+                  <span className="text-xs font-semibold text-slate-600">
+                    {locale === "zh-CN" ? "归档原因" : "Archive reason"}
+                  </span>
+                  <input
+                    className="mt-2 h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    value={archiveReason}
+                    onChange={(event) => setArchiveReason(event.target.value)}
+                    placeholder={
+                      locale === "zh-CN"
+                        ? "例如：UAT 重复记录、演示数据、已停止评估"
+                        : "Example: duplicate UAT record, demo data, evaluation stopped"
+                    }
+                  />
+                </label>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    className="inline-flex h-10 items-center gap-2 rounded-lg border border-amber-300 bg-white px-4 text-sm font-semibold text-amber-800 disabled:cursor-not-allowed disabled:text-slate-300"
+                    type="button"
+                    disabled={!archiveReason.trim()}
+                    onClick={() => setArchiveConfirmation("publisher")}
+                  >
+                    <Archive className="size-4" aria-hidden="true" />
+                    {locale === "zh-CN" ? "归档当前媒体" : "Archive this publisher"}
+                  </button>
+                  {(archiveSnapshot?.duplicateTestRecords ?? 0) > 0 ? (
+                    <button
+                      className="inline-flex h-10 items-center gap-2 rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white hover:bg-amber-700"
+                      type="button"
+                      onClick={() => setArchiveConfirmation("duplicates")}
+                    >
+                      <Archive className="size-4" aria-hidden="true" />
+                      {locale === "zh-CN"
+                        ? `保留当前记录，归档其余 ${archiveSnapshot?.duplicateTestRecords} 条`
+                        : `Keep this record and archive ${archiveSnapshot?.duplicateTestRecords} duplicate(s)`}
+                    </button>
+                  ) : null}
+                  <button
+                    className="h-10 rounded-lg px-3 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+                    type="button"
+                    onClick={() => setArchivePanelOpen(false)}
+                  >
+                    {locale === "zh-CN" ? "取消" : "Cancel"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        ) : null}
       </article>
+
+      {!archived ? (
+        <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-card">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Handshake className="size-5 text-blue-600" aria-hidden="true" />
+                <h2 className="text-base font-semibold text-slate-950">
+                  {locale === "zh-CN" ? "媒体 → 技术交接" : "Media → Engineering handoff"}
+                </h2>
+              </div>
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                {locale === "zh-CN"
+                  ? "媒体经理补齐接入需求包并提交；技术经理接单后才进入技术方案和执行门禁。"
+                  : "The Media Manager completes and submits the intake package. Technical planning starts only after the Integration Manager accepts it."}
+              </p>
+            </div>
+            <StatusBadge
+              tone={
+                handoffSnapshot.status === "accepted"
+                  ? "success"
+                  : handoffSnapshot.status === "changes_requested"
+                    ? "danger"
+                    : handoffSnapshot.status === "submitted"
+                      ? "info"
+                      : "warning"
+              }
+            >
+              {locale === "zh-CN"
+                ? {
+                    draft: "草稿",
+                    submitted: "待技术接单",
+                    accepted: "技术已接单",
+                    changes_requested: "需补充资料"
+                  }[handoffSnapshot.status]
+                : handoffSnapshot.status.replace("_", " ")}
+            </StatusBadge>
+          </div>
+          <div className="grid gap-0 md:grid-cols-[minmax(0,1fr)_280px]">
+            <div className="px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-slate-900">
+                  {locale === "zh-CN" ? "交接资料完整度" : "Handoff completeness"}
+                </p>
+                <span className="text-sm font-semibold text-blue-700">
+                  {handoffSnapshot.completed}/{handoffSnapshot.total}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {handoffSnapshot.completeness.map((item) => (
+                  <div
+                    key={item.code}
+                    className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs ${
+                      item.complete
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                        : "border-amber-200 bg-amber-50 text-amber-800"
+                    }`}
+                  >
+                    <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
+                    <span>{locale === "zh-CN" ? item.labelZh : item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 md:border-l md:border-t-0">
+              <p className="text-xs font-semibold text-slate-500">
+                {locale === "zh-CN" ? "下一步" : "Next action"}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-800">
+                {locale === "zh-CN" ? handoffSnapshot.nextActionZh : handoffSnapshot.nextAction}
+              </p>
+              {handoffSnapshot.project?.handoff_feedback ? (
+                <p className="mt-2 border-l-2 border-rose-400 pl-3 text-xs leading-5 text-rose-700">
+                  {handoffSnapshot.project.handoff_feedback}
+                </p>
+              ) : null}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {["draft", "changes_requested"].includes(handoffSnapshot.status) ? (
+                  <>
+                    <button
+                      className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:border-blue-300"
+                      type="button"
+                      onClick={onEditProfile}
+                    >
+                      <Pencil className="size-4" aria-hidden="true" />
+                      {locale === "zh-CN" ? "补充资料" : "Edit intake"}
+                    </button>
+                    <button
+                      className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      type="button"
+                      disabled={!handoffSnapshot.readyToSubmit || !canSubmitHandoff}
+                      onClick={onSubmitHandoff}
+                    >
+                      <Send className="size-4" aria-hidden="true" />
+                      {locale === "zh-CN" ? "提交给技术" : "Submit to engineering"}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:border-blue-300"
+                    type="button"
+                    onClick={onOpenIntegration}
+                  >
+                    <Wrench className="size-4" aria-hidden="true" />
+                    {locale === "zh-CN" ? "查看技术接入" : "Open integration"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </article>
+      ) : null}
 
       <div className="flex flex-col gap-3 border-b border-slate-200 pb-4">
         <div className="inline-flex w-full rounded-lg border border-slate-200 bg-slate-100 p-1 sm:w-auto" role="tablist">
-          <PublisherViewTab
-            active={workspaceView === "readiness"}
-            icon={ClipboardCheck}
-            label={t("media.readinessView")}
-            onClick={() => setWorkspaceView("readiness")}
-          />
-          <PublisherViewTab
-            active={workspaceView === "trusted"}
-            icon={ShieldCheck}
-            label={t("media.trustedView")}
-            onClick={() => setWorkspaceView("trusted")}
-          />
+          {!archived ? (
+            <PublisherViewTab
+              active={workspaceView === "readiness"}
+              icon={ClipboardCheck}
+              label={t("media.readinessView")}
+              onClick={() => setWorkspaceView("readiness")}
+            />
+          ) : null}
+          {!archived ? (
+            <PublisherViewTab
+              active={workspaceView === "trusted"}
+              icon={ShieldCheck}
+              label={t("media.trustedView")}
+              onClick={() => setWorkspaceView("trusted")}
+            />
+          ) : null}
           <PublisherViewTab
             active={workspaceView === "evidence"}
             icon={History}
@@ -2394,7 +2869,7 @@ function Publisher360({
         </p>
       </div>
 
-      {workspaceView === "readiness" ? (
+      {workspaceView === "readiness" && !archived ? (
         <>
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
             <NextActionBar
@@ -2475,7 +2950,7 @@ function Publisher360({
         </>
       ) : null}
 
-      {workspaceView === "trusted" ? (
+      {workspaceView === "trusted" && !archived ? (
         <TrustedSupplyPanel
           snapshot={trustedSnapshot}
           onEvaluate={onEvaluateTrust}
@@ -2571,6 +3046,123 @@ function Publisher360({
             <ReadinessEvidenceList title={t("media.diagnostics")} items={snapshot.diagnosticCases.map((item) => `${item.case_no} / ${item.current_blocker ?? item.next_action ?? item.status}`)} empty={t("media.noDataContinue")} />
           </div>
         </section>
+      ) : null}
+
+      {archiveConfirmation ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 p-0 sm:items-center sm:p-5">
+          <button
+            className="absolute inset-0 cursor-default"
+            type="button"
+            aria-label={locale === "zh-CN" ? "取消归档确认" : "Cancel archive confirmation"}
+            onClick={() => setArchiveConfirmation(null)}
+          />
+          <section
+            className="relative w-full max-w-lg rounded-t-lg bg-white shadow-2xl sm:rounded-lg"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="publisher-archive-confirmation-title"
+          >
+            <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+              <div className="flex min-w-0 items-start gap-3">
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                  <ShieldAlert className="size-5" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <h2
+                    id="publisher-archive-confirmation-title"
+                    className="text-lg font-semibold text-slate-950"
+                  >
+                    {archiveConfirmation === "publisher"
+                      ? locale === "zh-CN"
+                        ? `确认归档“${publisher.name}”？`
+                        : `Archive "${publisher.name}"?`
+                      : locale === "zh-CN"
+                        ? `确认归档 ${archiveSnapshot?.duplicateTestRecords ?? 0} 条同名测试媒体？`
+                        : `Archive ${archiveSnapshot?.duplicateTestRecords ?? 0} duplicate test publishers?`}
+                  </h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    {archiveConfirmation === "publisher"
+                      ? locale === "zh-CN"
+                        ? "确认后，该媒体会退出日常运营队列，但不会从数据库物理删除。"
+                        : "The publisher will leave active operations but will not be physically deleted from the database."
+                      : locale === "zh-CN"
+                        ? `系统会保留当前选中的“${publisher.name}”，仅归档其余符合条件的同名测试记录。`
+                        : `The selected "${publisher.name}" remains active; only eligible exact-name test duplicates are archived.`}
+                  </p>
+                </div>
+              </div>
+              <button
+                className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50"
+                type="button"
+                aria-label={locale === "zh-CN" ? "关闭确认弹窗" : "Close confirmation"}
+                onClick={() => setArchiveConfirmation(null)}
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </header>
+
+            <div className="space-y-4 px-5 py-5">
+              <div className="border-l-4 border-blue-500 bg-blue-50 px-4 py-3">
+                <p className="text-sm font-semibold text-blue-950">
+                  {locale === "zh-CN" ? "以下数据都会保留" : "The following data is retained"}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-blue-900">
+                  {locale === "zh-CN"
+                    ? "媒体主体、联系人、广告位、商务条款、技术接入、商业测试、诊断案例以及全部审计历史。归档后可由媒体总监或运营总监恢复。"
+                    : "Publisher identity, contacts, inventory, commercial terms, integrations, tests, diagnostics, and audit history. A director can restore the record later."}
+                </p>
+              </div>
+              {archiveConfirmation === "publisher" ? (
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-slate-500">
+                      {locale === "zh-CN" ? "归档原因" : "Reason"}
+                    </dt>
+                    <dd className="mt-1 font-medium text-slate-900">{archiveReason}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-slate-500">
+                      {locale === "zh-CN" ? "关联记录" : "Linked records"}
+                    </dt>
+                    <dd className="mt-1 font-medium text-slate-900">
+                      {(archiveSnapshot?.contacts ?? 0) +
+                        (archiveSnapshot?.adSlots ?? 0) +
+                        (archiveSnapshot?.contractTerms ?? 0) +
+                        (archiveSnapshot?.integrationProjects ?? 0) +
+                        (archiveSnapshot?.commercialTests ?? 0) +
+                        (archiveSnapshot?.diagnosticCases ?? 0) +
+                        (archiveSnapshot?.trustedSupplyRecords ?? 0)}
+                    </dd>
+                  </div>
+                </dl>
+              ) : null}
+            </div>
+
+            <footer className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
+              <button
+                className="h-10 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                type="button"
+                onClick={() => setArchiveConfirmation(null)}
+              >
+                {locale === "zh-CN" ? "返回检查" : "Back"}
+              </button>
+              <button
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white hover:bg-amber-700"
+                type="button"
+                onClick={confirmArchiveAction}
+              >
+                <Archive className="size-4" aria-hidden="true" />
+                {archiveConfirmation === "publisher"
+                  ? locale === "zh-CN"
+                    ? "确认归档当前媒体"
+                    : "Confirm publisher archive"
+                  : locale === "zh-CN"
+                    ? `确认归档其余 ${archiveSnapshot?.duplicateTestRecords ?? 0} 条`
+                    : `Confirm ${archiveSnapshot?.duplicateTestRecords ?? 0} duplicate archives`}
+              </button>
+            </footer>
+          </section>
+        </div>
       ) : null}
     </div>
   );

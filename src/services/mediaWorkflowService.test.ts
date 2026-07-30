@@ -45,6 +45,13 @@ function completeOnboardingInput(suffix: string): PublisherOnboardingInput {
       paymentTerms: "Net 30",
       revenueShare: 0.65,
       currency: "CNY"
+    },
+    handoff: {
+      mediaEngineeringContact: "Zhang Wei / Android Lead / zhang.wei@example.com",
+      targetPilotDate: "2026-08-10",
+      targetGoLiveDate: "2026-08-24",
+      launchRequirements: "Two-week review lead time and a 5% controlled traffic pilot.",
+      integrationExpectations: "Origin Android SDK with sandbox credentials and PG integration support."
     }
   };
 }
@@ -90,6 +97,13 @@ describe("MediaWorkflowService P0 mainline", () => {
         paymentTerms: "Net 30",
         revenueShare: 0.65,
         currency: "CNY"
+      },
+      handoff: {
+        mediaEngineeringContact: "Zhang Wei / Android Lead / zhang.wei@example.com",
+        targetPilotDate: "2026-08-10",
+        targetGoLiveDate: "2026-08-24",
+        launchRequirements: "Two-week review lead time and a 5% controlled traffic pilot.",
+        integrationExpectations: "Origin Android SDK with sandbox credentials and PG integration support."
       }
     });
 
@@ -143,7 +157,14 @@ describe("MediaWorkflowService P0 mainline", () => {
       publisher: { name: "", region: "CN", mediaType: "App", integrationType: "SDK" },
       contact: { name: "", roleTitle: "" },
       adSlot: { slotName: "", adFormat: "Native", placementType: "Feed" },
-      contractTerm: { contractType: "Framework", billingModel: "CPM", settlementCycle: "Monthly", paymentTerms: "" }
+      contractTerm: { contractType: "Framework", billingModel: "CPM", settlementCycle: "Monthly", paymentTerms: "" },
+      handoff: {
+        mediaEngineeringContact: "",
+        targetPilotDate: "",
+        targetGoLiveDate: "",
+        launchRequirements: "",
+        integrationExpectations: ""
+      }
     });
 
     expect(result.guard).toMatchObject({ allowed: false, reason_code: "PUBLISHER_ONBOARDING_INVALID" });
@@ -416,6 +437,104 @@ describe("MediaWorkflowService P0 mainline", () => {
     });
   });
 
+  it("moves a complete publisher intake from Media Manager submission to Integration Manager acceptance", () => {
+    const state = createInitialMediaWorkflowState();
+    const created = mediaWorkflowService.createPublisherOnboarding(
+      state,
+      user("media_manager"),
+      completeOnboardingInput("Handoff")
+    );
+    const publisherId = created.publisherId!;
+
+    const draft = mediaWorkflowService.getPublisherTechnicalHandoff(created.state, publisherId);
+    expect(draft).toMatchObject({
+      status: "draft",
+      completed: 8,
+      total: 8,
+      readyToSubmit: true
+    });
+
+    const submitted = mediaWorkflowService.submitTechnicalHandoff(
+      created.state,
+      user("media_manager"),
+      publisherId
+    );
+    expect(submitted.guard).toMatchObject({
+      allowed: true,
+      reason_code: "INTEGRATION_HANDOFF_SUBMITTED"
+    });
+    expect(mediaWorkflowService.getPublisherTechnicalHandoff(submitted.state, publisherId).status).toBe("submitted");
+
+    const accepted = mediaWorkflowService.acceptTechnicalHandoff(
+      submitted.state,
+      user("integration_manager"),
+      publisherId
+    );
+    expect(accepted.guard).toMatchObject({
+      allowed: true,
+      reason_code: "INTEGRATION_HANDOFF_ACCEPTED"
+    });
+    expect(mediaWorkflowService.getPublisherTechnicalHandoff(accepted.state, publisherId).status).toBe("accepted");
+    expect(accepted.state.businessEvents.map((event) => event.eventCode)).toContain(
+      "integration.handoff_accepted"
+    );
+  });
+
+  it("normalizes legacy empty handoff JSON without breaking Publisher 360", () => {
+    const state = createInitialMediaWorkflowState();
+    const project = state.integrationProjects[0];
+    const legacyState = {
+      ...state,
+      integrationProjects: state.integrationProjects.map((item) =>
+        item.id === project.id
+          ? { ...item, handoff_status: "draft" as const, handoff_package: {} as never }
+          : item
+      )
+    };
+
+    expect(() =>
+      mediaWorkflowService.getPublisherTechnicalHandoff(legacyState, project.publisher_id)
+    ).not.toThrow();
+    expect(
+      mediaWorkflowService.getPublisherTechnicalHandoff(legacyState, project.publisher_id).package
+    ).toEqual({
+      media_engineering_contact: "",
+      target_pilot_date: "",
+      target_go_live_date: project.go_live_date ?? "",
+      launch_requirements: "",
+      integration_expectations: ""
+    });
+  });
+
+  it("returns a submitted technical handoff to the Media Manager with actionable feedback", () => {
+    const state = createInitialMediaWorkflowState();
+    const created = mediaWorkflowService.createPublisherOnboarding(
+      state,
+      user("media_manager"),
+      completeOnboardingInput("Return")
+    );
+    const submitted = mediaWorkflowService.submitTechnicalHandoff(
+      created.state,
+      user("media_manager"),
+      created.publisherId!
+    );
+    const returned = mediaWorkflowService.requestTechnicalHandoffChanges(
+      submitted.state,
+      user("integration_manager"),
+      created.publisherId!,
+      "Confirm the media sandbox owner and SDK release window."
+    );
+
+    expect(returned.guard).toMatchObject({
+      allowed: true,
+      reason_code: "INTEGRATION_HANDOFF_CHANGES_REQUESTED"
+    });
+    expect(mediaWorkflowService.getPublisherTechnicalHandoff(returned.state, created.publisherId!)).toMatchObject({
+      status: "changes_requested",
+      nextAction: "Confirm the media sandbox owner and SDK release window."
+    });
+  });
+
   it("moves New CTV Partner through technical live, commercial test, and scale readiness", () => {
     let state = createInitialMediaWorkflowState();
     state = {
@@ -575,5 +694,155 @@ describe("MediaWorkflowService P0 mainline", () => {
       allowed: false,
       reason_code: "BLOCKING_DIAGNOSTIC_CASE"
     });
+  });
+
+  it("archives an inactive publisher without deleting linked operational records", () => {
+    const state = createInitialMediaWorkflowState();
+    const summaryBefore = mediaWorkflowService.getSummary(state);
+    const snapshotBefore = mediaWorkflowService.getPublisherArchiveSnapshot(state, "publisher-new-ctv");
+    const result = mediaWorkflowService.archivePublisher(
+      state,
+      user("media_director"),
+      "publisher-new-ctv",
+      "Duplicate UAT publisher record."
+    );
+
+    expect(result.guard).toMatchObject({ allowed: true, reason_code: "PUBLISHER_ARCHIVED" });
+    expect(
+      result.state.publishers.find((publisher) => publisher.id === "publisher-new-ctv")?.metadata
+    ).toMatchObject({
+      archived_by_role: "media_director",
+      archive_reason: "Duplicate UAT publisher record."
+    });
+    expect(
+      result.state.publishers.find((publisher) => publisher.id === "publisher-new-ctv")?.metadata
+        ?.archived_at
+    ).toBeTruthy();
+    expect(mediaWorkflowService.getSummary(result.state).total).toBe(summaryBefore.total - 1);
+    expect(
+      mediaWorkflowService.getReadinessQueue(result.state).some(
+        (item) => item.publisher.id === "publisher-new-ctv"
+      )
+    ).toBe(false);
+    expect(
+      mediaWorkflowService.getPublisherArchiveSnapshot(result.state, "publisher-new-ctv")
+    ).toMatchObject({
+      archived: true,
+      integrationProjects: snapshotBefore?.integrationProjects,
+      commercialTests: snapshotBefore?.commercialTests,
+      diagnosticCases: snapshotBefore?.diagnosticCases
+    });
+    expect(
+      mediaWorkflowService.getPublisherSnapshot(result.state, "publisher-new-ctv").publisher
+    ).toBeDefined();
+    expect(result.state.auditEvents[0]).toMatchObject({ action: "publisher.archive" });
+    expect(result.state.businessEvents[0]).toMatchObject({ eventCode: "publisher.archived" });
+  });
+
+  it("restricts archive authority and protects production-ready publishers", () => {
+    const state = createInitialMediaWorkflowState();
+
+    expect(
+      mediaWorkflowService.archivePublisher(
+        state,
+        user("media_manager"),
+        "publisher-new-ctv",
+        "Cleanup"
+      ).guard
+    ).toMatchObject({
+      allowed: false,
+      reason_code: "PUBLISHER_ARCHIVE_FORBIDDEN"
+    });
+    expect(
+      mediaWorkflowService.archivePublisher(
+        state,
+        user("media_director"),
+        "publisher-233",
+        "Cleanup"
+      ).guard
+    ).toMatchObject({
+      allowed: false,
+      reason_code: "PUBLISHER_ARCHIVE_PRODUCTION_PROTECTED"
+    });
+  });
+
+  it("restores an archived publisher to active operations", () => {
+    const state = createInitialMediaWorkflowState();
+    const archived = mediaWorkflowService.archivePublisher(
+      state,
+      user("media_director"),
+      "publisher-new-ctv",
+      "Temporary UAT cleanup."
+    );
+    const restored = mediaWorkflowService.restorePublisher(
+      archived.state,
+      user("operations_director"),
+      "publisher-new-ctv"
+    );
+    const publisher = restored.state.publishers.find(
+      (item) => item.id === "publisher-new-ctv"
+    );
+
+    expect(restored.guard).toMatchObject({ allowed: true, reason_code: "PUBLISHER_RESTORED" });
+    expect(publisher?.metadata?.archived_at).toBeUndefined();
+    expect(publisher?.metadata?.archive_reason).toBeUndefined();
+    expect(
+      mediaWorkflowService.getReadinessQueue(restored.state).some(
+        (item) => item.publisher.id === "publisher-new-ctv"
+      )
+    ).toBe(true);
+  });
+
+  it("keeps one canonical Demo publisher and archives eligible exact-name duplicates", () => {
+    const state = createInitialMediaWorkflowState();
+    const template = state.publishers.find(
+      (publisher) => publisher.id === "publisher-new-ctv"
+    );
+    expect(template).toBeDefined();
+    if (!template) return;
+
+    const duplicateState = {
+      ...state,
+      publishers: [
+        { ...template, id: "demo-audio-keep", name: "Demo Audio Network" },
+        { ...template, id: "demo-audio-duplicate-1", name: " Demo Audio  Network " },
+        { ...template, id: "demo-audio-duplicate-2", name: "demo audio network" },
+        ...state.publishers
+      ]
+    };
+    expect(
+      mediaWorkflowService.getPublisherArchiveSnapshot(
+        duplicateState,
+        "demo-audio-keep"
+      )?.duplicateTestRecords
+    ).toBe(2);
+
+    const result = mediaWorkflowService.archiveDuplicateTestPublishers(
+      duplicateState,
+      user("media_director"),
+      "demo-audio-keep"
+    );
+
+    expect(result.guard).toMatchObject({
+      allowed: true,
+      reason_code: "PUBLISHER_TEST_DUPLICATES_ARCHIVED"
+    });
+    expect(
+      result.state.publishers.find((publisher) => publisher.id === "demo-audio-keep")?.metadata
+        ?.archived_at
+    ).toBeUndefined();
+    expect(
+      result.state.publishers.filter(
+        (publisher) =>
+          ["demo-audio-duplicate-1", "demo-audio-duplicate-2"].includes(publisher.id) &&
+          publisher.metadata?.archived_at
+      )
+    ).toHaveLength(2);
+    expect(
+      mediaWorkflowService.getPublisherArchiveSnapshot(
+        result.state,
+        "demo-audio-keep"
+      )?.duplicateTestRecords
+    ).toBe(0);
   });
 });

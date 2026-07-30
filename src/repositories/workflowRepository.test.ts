@@ -1037,6 +1037,16 @@ describe("workflow repositories", () => {
           blocker: "Waiting allowlist",
           next_action: "Resolve allowlist blocker.",
           go_live_date: "2026-07-20",
+          handoff_status: "submitted",
+          handoff_package: {
+            media_engineering_contact: "Zhang Wei / Android Lead",
+            target_pilot_date: "2026-07-18",
+            target_go_live_date: "2026-07-20",
+            launch_requirements: "5% controlled production rollout.",
+            integration_expectations: "API allowlist and sandbox credentials."
+          },
+          handoff_submitted_at: "2026-07-15T08:00:00.000Z",
+          handoff_submitted_by: uuid(64),
           notes: "CM-5D execution"
         }
       ]
@@ -1049,7 +1059,12 @@ describe("workflow repositories", () => {
       id: projectId,
       blocker: "Waiting allowlist",
       next_action: "Resolve allowlist blocker.",
-      go_live_date: "2026-07-20"
+      go_live_date: "2026-07-20",
+      handoff_status: "submitted",
+      handoff_package: expect.objectContaining({
+        media_engineering_contact: "Zhang Wei / Android Lead",
+        target_pilot_date: "2026-07-18"
+      })
     });
     expect(project.evidence?.[0]).toMatchObject({ evidence_type: "connection_config", reference: "VAULT-001" });
 
@@ -1066,7 +1081,12 @@ describe("workflow repositories", () => {
         evidence: [expect.objectContaining({ id: evidenceId, reference: "VAULT-001" })],
         blocker: undefined,
         next_action: "Record test request evidence.",
-        go_live_date: "2026-07-20"
+        go_live_date: "2026-07-20",
+        handoff_status: "submitted",
+        handoff_package: expect.objectContaining({
+          target_go_live_date: "2026-07-20"
+        }),
+        handoff_submitted_by: uuid(64)
       })
     ]);
   });
@@ -1302,6 +1322,20 @@ describe("workflow repositories", () => {
           id: profileId,
           integration_project_id: projectId,
           platform: "android",
+          traffic_channel: "mobile",
+          integration_mode: "ivt_sdk_api",
+          protocol_codes: ["api", "openrtb"],
+          capability_profile: {
+            has_ad_server: true,
+            has_ad_player: false,
+            has_ad_sdk: true,
+            supports_api: true,
+            supports_openrtb: true,
+            supports_vast: false,
+            supports_lifecycle_events: true,
+            accepts_ivt_sdk: true,
+            requires_pg_full_sdk: false
+          },
           property_identifier: "com.example.publisher",
           playbook_codes: ["origin_ads_android_1_2", "origin_ivt_android_v11"],
           min_sdk: 23,
@@ -1352,6 +1386,9 @@ describe("workflow repositories", () => {
 
     expect(snapshot.mediaState.integrationProjectProfiles[0]).toMatchObject({
       id: profileId,
+      traffic_channel: "mobile",
+      integration_mode: "ivt_sdk_api",
+      protocol_codes: ["api", "openrtb"],
       property_identifier: "com.example.publisher",
       planned_formats: ["rewarded", "interstitial"],
       privacy_profile: expect.objectContaining({ consent_before_init: true, oaid: true })
@@ -1374,6 +1411,9 @@ describe("workflow repositories", () => {
       expect.objectContaining({
         id: profileId,
         integration_project_id: projectId,
+        traffic_channel: "mobile",
+        integration_mode: "ivt_sdk_api",
+        protocol_codes: ["api", "openrtb"],
         target_pilot_date: "2026-08-20",
         secret_reference: "vault://pgos/media/example"
       })

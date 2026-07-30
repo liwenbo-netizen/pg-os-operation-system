@@ -6,6 +6,8 @@ import type {
   EntityId,
   IntegrationEvidence,
   IntegrationEvidenceType,
+  IntegrationHandoffPackage,
+  IntegrationHandoffStatus,
   IntegrationProject,
   MediaWorkflowState,
   ModuleBusinessEvent,
@@ -102,6 +104,31 @@ export type PublisherOnboardingInput = {
   contact: PublisherContactInput;
   adSlot: AdSlotInput;
   contractTerm: ContractTermInput;
+  handoff: {
+    mediaEngineeringContact: string;
+    targetPilotDate: string;
+    targetGoLiveDate: string;
+    launchRequirements: string;
+    integrationExpectations: string;
+  };
+};
+
+export type PublisherTechnicalHandoffSnapshot = {
+  publisher?: Publisher;
+  project?: IntegrationProject;
+  status: IntegrationHandoffStatus;
+  package: IntegrationHandoffPackage;
+  completeness: Array<{
+    code: string;
+    label: string;
+    labelZh: string;
+    complete: boolean;
+  }>;
+  completed: number;
+  total: number;
+  readyToSubmit: boolean;
+  nextAction: string;
+  nextActionZh: string;
 };
 
 export type PublisherDuplicateKind = "name" | "property_identifier";
@@ -110,6 +137,20 @@ export type PublisherDuplicate = {
   kind: PublisherDuplicateKind;
   publisherId: EntityId;
   publisherName: string;
+};
+
+export type PublisherArchiveSnapshot = {
+  archived: boolean;
+  archiveReason?: string;
+  duplicateTestRecords: number;
+  contacts: number;
+  adSlots: number;
+  contractTerms: number;
+  integrationProjects: number;
+  commercialTests: number;
+  diagnosticCases: number;
+  trustedSupplyRecords: number;
+  productionProtected: boolean;
 };
 
 type TechnicalEvidenceInput = {
@@ -226,8 +267,41 @@ function getGuardService(state: MediaWorkflowState) {
   });
 }
 
-function findPublisher(state: MediaWorkflowState, publisherId: EntityId) {
+function findPublisherRecord(state: MediaWorkflowState, publisherId: EntityId) {
   return state.publishers.find((publisher) => publisher.id === publisherId);
+}
+
+function findPublisher(state: MediaWorkflowState, publisherId: EntityId) {
+  const publisher = findPublisherRecord(state, publisherId);
+  return publisher && !isPublisherArchived(publisher) ? publisher : undefined;
+}
+
+export function isPublisherArchived(publisher: Publisher) {
+  return Boolean(publisher.metadata?.archived_at);
+}
+
+export function isLikelyTestPublisher(publisher: Publisher) {
+  return /\b(demo|uat|test|sample|sandbox)\b|测试|演示/i.test(publisher.name);
+}
+
+function normalizedPublisherName(name: string) {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function publisherIsProductionProtected(publisher: Publisher) {
+  return (
+    publisher.technical_live_status === "technical_live_passed" ||
+    publisher.commercial_test_status === "test_passed" ||
+    ["proposal_selectable", "scale_ready"].includes(publisher.sales_scale_status)
+  );
+}
+
+function canArchivePublishers(user: BusinessUser) {
+  return (
+    rlsService.canWriteTable(user, "publishers") &&
+    rbacService.hasCapability(user, "publisher.manage") &&
+    rbacService.hasAnyRole(user, ["media_director", "operations_director"])
+  );
 }
 
 function createPublisherTrafficEvidenceRecord(
@@ -365,6 +439,36 @@ function collectPublisherOnboardingChanges(
     integrationProject?.integration_type,
     input.publisher.integrationType
   );
+  add(
+    "integration",
+    "integration.handoff.media_engineering_contact",
+    integrationProject?.handoff_package?.media_engineering_contact,
+    input.handoff.mediaEngineeringContact
+  );
+  add(
+    "integration",
+    "integration.handoff.target_pilot_date",
+    integrationProject?.handoff_package?.target_pilot_date,
+    input.handoff.targetPilotDate
+  );
+  add(
+    "integration",
+    "integration.handoff.target_go_live_date",
+    integrationProject?.handoff_package?.target_go_live_date,
+    input.handoff.targetGoLiveDate
+  );
+  add(
+    "integration",
+    "integration.handoff.launch_requirements",
+    integrationProject?.handoff_package?.launch_requirements,
+    input.handoff.launchRequirements
+  );
+  add(
+    "integration",
+    "integration.handoff.integration_expectations",
+    integrationProject?.handoff_package?.integration_expectations,
+    input.handoff.integrationExpectations
+  );
 
   return changes;
 }
@@ -452,7 +556,12 @@ function onboardingInputIsComplete(input: PublisherOnboardingInput) {
     input.adSlot.placementType,
     input.contractTerm.billingModel,
     input.contractTerm.settlementCycle,
-    input.contractTerm.paymentTerms
+    input.contractTerm.paymentTerms,
+    input.handoff.mediaEngineeringContact,
+    input.handoff.targetPilotDate,
+    input.handoff.targetGoLiveDate,
+    input.handoff.launchRequirements,
+    input.handoff.integrationExpectations
   ];
 
   return (
@@ -516,6 +625,21 @@ function canManageTechnicalExecution(user: BusinessUser) {
   return rlsService.canWriteTable(user, "integration_projects") && rbacService.hasCapability(user, "integration.manage");
 }
 
+function integrationHandoffStatus(project: IntegrationProject | undefined): IntegrationHandoffStatus {
+  // Existing integration projects predate the explicit handoff workflow and stay operational.
+  return project?.handoff_status ?? "accepted";
+}
+
+function toIntegrationHandoffPackage(input: PublisherOnboardingInput): IntegrationHandoffPackage {
+  return {
+    media_engineering_contact: input.handoff.mediaEngineeringContact.trim(),
+    target_pilot_date: input.handoff.targetPilotDate,
+    target_go_live_date: input.handoff.targetGoLiveDate,
+    launch_requirements: input.handoff.launchRequirements.trim(),
+    integration_expectations: input.handoff.integrationExpectations.trim()
+  };
+}
+
 function checklistItemDone(project: IntegrationProject, evidenceType: IntegrationEvidenceType, checklistKey: string) {
   if (evidenceType === "connection_config") {
     return Boolean(
@@ -541,9 +665,276 @@ export class MediaWorkflowService {
     return findPublisherDuplicate(state, input, excludePublisherId);
   }
 
+  getActivePublishers(state: MediaWorkflowState) {
+    return state.publishers.filter((publisher) => !isPublisherArchived(publisher));
+  }
+
+  getArchivedPublishers(state: MediaWorkflowState) {
+    return state.publishers.filter(isPublisherArchived);
+  }
+
+  getPublisherArchiveSnapshot(
+    state: MediaWorkflowState,
+    publisherId: EntityId
+  ): PublisherArchiveSnapshot | undefined {
+    const publisher = findPublisherRecord(state, publisherId);
+    if (!publisher) return undefined;
+
+    const normalizedName = normalizedPublisherName(publisher.name);
+    return {
+      archived: isPublisherArchived(publisher),
+      archiveReason: publisher.metadata?.archive_reason,
+      duplicateTestRecords: isLikelyTestPublisher(publisher)
+        ? state.publishers.filter(
+            (candidate) =>
+              candidate.id !== publisherId &&
+              !isPublisherArchived(candidate) &&
+              !publisherIsProductionProtected(candidate) &&
+              normalizedPublisherName(candidate.name) === normalizedName
+          ).length
+        : 0,
+      contacts: state.publisherContacts.filter((item) => item.publisher_id === publisherId).length,
+      adSlots: state.publisherAdSlots.filter((item) => item.publisher_id === publisherId).length,
+      contractTerms: state.publisherContractTerms.filter((item) => item.publisher_id === publisherId).length,
+      integrationProjects: state.integrationProjects.filter((item) => item.publisher_id === publisherId).length,
+      commercialTests: state.commercialTests.filter((item) => item.publisher_id === publisherId).length,
+      diagnosticCases: state.diagnosticCases.filter((item) => item.publisher_id === publisherId).length,
+      trustedSupplyRecords:
+        state.mediaTrustProfiles.filter((item) => item.publisher_id === publisherId).length +
+        state.mediaSupplyPackages.filter((item) => item.publisher_id === publisherId).length,
+      productionProtected: publisherIsProductionProtected(publisher)
+    };
+  }
+
+  archivePublisher(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    publisherId: EntityId,
+    reason = "Archived from Publisher 360."
+  ): WorkflowResult {
+    const publisher = findPublisherRecord(state, publisherId);
+    if (!publisher) {
+      const guard = createBlocked("Publisher record was not found.", "PUBLISHER_NOT_FOUND");
+      return { state: appendEvents(state, user, "publisher.archive", publisherId, guard), guard };
+    }
+    if (!canArchivePublishers(user)) {
+      const guard = createBlocked(
+        "Only Media Director or Operations Director can archive publishers.",
+        "PUBLISHER_ARCHIVE_FORBIDDEN",
+        "media_director"
+      );
+      return { state: appendEvents(state, user, "publisher.archive", publisherId, guard), guard };
+    }
+    if (isPublisherArchived(publisher)) {
+      const guard = {
+        ...createAllowed("Publisher is already archived.", "PUBLISHER_ALREADY_ARCHIVED"),
+        audit_required: false
+      };
+      return { state, guard };
+    }
+    if (publisherIsProductionProtected(publisher)) {
+      const guard = createBlocked(
+        "Production, test-passed, or sales-enabled publishers cannot be archived from the cleanup action.",
+        "PUBLISHER_ARCHIVE_PRODUCTION_PROTECTED",
+        "operations_director"
+      );
+      return { state: appendEvents(state, user, "publisher.archive", publisherId, guard), guard };
+    }
+
+    const archivedAt = new Date().toISOString();
+    const archivedState: MediaWorkflowState = {
+      ...state,
+      publishers: state.publishers.map((item) =>
+        item.id === publisherId
+          ? {
+              ...item,
+              metadata: {
+                ...item.metadata,
+                archived_at: archivedAt,
+                archived_by_role: user.activeRole,
+                archive_reason: reason.trim() || "Archived from Publisher 360."
+              }
+            }
+          : item
+      )
+    };
+    const guard = createAllowed(
+      "Publisher archived. Related business, technical, and audit records were retained.",
+      "PUBLISHER_ARCHIVED"
+    );
+    const event = createBusinessEvent("publisher.archived", publisherId, user.activeRole, {
+      archivedAt,
+      reason: reason.trim() || "Archived from Publisher 360."
+    });
+    const eventState = appendEvents(
+      archivedState,
+      user,
+      "publisher.archive",
+      publisherId,
+      guard,
+      event,
+      { archivedAt, reason }
+    );
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent: event,
+      publisherId
+    };
+  }
+
+  restorePublisher(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    publisherId: EntityId
+  ): WorkflowResult {
+    const publisher = findPublisherRecord(state, publisherId);
+    if (!publisher) {
+      const guard = createBlocked("Publisher record was not found.", "PUBLISHER_NOT_FOUND");
+      return { state: appendEvents(state, user, "publisher.restore", publisherId, guard), guard };
+    }
+    if (!canArchivePublishers(user)) {
+      const guard = createBlocked(
+        "Only Media Director or Operations Director can restore publishers.",
+        "PUBLISHER_RESTORE_FORBIDDEN",
+        "media_director"
+      );
+      return { state: appendEvents(state, user, "publisher.restore", publisherId, guard), guard };
+    }
+    if (!isPublisherArchived(publisher)) {
+      const guard = {
+        ...createAllowed("Publisher is already active.", "PUBLISHER_ALREADY_ACTIVE"),
+        audit_required: false
+      };
+      return { state, guard };
+    }
+
+    const restoredState: MediaWorkflowState = {
+      ...state,
+      publishers: state.publishers.map((item) => {
+        if (item.id !== publisherId) return item;
+        const metadata = { ...item.metadata };
+        delete metadata.archived_at;
+        delete metadata.archived_by_role;
+        delete metadata.archive_reason;
+        return { ...item, metadata };
+      })
+    };
+    const guard = createAllowed("Publisher restored to the active media queue.", "PUBLISHER_RESTORED");
+    const event = createBusinessEvent("publisher.restored", publisherId, user.activeRole);
+    const eventState = appendEvents(restoredState, user, "publisher.restore", publisherId, guard, event);
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent: event,
+      publisherId
+    };
+  }
+
+  archiveDuplicateTestPublishers(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    keepPublisherId: EntityId
+  ): WorkflowResult {
+    const keepPublisher = findPublisherRecord(state, keepPublisherId);
+    if (!keepPublisher) {
+      const guard = createBlocked("Publisher record was not found.", "PUBLISHER_NOT_FOUND");
+      return { state: appendEvents(state, user, "publisher.test_duplicates.archive", keepPublisherId, guard), guard };
+    }
+    if (!canArchivePublishers(user)) {
+      const guard = createBlocked(
+        "Only Media Director or Operations Director can archive duplicate test publishers.",
+        "PUBLISHER_ARCHIVE_FORBIDDEN",
+        "media_director"
+      );
+      return {
+        state: appendEvents(state, user, "publisher.test_duplicates.archive", keepPublisherId, guard),
+        guard
+      };
+    }
+    if (!isLikelyTestPublisher(keepPublisher)) {
+      const guard = createBlocked(
+        "Batch cleanup is restricted to publishers clearly named as Demo, UAT, Test, Sample, Sandbox, 测试, or 演示.",
+        "PUBLISHER_TEST_CLEANUP_SCOPE_REQUIRED"
+      );
+      return {
+        state: appendEvents(state, user, "publisher.test_duplicates.archive", keepPublisherId, guard),
+        guard
+      };
+    }
+
+    const normalizedName = normalizedPublisherName(keepPublisher.name);
+    const duplicateIds = state.publishers
+      .filter(
+        (publisher) =>
+          publisher.id !== keepPublisherId &&
+          !isPublisherArchived(publisher) &&
+          normalizedPublisherName(publisher.name) === normalizedName &&
+          !publisherIsProductionProtected(publisher)
+      )
+      .map((publisher) => publisher.id);
+    if (duplicateIds.length === 0) {
+      const guard = {
+        ...createAllowed("No eligible duplicate test publishers were found.", "PUBLISHER_TEST_DUPLICATES_NOT_FOUND"),
+        audit_required: false
+      };
+      return { state, guard };
+    }
+
+    const archivedAt = new Date().toISOString();
+    const archivedIdSet = new Set(duplicateIds);
+    const archivedState: MediaWorkflowState = {
+      ...state,
+      publishers: state.publishers.map((publisher) =>
+        archivedIdSet.has(publisher.id)
+          ? {
+              ...publisher,
+              metadata: {
+                ...publisher.metadata,
+                archived_at: archivedAt,
+                archived_by_role: user.activeRole,
+                archive_reason: `Duplicate test record; canonical publisher retained: ${keepPublisher.name} (${keepPublisher.id}).`
+              }
+            }
+          : publisher
+      )
+    };
+    const guard = createAllowed(
+      `${duplicateIds.length} duplicate test publisher record(s) archived; the selected record was retained.`,
+      "PUBLISHER_TEST_DUPLICATES_ARCHIVED"
+    );
+    const event = createBusinessEvent(
+      "publisher.test_duplicates_archived",
+      keepPublisherId,
+      user.activeRole,
+      { archivedPublisherIds: duplicateIds, archivedAt }
+    );
+    const eventState = appendEvents(
+      archivedState,
+      user,
+      "publisher.test_duplicates.archive",
+      keepPublisherId,
+      guard,
+      event,
+      { archivedPublisherIds: duplicateIds, archivedAt }
+    );
+
+    return {
+      state: eventState,
+      guard,
+      auditEvent: eventState.auditEvents[0],
+      businessEvent: event,
+      publisherId: keepPublisherId
+    };
+  }
+
   getPublisherSnapshot(state: MediaWorkflowState, publisherId: EntityId) {
     return {
-      publisher: findPublisher(state, publisherId),
+      publisher: findPublisherRecord(state, publisherId),
       trafficEvidenceHistory: state.publisherTrafficEvidenceHistory
         .filter((record) => record.publisher_id === publisherId)
         .sort((left, right) => right.created_at.localeCompare(left.created_at)),
@@ -579,7 +970,7 @@ export class MediaWorkflowService {
   }
 
   getReadinessQueue(state: MediaWorkflowState) {
-    return state.publishers.map((publisher) => ({
+    return this.getActivePublishers(state).map((publisher) => ({
       publisher,
       openBlockingCases: state.diagnosticCases.filter(
         (diagnosticCase) =>
@@ -593,14 +984,15 @@ export class MediaWorkflowService {
   }
 
   getSummary(state: MediaWorkflowState) {
-    const total = state.publishers.length;
-    const technicalLive = state.publishers.filter((publisher) => publisher.technical_live_status === "technical_live_passed").length;
-    const testPassed = state.publishers.filter((publisher) => publisher.commercial_test_status === "test_passed").length;
-    const proposalSelectable = state.publishers.filter((publisher) =>
+    const activePublishers = this.getActivePublishers(state);
+    const total = activePublishers.length;
+    const technicalLive = activePublishers.filter((publisher) => publisher.technical_live_status === "technical_live_passed").length;
+    const testPassed = activePublishers.filter((publisher) => publisher.commercial_test_status === "test_passed").length;
+    const proposalSelectable = activePublishers.filter((publisher) =>
       ["limited_sellable", "proposal_selectable", "scale_ready"].includes(publisher.sales_scale_status)
     ).length;
-    const scaleReady = state.publishers.filter((publisher) => publisher.sales_scale_status === "scale_ready").length;
-    const highRisk = state.publishers.filter((publisher) => ["high", "critical"].includes(publisher.risk_level)).length;
+    const scaleReady = activePublishers.filter((publisher) => publisher.sales_scale_status === "scale_ready").length;
+    const highRisk = activePublishers.filter((publisher) => ["high", "critical"].includes(publisher.risk_level)).length;
 
     return {
       total,
@@ -610,6 +1002,286 @@ export class MediaWorkflowService {
       scaleReady,
       highRisk
     };
+  }
+
+  getPublisherTechnicalHandoff(
+    state: MediaWorkflowState,
+    publisherId: EntityId
+  ): PublisherTechnicalHandoffSnapshot {
+    const publisher = findPublisher(state, publisherId);
+    const project = findIntegrationProject(state, publisherId);
+    const primaryContact =
+      state.publisherContacts.find((item) => item.publisher_id === publisherId && item.is_primary) ??
+      state.publisherContacts.find((item) => item.publisher_id === publisherId);
+    const activeSlot = state.publisherAdSlots.find(
+      (item) => item.publisher_id === publisherId && item.status === "active"
+    );
+    const commercialTerm = state.publisherContractTerms.find((item) => item.publisher_id === publisherId);
+    const storedHandoff = project?.handoff_package;
+    const handoffPackage: IntegrationHandoffPackage = {
+      media_engineering_contact: storedHandoff?.media_engineering_contact ?? "",
+      target_pilot_date: storedHandoff?.target_pilot_date ?? "",
+      target_go_live_date: storedHandoff?.target_go_live_date ?? project?.go_live_date ?? "",
+      launch_requirements: storedHandoff?.launch_requirements ?? "",
+      integration_expectations: storedHandoff?.integration_expectations ?? ""
+    };
+    const completeness = [
+      {
+        code: "publisher_identity",
+        label: "Publisher identity and property identifier",
+        labelZh: "媒体主体与资产标识",
+        complete: Boolean(
+          publisher?.name &&
+          publisher.legal_entity &&
+          publisher.metadata?.property_identifier
+        )
+      },
+      {
+        code: "traffic",
+        label: "Traffic scale and evidence date",
+        labelZh: "流量规模与数据日期",
+        complete: Boolean(
+          (publisher?.daily_active_users ?? 0) > 0 &&
+          (publisher?.daily_requests ?? 0) > 0 &&
+          publisher?.metadata?.traffic_data_as_of
+        )
+      },
+      {
+        code: "inventory",
+        label: "Active ad inventory and format",
+        labelZh: "有效广告位与广告形式",
+        complete: Boolean(activeSlot && (activeSlot.daily_requests ?? 0) > 0)
+      },
+      {
+        code: "business_contact",
+        label: "Publisher business contact",
+        labelZh: "媒体商务联系人",
+        complete: Boolean(primaryContact?.name && primaryContact.role_title)
+      },
+      {
+        code: "commercial_terms",
+        label: "Commercial and settlement terms",
+        labelZh: "商务与结算条款",
+        complete: Boolean(
+          commercialTerm?.billing_model &&
+          commercialTerm.settlement_cycle &&
+          commercialTerm.payment_terms
+        )
+      },
+      {
+        code: "engineering_contact",
+        label: "Publisher engineering contact",
+        labelZh: "媒体研发联系人",
+        complete: Boolean(handoffPackage.media_engineering_contact.trim())
+      },
+      {
+        code: "target_dates",
+        label: "Pilot and production target dates",
+        labelZh: "联调与正式上线目标日期",
+        complete: Boolean(
+          handoffPackage.target_pilot_date &&
+          handoffPackage.target_go_live_date
+        )
+      },
+      {
+        code: "launch_requirements",
+        label: "Launch requirements and integration expectations",
+        labelZh: "上线要求与接入期望",
+        complete: Boolean(
+          handoffPackage.launch_requirements.trim() &&
+          handoffPackage.integration_expectations.trim()
+        )
+      }
+    ];
+    const completed = completeness.filter((item) => item.complete).length;
+    const status = integrationHandoffStatus(project);
+    const nextByStatus = {
+      draft: {
+        en: completed === completeness.length
+          ? "Submit the complete intake package to the Integration Manager."
+          : "Complete the missing intake fields before technical handoff.",
+        zh: completed === completeness.length
+          ? "资料已齐全，提交给技术经理接单。"
+          : "补齐缺失资料后再提交技术交接。"
+      },
+      submitted: {
+        en: "Waiting for the Integration Manager to accept or return the package.",
+        zh: "等待技术经理接单或退回补充。"
+      },
+      accepted: {
+        en: "Technical owner accepted the package. Continue route design and Gate 0-7.",
+        zh: "技术经理已接单，继续确认接入路线并推进 Gate 0–7。"
+      },
+      changes_requested: {
+        en: project?.handoff_feedback || "Update the requested items and resubmit the package.",
+        zh: project?.handoff_feedback || "按技术经理反馈补充资料并重新提交。"
+      }
+    } satisfies Record<IntegrationHandoffStatus, { en: string; zh: string }>;
+
+    return {
+      publisher,
+      project,
+      status,
+      package: handoffPackage,
+      completeness,
+      completed,
+      total: completeness.length,
+      readyToSubmit: Boolean(project && completed === completeness.length),
+      nextAction: nextByStatus[status].en,
+      nextActionZh: nextByStatus[status].zh
+    };
+  }
+
+  submitTechnicalHandoff(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    publisherId: EntityId
+  ): WorkflowResult {
+    const handoff = this.getPublisherTechnicalHandoff(state, publisherId);
+    if (!handoff.publisher || !handoff.project) {
+      const guard = createBlocked("Publisher or integration project was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "integration.handoff.submit", publisherId, guard), guard };
+    }
+    if (
+      !rlsService.canWriteTable(user, "integration_projects") ||
+      !rbacService.hasAnyRole(user, ["media_manager", "media_director", "operations_director"])
+    ) {
+      const guard = createBlocked(
+        "Current role cannot submit a publisher technical handoff.",
+        "INTEGRATION_HANDOFF_SUBMIT_FORBIDDEN",
+        "media_manager"
+      );
+      return { state: appendEvents(state, user, "integration.handoff.submit", publisherId, guard), guard };
+    }
+    if (!handoff.readyToSubmit) {
+      const missing = handoff.completeness.filter((item) => !item.complete);
+      const guard = createBlocked(
+        `Complete ${missing.length} handoff item(s): ${missing.map((item) => item.label).join(", ")}.`,
+        "INTEGRATION_HANDOFF_INCOMPLETE",
+        "media_manager"
+      );
+      return { state: appendEvents(state, user, "integration.handoff.submit", publisherId, guard), guard };
+    }
+    if (handoff.status === "accepted") {
+      const guard = createBlocked(
+        "The technical handoff has already been accepted.",
+        "INTEGRATION_HANDOFF_ALREADY_ACCEPTED",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "integration.handoff.submit", publisherId, guard), guard };
+    }
+
+    const submittedAt = new Date().toISOString();
+    const nextState = updateIntegrationProject(state, handoff.project.id, {
+      handoff_status: "submitted",
+      handoff_submitted_at: submittedAt,
+      handoff_submitted_by: user.id,
+      handoff_accepted_at: undefined,
+      handoff_accepted_by: undefined,
+      handoff_feedback: undefined,
+      go_live_date: handoff.package.target_go_live_date,
+      next_action: "Integration Manager accepts the handoff and confirms the technical route."
+    });
+    const guard = createAllowed("Publisher technical handoff submitted.", "INTEGRATION_HANDOFF_SUBMITTED");
+    const businessEvent = createBusinessEvent("integration.handoff_submitted", publisherId, user.activeRole, {
+      integrationProjectId: handoff.project.id,
+      targetPilotDate: handoff.package.target_pilot_date,
+      targetGoLiveDate: handoff.package.target_go_live_date
+    });
+    const eventState = appendEvents(nextState, user, "integration.handoff.submit", publisherId, guard, businessEvent);
+    return { state: eventState, guard, auditEvent: eventState.auditEvents[0], businessEvent };
+  }
+
+  acceptTechnicalHandoff(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    publisherId: EntityId
+  ): WorkflowResult {
+    const handoff = this.getPublisherTechnicalHandoff(state, publisherId);
+    if (!handoff.project) {
+      const guard = createBlocked("Integration project was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "integration.handoff.accept", publisherId, guard), guard };
+    }
+    if (
+      !rlsService.canWriteTable(user, "integration_projects") ||
+      !rbacService.hasAnyRole(user, ["integration_manager", "media_director", "operations_director"])
+    ) {
+      const guard = createBlocked(
+        "Current role cannot accept a publisher technical handoff.",
+        "INTEGRATION_HANDOFF_ACCEPT_FORBIDDEN",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "integration.handoff.accept", publisherId, guard), guard };
+    }
+    if (handoff.status !== "submitted") {
+      const guard = createBlocked(
+        "The Media Manager must submit the handoff before it can be accepted.",
+        "INTEGRATION_HANDOFF_NOT_SUBMITTED",
+        "media_manager"
+      );
+      return { state: appendEvents(state, user, "integration.handoff.accept", publisherId, guard), guard };
+    }
+
+    const acceptedAt = new Date().toISOString();
+    const nextState = updateIntegrationProject(state, handoff.project.id, {
+      handoff_status: "accepted",
+      handoff_accepted_at: acceptedAt,
+      handoff_accepted_by: user.id,
+      handoff_feedback: undefined,
+      next_action: "Confirm the approved integration route and complete Gate 0-7 prerequisites."
+    });
+    const guard = createAllowed("Publisher technical handoff accepted.", "INTEGRATION_HANDOFF_ACCEPTED");
+    const businessEvent = createBusinessEvent("integration.handoff_accepted", publisherId, user.activeRole, {
+      integrationProjectId: handoff.project.id
+    });
+    const eventState = appendEvents(nextState, user, "integration.handoff.accept", publisherId, guard, businessEvent);
+    return { state: eventState, guard, auditEvent: eventState.auditEvents[0], businessEvent };
+  }
+
+  requestTechnicalHandoffChanges(
+    state: MediaWorkflowState,
+    user: BusinessUser,
+    publisherId: EntityId,
+    feedback: string
+  ): WorkflowResult {
+    const handoff = this.getPublisherTechnicalHandoff(state, publisherId);
+    if (!handoff.project) {
+      const guard = createBlocked("Integration project was not found.", "NOT_FOUND");
+      return { state: appendEvents(state, user, "integration.handoff.return", publisherId, guard), guard };
+    }
+    if (
+      !rbacService.hasAnyRole(user, ["integration_manager", "media_director", "operations_director"])
+    ) {
+      const guard = createBlocked(
+        "Current role cannot return a publisher technical handoff.",
+        "INTEGRATION_HANDOFF_RETURN_FORBIDDEN",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "integration.handoff.return", publisherId, guard), guard };
+    }
+    if (handoff.status !== "submitted" || !feedback.trim()) {
+      const guard = createBlocked(
+        "A submitted handoff and concrete feedback are required.",
+        "INTEGRATION_HANDOFF_FEEDBACK_REQUIRED",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "integration.handoff.return", publisherId, guard), guard };
+    }
+
+    const nextState = updateIntegrationProject(state, handoff.project.id, {
+      handoff_status: "changes_requested",
+      handoff_feedback: feedback.trim(),
+      handoff_accepted_at: undefined,
+      handoff_accepted_by: undefined,
+      next_action: feedback.trim()
+    });
+    const guard = createAllowed("Publisher technical handoff returned for changes.", "INTEGRATION_HANDOFF_CHANGES_REQUESTED");
+    const businessEvent = createBusinessEvent("integration.handoff_changes_requested", publisherId, user.activeRole, {
+      integrationProjectId: handoff.project.id,
+      feedback: feedback.trim()
+    });
+    const eventState = appendEvents(nextState, user, "integration.handoff.return", publisherId, guard, businessEvent);
+    return { state: eventState, guard, auditEvent: eventState.auditEvents[0], businessEvent };
   }
 
   createPublisher(state: MediaWorkflowState, user: BusinessUser, input: CreatePublisherInput): WorkflowResult {
@@ -659,7 +1331,15 @@ export class MediaWorkflowService {
       checklist: {},
       notes: "Created from media onboarding.",
       evidence: [],
-      next_action: "Start technical execution and record connection configuration evidence."
+      next_action: "Complete the media intake package and submit it to the Integration Manager.",
+      handoff_status: "draft" as const,
+      handoff_package: {
+        media_engineering_contact: "",
+        target_pilot_date: "",
+        target_go_live_date: "",
+        launch_requirements: "",
+        integration_expectations: ""
+      }
     };
     const trafficEvidence = createPublisherTrafficEvidenceRecord(
       id,
@@ -880,6 +1560,15 @@ export class MediaWorkflowService {
     const contactResult = this.addPublisherContact(publisherResult.state, user, publisherId, input.contact);
     const slotResult = this.addAdSlot(contactResult.state, user, publisherId, input.adSlot);
     const termResult = this.addContractTerm(slotResult.state, user, publisherId, input.contractTerm);
+    const createdProject = findIntegrationProject(termResult.state, publisherId);
+    const onboardingState = createdProject
+      ? updateIntegrationProject(termResult.state, createdProject.id, {
+          handoff_status: "draft",
+          handoff_package: toIntegrationHandoffPackage(input),
+          go_live_date: input.handoff.targetGoLiveDate,
+          next_action: "Review the intake package and submit it to the Integration Manager."
+        })
+      : termResult.state;
     const guard = createAllowed(
       "Publisher onboarding package created with identity, traffic, inventory, contact, commercial terms, and integration project.",
       "PUBLISHER_ONBOARDING_CREATED"
@@ -891,7 +1580,7 @@ export class MediaWorkflowService {
       integrationType: input.publisher.integrationType
     });
     const eventState = appendEvents(
-      termResult.state,
+      onboardingState,
       user,
       "publisher.onboarding.create",
       publisherId,
@@ -1120,7 +1809,23 @@ export class MediaWorkflowService {
         ? currentProject
           ? state.integrationProjects.map((project) =>
               project.id === projectId
-                ? { ...project, integration_type: input.publisher.integrationType }
+                ? {
+                    ...project,
+                    integration_type: input.publisher.integrationType,
+                    handoff_status:
+                      integrationHandoffStatus(project) === "accepted"
+                        ? "changes_requested"
+                        : "draft",
+                    handoff_package: toIntegrationHandoffPackage(input),
+                    handoff_accepted_at: undefined,
+                    handoff_accepted_by: undefined,
+                    handoff_feedback:
+                      integrationHandoffStatus(project) === "accepted"
+                        ? "Media intake data changed after acceptance. Review and resubmit the handoff."
+                        : project.handoff_feedback,
+                    go_live_date: input.handoff.targetGoLiveDate,
+                    next_action: "Review the updated intake package and submit it to the Integration Manager."
+                  }
                 : project
             )
           : [
@@ -1132,7 +1837,10 @@ export class MediaWorkflowService {
                 checklist: {},
                 notes: "Created while completing publisher profile governance.",
                 evidence: [],
-                next_action: "Start technical execution and record connection configuration evidence."
+                next_action: "Review the intake package and submit it to the Integration Manager.",
+                handoff_status: "draft",
+                handoff_package: toIntegrationHandoffPackage(input),
+                go_live_date: input.handoff.targetGoLiveDate
               },
               ...state.integrationProjects
             ]
@@ -1238,6 +1946,14 @@ export class MediaWorkflowService {
       const guard = createBlocked(
         "Current role cannot start technical integration execution.",
         "INTEGRATION_EXECUTION_FORBIDDEN",
+        "integration_manager"
+      );
+      return { state: appendEvents(state, user, "integration.execution.start", publisherId, guard), guard };
+    }
+    if (integrationHandoffStatus(project) !== "accepted") {
+      const guard = createBlocked(
+        "Accept the Media Manager handoff before starting technical execution.",
+        "INTEGRATION_HANDOFF_ACCEPTANCE_REQUIRED",
         "integration_manager"
       );
       return { state: appendEvents(state, user, "integration.execution.start", publisherId, guard), guard };

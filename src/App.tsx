@@ -33,6 +33,7 @@ import { createWorkflowRepository } from "./repositories/workflowRepositoryFacto
 import type { WorkflowRepositoryHealth, WorkflowSnapshot } from "./repositories/workflowRepository";
 import {
   createAuthSessionRepository,
+  formatAuthSessionError,
   type AuthSessionMode,
   type AuthSessionResult,
   type SupabasePasswordSignInInput
@@ -356,6 +357,17 @@ export function App() {
           result.mode
         );
       }
+    } catch (error) {
+      applyAuthResult({
+        status: "error",
+        mode: "supabase",
+        source: "supabase-auth",
+        warnings: [],
+        error: formatAuthSessionError(
+          error,
+          "Unable to reach the Supabase authentication service."
+        )
+      });
     } finally {
       setAuthLoading(false);
     }

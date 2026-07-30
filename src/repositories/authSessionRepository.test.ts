@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatAuthSessionError,
   LocalAuthSessionRepository,
   SupabaseAuthSessionRepository,
   type SupabaseAuthLike
@@ -74,6 +75,21 @@ class FakeSupabase implements SupabaseAuthLike {
 }
 
 describe("auth session repositories", () => {
+  it("normalizes empty Supabase error payloads into a useful fallback", () => {
+    expect(formatAuthSessionError({ message: {} }, "Authentication service unavailable.")).toBe(
+      "Authentication service unavailable."
+    );
+    expect(formatAuthSessionError({ message: "{}" }, "Authentication service unavailable.")).toBe(
+      "Authentication service unavailable."
+    );
+    expect(
+      formatAuthSessionError(
+        { error_description: "Invalid login credentials" },
+        "Authentication service unavailable."
+      )
+    ).toBe("Invalid login credentials");
+  });
+
   it("keeps the local mock role sign-in path", async () => {
     const repository = new LocalAuthSessionRepository();
     const result = await repository.signInWithRole("finance_manager");

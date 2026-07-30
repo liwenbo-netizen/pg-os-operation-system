@@ -315,17 +315,43 @@ function mapIntegrationProject(row: Row): IntegrationProject {
     blocker: optionalString(row.blocker),
     next_action: optionalString(row.next_action),
     readiness_reviewed_at: optionalString(row.readiness_reviewed_at),
-    go_live_date: optionalString(row.go_live_date)
+    go_live_date: optionalString(row.go_live_date),
+    handoff_status: optionalString(row.handoff_status) as IntegrationProject["handoff_status"],
+    handoff_package: objectValue(row.handoff_package) as IntegrationProject["handoff_package"],
+    handoff_submitted_at: optionalString(row.handoff_submitted_at),
+    handoff_submitted_by: optionalString(row.handoff_submitted_by),
+    handoff_accepted_at: optionalString(row.handoff_accepted_at),
+    handoff_accepted_by: optionalString(row.handoff_accepted_by),
+    handoff_feedback: optionalString(row.handoff_feedback)
   };
 }
 
 function mapIntegrationProjectProfile(row: Row): IntegrationProjectProfile {
   const privacyProfile = objectValue(row.privacy_profile);
+  const capabilityProfile = objectValue(row.capability_profile);
+  const platform = stringValue(row.platform, "android") as IntegrationProjectProfile["platform"];
 
   return {
     id: stringValue(row.id),
     integration_project_id: stringValue(row.integration_project_id),
-    platform: stringValue(row.platform, "android") as IntegrationProjectProfile["platform"],
+    platform,
+    traffic_channel: stringValue(
+      row.traffic_channel,
+      platform === "android_tv" ? "ctv" : "mobile"
+    ) as IntegrationProjectProfile["traffic_channel"],
+    integration_mode: stringValue(row.integration_mode, "full_sdk") as IntegrationProjectProfile["integration_mode"],
+    protocol_codes: arrayValue<IntegrationProjectProfile["protocol_codes"][number]>(row.protocol_codes),
+    capability_profile: {
+      has_ad_server: booleanValue(capabilityProfile.has_ad_server),
+      has_ad_player: booleanValue(capabilityProfile.has_ad_player),
+      has_ad_sdk: booleanValue(capabilityProfile.has_ad_sdk),
+      supports_api: booleanValue(capabilityProfile.supports_api),
+      supports_openrtb: booleanValue(capabilityProfile.supports_openrtb),
+      supports_vast: booleanValue(capabilityProfile.supports_vast),
+      supports_lifecycle_events: booleanValue(capabilityProfile.supports_lifecycle_events),
+      accepts_ivt_sdk: booleanValue(capabilityProfile.accepts_ivt_sdk),
+      requires_pg_full_sdk: booleanValue(capabilityProfile.requires_pg_full_sdk)
+    },
     property_identifier: stringValue(row.property_identifier),
     playbook_codes: arrayValue<IntegrationProjectProfile["playbook_codes"][number]>(row.playbook_codes),
     min_sdk: optionalNumber(row.min_sdk),
@@ -1293,7 +1319,14 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           blocker: project.blocker,
           next_action: project.next_action,
           readiness_reviewed_at: project.readiness_reviewed_at,
-          go_live_date: project.go_live_date
+          go_live_date: project.go_live_date,
+          handoff_status: project.handoff_status,
+          handoff_package: project.handoff_package ?? {},
+          handoff_submitted_at: project.handoff_submitted_at,
+          handoff_submitted_by: optionalUuid(project.handoff_submitted_by),
+          handoff_accepted_at: project.handoff_accepted_at,
+          handoff_accepted_by: optionalUuid(project.handoff_accepted_by),
+          handoff_feedback: project.handoff_feedback
         })),
         uuidFields: ["publisher_id"]
       },
@@ -1303,6 +1336,10 @@ export class SupabaseWorkflowRepository implements WorkflowRepository {
           id: profile.id,
           integration_project_id: profile.integration_project_id,
           platform: profile.platform,
+          traffic_channel: profile.traffic_channel,
+          integration_mode: profile.integration_mode,
+          protocol_codes: profile.protocol_codes,
+          capability_profile: profile.capability_profile,
           property_identifier: profile.property_identifier,
           playbook_codes: profile.playbook_codes,
           min_sdk: profile.min_sdk,

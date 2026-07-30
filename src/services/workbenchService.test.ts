@@ -8,7 +8,12 @@ import { createInitialSalesWorkflowState } from "./salesWorkflowService";
 import { createInitialGuideWorkflowState } from "./sopService";
 import { trustedSupplyNetworkService } from "./trustedSupplyNetworkService";
 import { createInitialWorkbenchWorkflowState, workbenchService } from "./workbenchService";
-import { sdkIntegrationService, type IntegrationProjectProfileInput } from "./sdkIntegrationService";
+import {
+  integrationChecklistForProfile,
+  integrationWorkflowPhaseForCheck,
+  sdkIntegrationService,
+  type IntegrationProjectProfileInput
+} from "./sdkIntegrationService";
 
 function context() {
   return {
@@ -24,6 +29,20 @@ function context() {
 function validIntegrationProfile(): IntegrationProjectProfileInput {
   return {
     platform: "android_tv",
+    trafficChannel: "ctv",
+    integrationMode: "ivt_sdk_api",
+    protocolCodes: ["vast", "api"],
+    capabilityProfile: {
+      has_ad_server: true,
+      has_ad_player: true,
+      has_ad_sdk: true,
+      supports_api: true,
+      supports_openrtb: false,
+      supports_vast: true,
+      supports_lifecycle_events: true,
+      accepts_ivt_sdk: true,
+      requires_pg_full_sdk: false
+    },
     propertyIdentifier: "com.example.ctv",
     playbookCodes: ["origin_ads_android_1_2", "origin_ivt_android_v11"],
     minSdk: 23,
@@ -335,6 +354,65 @@ describe("workbenchService phase 10", () => {
     );
   });
 
+  it("hands the publisher intake task from Media Manager to Integration Manager", () => {
+    const snapshotContext = context();
+    const project = snapshotContext.mediaState.integrationProjects.find(
+      (item) => item.publisher_id === "publisher-new-ctv"
+    )!;
+    snapshotContext.mediaState = {
+      ...snapshotContext.mediaState,
+      integrationProjects: snapshotContext.mediaState.integrationProjects.map((item) =>
+        item.id === project.id
+          ? {
+              ...item,
+              handoff_status: "draft" as const,
+              handoff_package: {
+                media_engineering_contact: "Zhang Wei / Android Lead",
+                target_pilot_date: "2026-08-10",
+                target_go_live_date: "2026-08-24",
+                launch_requirements: "Controlled launch.",
+                integration_expectations: "Origin Android SDK."
+              }
+            }
+          : item
+      )
+    };
+
+    const mediaSnapshot = workbenchService.getSnapshot(
+      snapshotContext,
+      authService.createMockUser("media_manager")
+    );
+    expect(mediaSnapshot.tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: "Complete technical handoff: New CTV Partner",
+          owner_role: "media_manager",
+          related_route: "/media/publishers/:id"
+        })
+      ])
+    );
+
+    snapshotContext.mediaState = {
+      ...snapshotContext.mediaState,
+      integrationProjects: snapshotContext.mediaState.integrationProjects.map((item) =>
+        item.id === project.id ? { ...item, handoff_status: "submitted" as const } : item
+      )
+    };
+    const integrationSnapshot = workbenchService.getSnapshot(
+      snapshotContext,
+      authService.createMockUser("integration_manager")
+    );
+    expect(integrationSnapshot.tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          title: "Accept technical handoff: New CTV Partner",
+          owner_role: "integration_manager",
+          related_route: "/media/integration-wizard/:id"
+        })
+      ])
+    );
+  });
+
   it("opens an owned blocked SDK task for resolution and records trace events", () => {
     const snapshotContext = context();
     const integrationUser = authService.createMockUser("integration_manager");
@@ -345,6 +423,27 @@ describe("workbenchService phase 10", () => {
       "publisher-new-ctv",
       validIntegrationProfile()
     ).state;
+    const project = snapshotContext.mediaState.integrationProjects.find(
+      (item) => item.publisher_id === "publisher-new-ctv"
+    );
+    const profile = snapshotContext.mediaState.integrationProjectProfiles.find(
+      (item) => item.integration_project_id === project?.id
+    );
+    for (const template of integrationChecklistForProfile(profile)) {
+      if (integrationWorkflowPhaseForCheck(template.code) >= 4) continue;
+      const result = sdkIntegrationService.updateCheckResult(
+        snapshotContext.mediaState,
+        integrationUser,
+        "publisher-new-ctv",
+        {
+          itemCode: template.code,
+          status: "passed",
+          evidenceReference: `EVIDENCE-${template.code}`
+        }
+      );
+      expect(result.guard.allowed).toBe(true);
+      snapshotContext.mediaState = result.state;
+    }
     snapshotContext.mediaState = sdkIntegrationService.updateCheckResult(
       snapshotContext.mediaState,
       legalUser,

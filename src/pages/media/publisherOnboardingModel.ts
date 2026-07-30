@@ -8,7 +8,7 @@ import type {
   PublisherContractTerm
 } from "../../types/domain";
 
-export type PublisherOnboardingStep = "identity" | "traffic" | "inventory" | "commercial";
+export type PublisherOnboardingStep = "identity" | "traffic" | "inventory" | "commercial" | "handoff";
 
 export type PublisherOnboardingDraft = {
   name: string;
@@ -40,12 +40,23 @@ export type PublisherOnboardingDraft = {
   settlementCycle: string;
   paymentTerms: string;
   revenueSharePercent: string;
+  mediaEngineeringContact: string;
+  targetPilotDate: string;
+  targetGoLiveDate: string;
+  launchRequirements: string;
+  integrationExpectations: string;
 };
 
 export type PublisherOnboardingField = keyof PublisherOnboardingDraft;
 export type PublisherOnboardingErrors = Partial<Record<PublisherOnboardingField, "required" | "positive" | "email" | "percentage">>;
 
-export const publisherOnboardingSteps: PublisherOnboardingStep[] = ["identity", "traffic", "inventory", "commercial"];
+export const publisherOnboardingSteps: PublisherOnboardingStep[] = [
+  "identity",
+  "traffic",
+  "inventory",
+  "commercial",
+  "handoff"
+];
 
 export function createPublisherOnboardingDraft(today = formatUtcPlus8Date()): PublisherOnboardingDraft {
   return {
@@ -77,7 +88,12 @@ export function createPublisherOnboardingDraft(today = formatUtcPlus8Date()): Pu
     billingModel: "CPM",
     settlementCycle: "Monthly",
     paymentTerms: "Net 30",
-    revenueSharePercent: ""
+    revenueSharePercent: "",
+    mediaEngineeringContact: "",
+    targetPilotDate: "",
+    targetGoLiveDate: "",
+    launchRequirements: "",
+    integrationExpectations: ""
   };
 }
 
@@ -128,7 +144,12 @@ export function createPublisherOnboardingDraftFromSnapshot(snapshot: {
     billingModel: term?.billing_model ?? draft.billingModel,
     settlementCycle: term?.settlement_cycle ?? draft.settlementCycle,
     paymentTerms: term?.payment_terms ?? draft.paymentTerms,
-    revenueSharePercent: term?.revenue_share === undefined ? "" : String(term.revenue_share * 100)
+    revenueSharePercent: term?.revenue_share === undefined ? "" : String(term.revenue_share * 100),
+    mediaEngineeringContact: project?.handoff_package?.media_engineering_contact ?? "",
+    targetPilotDate: project?.handoff_package?.target_pilot_date ?? "",
+    targetGoLiveDate: project?.handoff_package?.target_go_live_date ?? project?.go_live_date ?? "",
+    launchRequirements: project?.handoff_package?.launch_requirements ?? "",
+    integrationExpectations: project?.handoff_package?.integration_expectations ?? ""
   };
 }
 
@@ -182,6 +203,18 @@ export function validatePublisherOnboardingStep(
     if (!isBlank(draft.revenueSharePercent)) {
       const share = Number(draft.revenueSharePercent);
       if (!Number.isFinite(share) || share < 0 || share > 100) errors.revenueSharePercent = "percentage";
+    }
+  }
+
+  if (step === "handoff") {
+    for (const field of [
+      "mediaEngineeringContact",
+      "targetPilotDate",
+      "targetGoLiveDate",
+      "launchRequirements",
+      "integrationExpectations"
+    ] as const) {
+      if (isBlank(draft[field])) errors[field] = "required";
     }
   }
 
@@ -242,6 +275,13 @@ export function toPublisherOnboardingInput(draft: PublisherOnboardingDraft): Pub
       paymentTerms: draft.paymentTerms,
       revenueShare: optionalNumber(draft.revenueSharePercent) === undefined ? undefined : Number(draft.revenueSharePercent) / 100,
       currency: draft.currency
+    },
+    handoff: {
+      mediaEngineeringContact: draft.mediaEngineeringContact.trim(),
+      targetPilotDate: draft.targetPilotDate,
+      targetGoLiveDate: draft.targetGoLiveDate,
+      launchRequirements: draft.launchRequirements.trim(),
+      integrationExpectations: draft.integrationExpectations.trim()
     }
   };
 }

@@ -6,6 +6,39 @@ import type { SupabasePasswordSignInInput } from "../repositories/authSessionRep
 
 type LoginMode = "mock" | "supabase";
 
+function localizedAuthError(error: string, zh: boolean) {
+  if (!zh) return error;
+
+  const normalized = error.toLowerCase();
+  if (
+    normalized.includes("invalid login credentials") ||
+    normalized.includes("check the email and password")
+  ) {
+    return "邮箱或密码错误。请使用已创建并分配角色的 PG OS 账号登录。";
+  }
+  if (
+    normalized.includes("unable to reach") ||
+    normalized.includes("fetch failed") ||
+    normalized.includes("network")
+  ) {
+    return "暂时无法连接登录服务，请检查网络后重试。";
+  }
+  if (normalized.includes("no pg os role is assigned")) {
+    return "该账号尚未分配 PG OS 角色，请联系系统管理员。";
+  }
+  if (normalized.includes("profile is inactive")) {
+    return "该账号已停用，请联系系统管理员。";
+  }
+  if (normalized.includes("unable to read current user profile")) {
+    return "无法读取当前账号资料，请检查 profiles 权限配置。";
+  }
+  if (normalized.includes("unable to read current user roles")) {
+    return "无法读取当前账号角色，请检查 user_roles 权限配置。";
+  }
+
+  return error;
+}
+
 type LoginPageProps = {
   selectedRole: RoleCode;
   authLoading: boolean;
@@ -28,6 +61,7 @@ export function LoginPage({
   onSupabaseSignIn
 }: LoginPageProps) {
   const { locale, t } = useLocale();
+  const zh = locale === "zh-CN";
   const [loginMode, setLoginMode] = useState<LoginMode>("mock");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -167,7 +201,7 @@ export function LoginPage({
 
           {authError ? (
             <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm leading-6 text-red-700">
-              {authError}
+              {localizedAuthError(authError, zh)}
             </div>
           ) : null}
 

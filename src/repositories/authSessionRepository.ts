@@ -6,7 +6,11 @@ import { isSupabaseConfigured, supabase } from "../lib/supabase";
 type Row = Record<string, unknown>;
 
 type SupabaseErrorLike = {
-  message?: string;
+  message?: unknown;
+  error?: unknown;
+  error_description?: unknown;
+  details?: unknown;
+  code?: unknown;
 };
 
 type SupabaseSessionUserLike = {
@@ -81,6 +85,29 @@ function stringValue(value: unknown, fallback = "") {
   return typeof value === "string" && value.length > 0 ? value : fallback;
 }
 
+export function formatAuthSessionError(error: unknown, fallback: string) {
+  const candidates: unknown[] = [error];
+
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    candidates.push(
+      record.message,
+      record.error_description,
+      record.error,
+      record.details
+    );
+  }
+
+  const message = candidates.find(
+    (candidate) =>
+      typeof candidate === "string" &&
+      candidate.trim().length > 0 &&
+      !["{}", "[object Object]", "undefined", "null"].includes(candidate.trim())
+  );
+
+  return typeof message === "string" ? message.trim() : fallback;
+}
+
 function createMockResult(roleCode: RoleCode): AuthSessionResult {
   const authService = new AuthService();
 
@@ -138,10 +165,24 @@ export class SupabaseAuthSessionRepository implements AuthSessionRepository {
   constructor(private readonly client: SupabaseAuthLike) {}
 
   async getCurrentSessionUser(requestedRole?: RoleCode) {
-    const { data, error } = await this.client.auth.getSession();
+    let sessionResult;
+    try {
+      sessionResult = await this.client.auth.getSession();
+    } catch (error) {
+      return errorResult(
+        "supabase",
+        "supabase-auth",
+        formatAuthSessionError(error, "Unable to reach the Supabase authentication service.")
+      );
+    }
+    const { data, error } = sessionResult;
 
     if (error) {
-      return errorResult("supabase", "supabase-auth", error.message ?? "Unable to read Supabase session.");
+      return errorResult(
+        "supabase",
+        "supabase-auth",
+        formatAuthSessionError(error, "Unable to read Supabase session.")
+      );
     }
 
     if (!data.session?.user) {
@@ -162,13 +203,27 @@ export class SupabaseAuthSessionRepository implements AuthSessionRepository {
       return errorResult("supabase", "supabase-auth", "Email and password are required.");
     }
 
-    const { data, error } = await this.client.auth.signInWithPassword({
-      email,
-      password: input.password
-    });
+    let signInResult;
+    try {
+      signInResult = await this.client.auth.signInWithPassword({
+        email,
+        password: input.password
+      });
+    } catch (error) {
+      return errorResult(
+        "supabase",
+        "supabase-auth",
+        formatAuthSessionError(error, "Unable to reach the Supabase authentication service.")
+      );
+    }
+    const { data, error } = signInResult;
 
     if (error) {
-      return errorResult("supabase", "supabase-auth", error.message ?? "Supabase sign-in failed.");
+      return errorResult(
+        "supabase",
+        "supabase-auth",
+        formatAuthSessionError(error, "Supabase sign-in failed. Check the email and password.")
+      );
     }
 
     const user = data.user ?? data.session?.user;
@@ -180,10 +235,24 @@ export class SupabaseAuthSessionRepository implements AuthSessionRepository {
   }
 
   async signOut() {
-    const { error } = await this.client.auth.signOut();
+    let signOutResult;
+    try {
+      signOutResult = await this.client.auth.signOut();
+    } catch (error) {
+      return errorResult(
+        "supabase",
+        "supabase-auth",
+        formatAuthSessionError(error, "Unable to reach the Supabase authentication service.")
+      );
+    }
+    const { error } = signOutResult;
 
     if (error) {
-      return errorResult("supabase", "supabase-auth", error.message ?? "Supabase sign-out failed.");
+      return errorResult(
+        "supabase",
+        "supabase-auth",
+        formatAuthSessionError(error, "Supabase sign-out failed.")
+      );
     }
 
     return signedOutResult("supabase", "supabase-auth");
@@ -201,7 +270,7 @@ export class SupabaseAuthSessionRepository implements AuthSessionRepository {
       return errorResult(
         "supabase",
         "supabase:profiles",
-        profileResult.error.message ?? "Unable to read current user profile."
+        formatAuthSessionError(profileResult.error, "Unable to read current user profile.")
       );
     }
 
@@ -220,7 +289,7 @@ export class SupabaseAuthSessionRepository implements AuthSessionRepository {
       return errorResult(
         "supabase",
         "supabase:user_roles",
-        rolesResult.error.message ?? "Unable to read current user roles."
+        formatAuthSessionError(rolesResult.error, "Unable to read current user roles.")
       );
     }
 

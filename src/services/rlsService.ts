@@ -38,10 +38,14 @@ const tableWriteRoles: Partial<Record<RlsTable, RoleCode[]>> = {
   integration_project_profiles: ["integration_manager", "media_director", "operations_director"],
   integration_check_results: [
     "integration_manager",
+    "media_manager",
     "media_director",
     "operations_director",
+    "sales_manager",
+    "finance_manager",
     "legal_manager",
-    "data_analyst"
+    "data_analyst",
+    "adops_manager"
   ],
   commercial_tests: ["adops_manager", "media_director", "operations_director", "data_analyst"],
   media_trust_profiles: ["media_manager", "media_director", "operations_director", "data_analyst"],

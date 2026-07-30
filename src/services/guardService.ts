@@ -364,7 +364,9 @@ export class GuardService {
   }
 
   private getPublisher(publisherId: EntityId) {
-    return this.repository.publishers.find((publisher) => publisher.id === publisherId);
+    return this.repository.publishers.find(
+      (publisher) => publisher.id === publisherId && !publisher.metadata?.archived_at
+    );
   }
 
   private getOpenBlockingSalesCase(publisherId: EntityId) {

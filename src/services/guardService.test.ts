@@ -126,9 +126,12 @@ describe("RLS policy mirror", () => {
     expect(rlsService.canWriteTable(user("media_manager"), "integration_project_profiles")).toBe(false);
   });
 
-  it("allows legal and data owners to update their technical checklist rows", () => {
+  it("allows assigned business and technical owners to update integration gate rows", () => {
     expect(rlsService.canWriteTable(user("legal_manager"), "integration_check_results")).toBe(true);
     expect(rlsService.canWriteTable(user("data_analyst"), "integration_check_results")).toBe(true);
-    expect(rlsService.canWriteTable(user("sales_manager"), "integration_check_results")).toBe(false);
+    expect(rlsService.canWriteTable(user("media_manager"), "integration_check_results")).toBe(true);
+    expect(rlsService.canWriteTable(user("adops_manager"), "integration_check_results")).toBe(true);
+    expect(rlsService.canWriteTable(user("sales_manager"), "integration_check_results")).toBe(true);
+    expect(rlsService.canWriteTable(user("finance_manager"), "integration_check_results")).toBe(true);
   });
 });

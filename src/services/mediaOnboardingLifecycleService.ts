@@ -237,7 +237,9 @@ function buildLinkedRecords(input: LifecycleInput) {
   for (const lead of mediaState.mediaEcosystemLeads) {
     const candidate = mediaState.trustedSupplyCandidates.find((item) => item.lead_id === lead.id);
     const publisherId = candidate?.publisher_id ?? lead.linked_publisher_id;
-    const publisher = publisherId ? mediaState.publishers.find((item) => item.id === publisherId) : undefined;
+    const publisher = publisherId
+      ? mediaState.publishers.find((item) => item.id === publisherId && !item.metadata?.archived_at)
+      : undefined;
     if (candidate) claimedCandidateIds.add(candidate.id);
     if (publisher) claimedPublisherIds.add(publisher.id);
 
@@ -252,7 +254,11 @@ function buildLinkedRecords(input: LifecycleInput) {
 
   for (const candidate of mediaState.trustedSupplyCandidates) {
     if (claimedCandidateIds.has(candidate.id)) continue;
-    const publisher = candidate.publisher_id ? mediaState.publishers.find((item) => item.id === candidate.publisher_id) : undefined;
+    const publisher = candidate.publisher_id
+      ? mediaState.publishers.find(
+          (item) => item.id === candidate.publisher_id && !item.metadata?.archived_at
+        )
+      : undefined;
     if (publisher) claimedPublisherIds.add(publisher.id);
     const integration = publisher ? mediaState.integrationProjects.find((item) => item.publisher_id === publisher.id) : undefined;
     const commercialTest = publisher ? findCommercialTest(mediaState, publisher.id) : undefined;
@@ -264,6 +270,7 @@ function buildLinkedRecords(input: LifecycleInput) {
   }
 
   for (const publisher of mediaState.publishers) {
+    if (publisher.metadata?.archived_at) continue;
     if (claimedPublisherIds.has(publisher.id)) continue;
     const integration = mediaState.integrationProjects.find((item) => item.publisher_id === publisher.id);
     const commercialTest = findCommercialTest(mediaState, publisher.id);

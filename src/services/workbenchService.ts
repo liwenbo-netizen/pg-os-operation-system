@@ -315,7 +315,9 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
   const onboardingTasks = context.mediaState.trustedSupplyCandidates
     .filter((candidate) => candidate.status === "onboarding_project_created" && candidate.publisher_id)
     .map<WorkbenchTask>((candidate) => {
-      const publisher = context.mediaState.publishers.find((item) => item.id === candidate.publisher_id);
+      const publisher = context.mediaState.publishers.find(
+        (item) => item.id === candidate.publisher_id && !item.metadata?.archived_at
+      );
       const integrationProject = context.mediaState.integrationProjects.find(
         (item) => item.publisher_id === candidate.publisher_id
       );
@@ -350,7 +352,9 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
   const integrationChecklistTasks = context.mediaState.integrationProjects
     .filter((project) => project.status !== "technical_live_passed")
     .flatMap<WorkbenchTask>((project) => {
-      const publisher = context.mediaState.publishers.find((item) => item.id === project.publisher_id);
+      const publisher = context.mediaState.publishers.find(
+        (item) => item.id === project.publisher_id && !item.metadata?.archived_at
+      );
       if (!publisher) {
         return [];
       }
@@ -368,6 +372,51 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
       const profile = context.mediaState.integrationProjectProfiles.find(
         (item) => item.integration_project_id === project.id
       );
+      const technicalHandoffStatus = project.handoff_status ?? "accepted";
+
+      if (["draft", "changes_requested"].includes(technicalHandoffStatus)) {
+        return [
+          {
+            id: createStableDerivedUuid("publisher-handoff-submit", project.id),
+            title: `Complete technical handoff: ${publisher.name}`,
+            module: "Media",
+            owner_role: "media_manager",
+            related_route: "/media/publishers/:id",
+            priority: "P0",
+            status: "open",
+            due_date: project.handoff_package?.target_pilot_date,
+            blocker:
+              technicalHandoffStatus === "changes_requested"
+                ? project.handoff_feedback
+                : undefined,
+            next_action:
+              technicalHandoffStatus === "changes_requested"
+                ? project.handoff_feedback ?? "Complete the requested changes and resubmit the handoff."
+                : "Complete the publisher intake package and submit it to the Integration Manager.",
+            allow_open_when_blocked: true,
+            source_object_type: "publisher",
+            source_object_id: publisher.id
+          }
+        ];
+      }
+
+      if (technicalHandoffStatus === "submitted") {
+        return [
+          {
+            id: createStableDerivedUuid("publisher-handoff-accept", project.id),
+            title: `Accept technical handoff: ${publisher.name}`,
+            module: "Media",
+            owner_role: "integration_manager",
+            related_route: "/media/integration-wizard/:id",
+            priority: "P0",
+            status: "open",
+            due_date: project.handoff_package?.target_pilot_date,
+            next_action: "Review the Media Manager intake package, then accept it or return concrete feedback.",
+            source_object_type: "publisher",
+            source_object_id: publisher.id
+          }
+        ];
+      }
 
       if (!profile) {
         const handoffBlocked = !handoffConfirmed;
@@ -439,6 +488,7 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
   const commercialValidationTasks = context.mediaState.publishers
     .filter(
       (publisher) =>
+        !publisher.metadata?.archived_at &&
         publisher.technical_live_status === "technical_live_passed" &&
         publisher.commercial_test_status !== "test_passed"
     )
@@ -462,6 +512,7 @@ function createDerivedTasks(context: OperationsContext): WorkbenchTask[] {
   const trustQualificationTasks = context.mediaState.publishers
     .filter(
       (publisher) =>
+        !publisher.metadata?.archived_at &&
         publisher.technical_live_status === "technical_live_passed" &&
         (publisher.commercial_test_status === "test_passed" ||
           context.mediaState.commercialTests.some(
