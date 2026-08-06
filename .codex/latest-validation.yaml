@@ -1,5 +1,5 @@
 task_id: CX-0193
-captured_at: "2026-08-06T19:10:00+08:00"
+captured_at: "2026-08-06T19:35:00+08:00"
 result: BLOCKED
 task_type: READ_ONLY_AND_SANDBOX
 baseline_reconstructability: NOT_PROVEN
@@ -95,6 +95,12 @@ validation:
     writes_attempted: 0
     sandbox_keys_configured: false
     second_project_status: INACTIVE
+  retry_2026_08_06_round3:
+    claim_in_task: "sandbox prepared and active"
+    actual_evidence: "sandbox env keys missing from all env files; second project still INACTIVE"
+    baseline_environment: BLOCKED
+    sandbox_rebuild_check: BLOCKED
+    writes_attempted: 0
   cx0193_focused_tests:
     status: PASS
     test_files: 6

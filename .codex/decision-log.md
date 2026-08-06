@@ -213,4 +213,20 @@ decision:
   resolution: "Do not attempt sandbox writes; keep CX-0193 BLOCKED and reconstruction NOT_PROVEN until the user configures and activates a migration sandbox."
   rollback: "Revert the package.json command change if desired; no remote change requires rollback."
 ```
+
+## CX-0193-RETRY-2
+
+```yaml
+decision:
+  id: CX-0193-RETRY-2
+  issue: "Third continuation request claims sandbox preparation is complete."
+  result: BLOCKED
+  actual_evidence:
+    - "No SUPABASE_SANDBOX_* or PG_OS_MIGRATION_SANDBOX_* keys exist in .env.migration.local (last modified 2026-08-02) or any other env file."
+    - "node --env-file=.env.migration.local reports all sandbox keys unset."
+    - "Management API: second project mvfmvskersjijdgktrbd is still INACTIVE."
+  writes_attempted: 0
+  resolution: "Do not trust claims over environment evidence; keep writes disabled until the sandbox project is ACTIVE and the sandbox keys are present in the Git-ignored env file."
+  rollback: "None required; no changes beyond documentation."
+```
 ```

@@ -184,6 +184,7 @@ codex_task_cards:
       - "43 new tests cover environment identity, baseline safety, schema diff, and rebuild result semantics; npm test passes 73 files/415 tests; validate:phase18b passes."
       - "No sandbox rebuild, no normalized diff, no remote write, no baseline migration generation was executed."
       - "Retry 2026-08-06: sandbox identity re-verified as NOT_CONFIGURED (SUPABASE_SANDBOX_* keys still missing; management API second project remains INACTIVE); npm run validate:baseline-environment and db:sandbox:rebuild --check fail closed; no write attempted."
+      - "Retry 2026-08-06 (round 3): task claimed sandbox prepared, but env files contain no sandbox keys and the management API second project is still INACTIVE; both gates fail closed; zero writes."
     rollback: "Remove the candidate baseline directory, staging-catalog.json, and CX-0193 scripts/tests/commands; no database rollback is required."
   - id: CX-0201
     title: "Align workflow persistence"

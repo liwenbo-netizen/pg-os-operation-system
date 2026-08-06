@@ -242,4 +242,5 @@ cx0193:
   sandbox_write: false
   required_human_action: "Confirm the second project (or an active replacement) as the disposable migration sandbox and populate SUPABASE_SANDBOX_PROJECT_REF/HOST plus PG_OS_MIGRATION_SANDBOX_* confirmations in the Git-ignored migration environment."
   retry_2026_08_06: "Sandbox keys still absent; second project still INACTIVE; no writes attempted."
+  retry_2026_08_06_round3: "Task claimed sandbox ready, but evidence shows no sandbox env keys and INACTIVE second project; gates fail closed; no writes."
 ```

@@ -140,6 +140,7 @@ commands:
     cx0193_result: BLOCKED
     evidence: "Fails closed because SUPABASE_SANDBOX_* variables are unconfigured and the second project purpose is unconfirmed (management API name PG-OS-CRM006B-R2-Rollback is INACTIVE)."
     retry_2026_08_06: "Command now loads --env-file=.env.migration.local; fails closed only on missing sandbox keys. Staging identity/read-only checks pass."
+    retry_2026_08_06_round3: "BLOCKED again; sandbox keys still absent and second project still INACTIVE despite task claim."
 
   schema_baseline_generate:
     command: "npm run db:schema:baseline:generate"
@@ -162,6 +163,7 @@ commands:
     cx0193_result: BLOCKED
     evidence: "No sandbox environment configured; the only second project is INACTIVE and its purpose is unconfirmed. Zero sandbox rebuilds executed."
     retry_2026_08_06: "db:sandbox:rebuild --check re-ran and failed closed; --apply --reset was not attempted per task stop rules."
+    retry_2026_08_06_round3: "db:sandbox:rebuild --check failed closed again; --apply --reset not attempted."
 
   schema_diff:
     command: "npm run db:schema:diff"
