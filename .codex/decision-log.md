@@ -119,4 +119,55 @@ decision:
   required_human_decisions:
     - "Either provision a real production-denylist target or explicitly approve a first-class no-production-project marker; do not fabricate Project values."
   rollback: "Revoke the temporary CLI token, rotate the database password again, remove the Git-ignored migration environment, and revert the local migration-safety tooling. No schema or data rollback is required."
+
+## CX-0192
+
+```yaml
+decision:
+  id: CX-0192
+  issue: "Remote Supabase migration history cannot be explained from the local repository alone."
+  result: COMPLETED_READ_ONLY
+  local_migration_count: 24
+  remote_migration_count: 66
+  matched_versions: 0
+  remote_version_style: "sequential 000-065"
+  local_version_style: "date-based YYYYMMDDNNNN"
+  remote_public_tables: 178
+  remote_public_policies: 125
+  local_static_tables: 37
+  local_static_policies: 66
+  reconstruction_status: NOT_PROVEN
+  evidence:
+    - ".codex/schema-baseline/CX-0190.json refreshed 2026-08-06 through the Supabase Management API read-only endpoint"
+    - "git log --all shows no deleted migration files; only master exists; no tags"
+    - "Phase 13/16B/30 reports document manual SQL Editor execution, which does not record into schema_migrations"
+    - "Old development package RAR is missing from Downloads, so the 66 sequential SQL files could not be recovered"
+  hypothesis: "The remote project was initialized from the original development package (66 sequential migrations), while the current repository is the ZERO BUILD CLEANED rebuild (24 date-based migrations) applied manually via SQL Editor; strong but unproven."
+  remote_changes_made: false
+  baseline_migration_generated: false
+  resolution: "Keep migration writes disabled; record evidence; require a user decision between rebuild-from-local and archive-replay before any write."
+  rollback: "Remove the CX-0192 record and revert the refreshed local baseline file; no remote rollback is required."
+```
+
+## ADR-001
+
+```yaml
+decision:
+  id: ADR-001
+  issue: "Which architecture should own authoritative workflow state transitions?"
+  options_compared:
+    - browser_direct_supabase_writes
+    - postgresql_rpc
+    - supabase_edge_function_plus_rpc
+    - standalone_node_api
+  recommended: supabase_edge_function_plus_rpc
+  transactional_core: postgresql_rpc
+  rationale: "Repository has no Node server layer or server framework dependencies; Supabase already hosts RLS/triggers and an enabled edge runtime; Edge Function provides the stable API contract and error envelope required by INV-047 while RPC holds transaction/idempotency/locking/audit/outbox."
+  binding_rule: "Workflow-controlled state must not continue to be modified by browser per-table upserts."
+  responsibility_boundaries:
+    CX-0201: "expand/contract persistence (five-dimensional state, version lock, history, idempotency), compatibility reads, controlled writes through the server path"
+    CX-0202: "PL/pgSQL RPC evaluate/execute with transaction, idempotency, optimistic lock, guard registry evaluation, audit and outbox rows in the same transaction"
+    CX-0401: "Edge Function HTTP contracts (state, available transitions, gate results, evaluate, execute) with stable error codes and JWT role mapping"
+  rollback: "Default-off feature flags and kill switch from CX-0102; versioned RPC functions; expand/contract migrations; no browser-write fallback."
+```
 ```

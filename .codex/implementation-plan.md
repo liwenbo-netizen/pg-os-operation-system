@@ -3,6 +3,34 @@
 **Planning status:** W0, CX-0004, CX-0101, and CX-0102 are complete. The versioned machine now has a default-off, read-only compatibility seam without changing production workflow behavior.
 **Baseline status:** green after CX-0004 repaired the `Opportunity.stage` validator and CX-0101/CX-0102 passed all local gates.
 
+## CX-0192 and ADR-001 (2026-08-06)
+
+CX-0192 completed a **read-only** local/remote migration history reconciliation:
+
+- Local: 24 date-based migration versions (`202606290001` … `202607300001`).
+- Remote: 66 sequential versions (`000`–`065`) in `supabase_migrations.schema_migrations`.
+- Match rate: 0/24 local versions exist remotely and 0/66 remote versions exist locally (zero overlap).
+- Remote schema counts (178 tables / 3121 columns / 125 policies) exceed local static declarations
+  (37 tables / 66 policies), confirming major drift that cannot be reconstructed from repository evidence alone.
+- The old development package RAR is no longer available on disk, so the 66 sequential SQL files were not
+  recoverable; `reconstruction_status: NOT_PROVEN`.
+- No remote write, DDL, DML, Schema History Repair, baseline migration generation, or `db push/reset/up`
+  was performed. `PG_OS_ENABLE_MIGRATION_WRITE=false` remains in effect.
+
+ADR-001 (`docs/adr/ADR-001-server-authoritative-workflow-execution.md`) was written and recommends
+**Supabase Edge Function + PostgreSQL RPC** as the server-authoritative workflow execution boundary,
+with RPC as the transactional core. It explicitly records that workflow-controlled state must no longer
+be modified by browser per-table upserts, and assigns responsibility boundaries to CX-0201 (persistence),
+CX-0202 (RPC executor), and CX-0401 (Edge Function API contracts).
+
+Current statuses:
+
+```yaml
+CX-0192: COMPLETED   # read-only reconciliation evidence captured
+CX-0190: BLOCKED     # no-production-project denylist contract unresolved
+CX-0201: BLOCKED     # must not be auto-unblocked by CX-0192
+```
+
 ## Immediate Sequencing Rule
 
 CX-0004 is complete. It proved that the existing six `Opportunity.stage` values already matched both SQL constraints and repaired only the validator's parsing scope. `npm run validate:domain-schema` and `npm run validate:phase18b` now pass.

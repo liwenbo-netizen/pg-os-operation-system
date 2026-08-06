@@ -23,6 +23,7 @@ baseline_blockers:
     status: BLOCKED
     impact: "No live migration verification can be executed from the local repository."
     evidence:
+      - "CX-0192 (2026-08-06): remote migration history has 66 sequential versions (000-065) while the local repository declares 24 date-based versions; the two sets have zero overlap and reconstruction is NOT_PROVEN."
       - "supabase@2.110.0 is pinned in package.json/package-lock.json and npm run validate:supabase-cli passes through project-local npx execution."
       - "supabase/config.toml and fail-closed CLI/environment/denylist validators exist; Docker was not started or required."
       - "Protected local Staging identity, database credentials, marker and access token are configured in a Git-ignored migration environment with writes disabled."
@@ -159,6 +160,18 @@ codex_task_cards:
     required_human_inputs:
       - "Resolve whether CX-0190 will provision a separate production-denylist target or amend the contract with an explicit no-production-project marker; do not invent placeholder Project values."
     rollback: "Revoke the temporary CLI token, rotate the database password again, remove the Git-ignored migration environment, and revert migration-safety scripts/tests, package scripts/dependency, Supabase init files, README, and .codex records. No schema/data rollback is required."
+  - id: CX-0192
+    title: "Reconcile local and remote migration history"
+    status: COMPLETED
+    type: READ_ONLY
+    evidence:
+      - ".codex/schema-baseline/CX-0190.json refreshed on 2026-08-06 via npm run db:schema:baseline:read-only: remote_count=66 (versions 000-065), local_count=24, aligned=false."
+      - "Remote public schema counts: 178 tables, 3121 columns, 125 policies, 51 triggers, 15 functions; local static validation declares 37 tables and 66 policies (validate:phase2)."
+      - "Git history contains only the current 24 migration files, no deleted migration files, no other branches and no tags."
+      - "Phase reports (13/16B/30) document manual SQL Editor execution of local migrations, consistent with all 24 local versions being absent from remote schema_migrations."
+      - "Old development package RAR is no longer present on disk, so the 66 sequential migration files could not be recovered; reconstruction_status=NOT_PROVEN."
+      - "docs/adr/ADR-001-server-authoritative-workflow-execution.md records the server-authoritative execution decision."
+    rollback: "Remove the CX-0192 validation record and revert the refreshed local schema baseline; no remote change occurred."
   - id: CX-0201
     title: "Align workflow persistence"
     status: BLOCKED

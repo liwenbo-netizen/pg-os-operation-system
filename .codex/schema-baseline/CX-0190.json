@@ -1,6 +1,6 @@
 {
   "task_id": "CX-0190",
-  "captured_at": "2026-08-01T16:41:43.106Z",
+  "captured_at": "2026-08-06T08:48:52.587Z",
   "schema_baseline": {
     "target_environment": "staging",
     "write_enabled": false,
