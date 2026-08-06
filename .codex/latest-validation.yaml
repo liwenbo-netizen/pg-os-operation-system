@@ -1,19 +1,39 @@
-task_id: CX-0192
-captured_at: "2026-08-06T17:05:00+08:00"
-result: COMPLETED
-task_type: READ_ONLY
+task_id: CX-0193
+captured_at: "2026-08-06T17:50:00+08:00"
+result: BLOCKED
+task_type: READ_ONLY_AND_SANDBOX
+baseline_reconstructability: NOT_PROVEN
 product_code_changed: false
 runtime_application_behavior_changed: false
-validation_code_changed: false
+validation_code_changed: true
 documentation_changed: true
 changed_files:
-  - .codex/validation/CX-0192.md
+  - .codex/validation/CX-0193.md
+  - .codex/repository-overlay.md
+  - .codex/command-map.yaml
   - .codex/spec-gap-matrix.yaml
   - .codex/implementation-plan.md
   - .codex/decision-log.md
   - .codex/latest-validation.yaml
-  - .codex/schema-baseline/CX-0190.json
-  - docs/adr/ADR-001-server-authoritative-workflow-execution.md
+  - .codex/schema-baseline/staging-catalog.json
+  - supabase/baseline-candidate/00_extensions.sql
+  - supabase/baseline-candidate/10_public_schema.sql
+  - supabase/baseline-candidate/manifest.yaml
+  - package.json
+  - .env.example
+  - scripts/baselineSafety.mjs
+  - scripts/validate-baseline-environment.mjs
+  - scripts/validate-baseline-environment.test.mjs
+  - scripts/generate-schema-baseline.mjs
+  - scripts/generate-schema-baseline.test.mjs
+  - scripts/validate-schema-baseline.mjs
+  - scripts/validate-schema-baseline.test.mjs
+  - scripts/db-sandbox-rebuild.mjs
+  - scripts/db-sandbox-rebuild.test.mjs
+  - scripts/db-schema-diff.mjs
+  - scripts/db-schema-diff.test.mjs
+  - scripts/validate-baseline-reconstructability.mjs
+  - scripts/validate-baseline-reconstructability.test.mjs
 schema_or_data_changed: false
 dependencies_changed: false
 ci_changed: false
@@ -22,52 +42,54 @@ baseline_migration_generated: false
 production_accessed: false
 remote_staging_accessed: true
 remote_access_mode: READ_ONLY_SELECT
-git_workspace:
-  checkpoint_commits:
-    - "1c592c1 checkpoint: preserve user-owned TechnicalIntegrationWorkspace in-progress changes"
-    - "3bed2ed fix(validation): scope Opportunity.stage AST extraction (CX-0004)"
-    - "1abdc0f feat(workflow): add versioned V2.5 machine loader and static validation (CX-0101)"
-    - "2bc5fab feat(workflow): add read-only compatibility adapters and default-off feature flags (CX-0102)"
-    - "d2a357c chore(migration-safety): pin Supabase CLI and add fail-closed migration gates (CX-0190)"
-    - "f611a0d docs(codex): add PG OS V1.8 specifications and W0/CX artifact baseline"
-  user_ui_changes_isolated: true
-  secrets_committed: false
-  env_migration_local_committed: false
-  working_tree_after_checkpoint: clean
-migration_reconciliation:
-  local_count: 24
-  remote_count: 66
-  matched: 0
-  remote_only: 66
-  local_only: 24
-  duplicate_versions: 0
-  ordering_conflicts: 0
-  earliest_local_version: 202606290001
-  latest_local_version: 202607300001
-  earliest_remote_version: "000"
-  latest_remote_version: "065"
-  missing_migrations_found_in_git_history: 0
-  missing_migrations_found_in_other_directories: 0
-  reconstruction_status: NOT_PROVEN
-  remote_schema:
+sandbox_writes: 0
+project_classification:
+  staging_source:
+    project_ref_env: SUPABASE_STAGING_PROJECT_REF
+    host_env: SUPABASE_STAGING_DB_HOST
+    status: ACTIVE_HEALTHY
+    write_allowed: false
+    reset_allowed: false
+  migration_sandbox:
+    configured: false
+    management_api_candidate: "PG-OS-CRM006B-R2-Rollback (INACTIVE)"
+    purpose_confirmed: false
+    write_allowed: false
+    reset_allowed: false
+candidate_baseline:
+  directory: supabase/baseline-candidate
+  object_counts:
     tables: 178
-    columns: 3121
+    columns: 3106
+    constraints: 528
+    indexes: 399
     policies: 125
     triggers: 51
     functions: 15
     views: 2
-    constraints: 528
-    indexes: 625
+    sequences: 4
     extensions: 5
-  local_static:
-    tables: 37
-    policies: 66
-  suspected_dashboard_or_legacy_changes: true
+  object_classification:
+    PG_OS_APPLICATION_MANAGED: 371
+    EXTENSION_MANAGED: 5
+    EXCLUDED_WITH_REASON: 6
+  static_review: PASS
+  formal_migration_chain: false
+legacy_local_migrations:
+  count: 24
+  status: PRESERVED_AS_HISTORICAL_REFERENCE
+  canonical_status: NOT_DECIDED
 validation:
-  read_only_schema_baseline:
+  baseline_environment: BLOCKED
+  schema_baseline_generate: PASS
+  schema_baseline_static_check: PASS
+  sandbox_rebuild_check: BLOCKED
+  schema_diff: NOT_RUN
+  reconstructability: NOT_RUN
+  cx0193_focused_tests:
     status: PASS
-    mode: NO_PRODUCTION_PROJECT
-    write_status: DISABLED
+    test_files: 6
+    tests: 43
   workflow_machine_static_validation:
     status: PASS
     roles: 16
@@ -82,34 +104,32 @@ validation:
     status: PASS
     tables: 37
     policies: 66
-    migration_applied: false
-  lint:
-    status: PASS
-    command: "tsc --noEmit"
+  lint: PASS
   unit_and_repository_tests:
     status: PASS
-    test_files: 67
-    tests: 372
+    test_files: 73
+    tests: 415
   build:
     status: PASS_WITH_WARNING
-    warning: "Vite JS chunk is 1294.31 kB minified, above the 500 kB warning threshold; not processed this round."
+    warning: "Existing Vite bundle-size warning not processed this round."
   ci_local_uat:
     status: PASS
-    note: "npm run validate:phase18b passed in 87.5s including secret hygiene (342 text files), 67 test files/372 tests, lint, build, domain-schema, and phase 28/29/30/31/34/35/40 gates."
+    note: "npm run validate:phase18b passed in 94.7s; secret hygiene checked 358 text files."
 pre_existing_failures:
   - "CX-0190 BLOCKED: no-production-project denylist contract unresolved"
-  - "Vite bundle-size warning deferred by instruction"
+  - "CX-0192: remote migration history reconstruction NOT_PROVEN"
+  - "Vite bundle-size warning deferred"
 new_failures: []
 blockers:
-  - "CX-0190 remains BLOCKED; migration writes stay disabled."
-  - "CX-0201 remains BLOCKED and was not auto-unblocked by CX-0192."
-  - "Remote migration history reconstruction is NOT_PROVEN because the old development package is unavailable."
+  - "Migration sandbox is not configured and the second project is INACTIVE with unconfirmed purpose."
+  - "Sandbox rebuild and normalized schema diff cannot run; PROVEN is not claimed."
+  - "CX-0190 and CX-0201 remain BLOCKED."
 artifacts:
-  - .codex/validation/CX-0192.md
-  - docs/adr/ADR-001-server-authoritative-workflow-execution.md
-  - .codex/schema-baseline/CX-0190.json
-rollback: "Revert the documentation commit containing ADR-001/CX-0192 records and restore the previous schema baseline JSON. No remote change occurred, so no database rollback is required."
+  - .codex/validation/CX-0193.md
+  - supabase/baseline-candidate/manifest.yaml
+  - .codex/schema-baseline/staging-catalog.json
+rollback: "Remove candidate baseline files, staging-catalog.json, CX-0193 scripts/tests/commands, and revert package.json/.env.example additions. No remote change occurred, so no database rollback is required."
 next_task:
-  id: CX-0201
+  id: CX-0193-RETRY
   status: BLOCKED
-  reason: "CX-0190 denylist contract must be resolved first; ADR-001 defines the required server-authoritative architecture."
+  reason: "Requires user confirmation/activation of a migration sandbox and population of SUPABASE_SANDBOX_* environment keys before sandbox rebuild and normalized diff can run."

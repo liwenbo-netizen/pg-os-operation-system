@@ -24,6 +24,7 @@ baseline_blockers:
     impact: "No live migration verification can be executed from the local repository."
     evidence:
       - "CX-0192 (2026-08-06): remote migration history has 66 sequential versions (000-065) while the local repository declares 24 date-based versions; the two sets have zero overlap and reconstruction is NOT_PROVEN."
+      - "CX-0193 (2026-08-06): read-only candidate baseline generated (178 tables/3106 columns/125 policies) but sandbox rebuild and normalized diff are BLOCKED because the only second project is INACTIVE and its purpose is unconfirmed; reconstruction remains NOT_PROVEN."
       - "supabase@2.110.0 is pinned in package.json/package-lock.json and npm run validate:supabase-cli passes through project-local npx execution."
       - "supabase/config.toml and fail-closed CLI/environment/denylist validators exist; Docker was not started or required."
       - "Protected local Staging identity, database credentials, marker and access token are configured in a Git-ignored migration environment with writes disabled."
@@ -172,6 +173,17 @@ codex_task_cards:
       - "Old development package RAR is no longer present on disk, so the 66 sequential migration files could not be recovered; reconstruction_status=NOT_PROVEN."
       - "docs/adr/ADR-001-server-authoritative-workflow-execution.md records the server-authoritative execution decision."
     rollback: "Remove the CX-0192 validation record and revert the refreshed local schema baseline; no remote change occurred."
+  - id: CX-0193
+    title: "Build and verify canonical schema baseline"
+    status: BLOCKED
+    type: "READ_ONLY + SANDBOX"
+    baseline_reconstructability: NOT_PROVEN
+    evidence:
+      - "supabase/baseline-candidate generated from staging source via Management API read-only catalog extraction: 178 tables, 3106 columns, 528 constraints, 399 indexes, 125 policies, 51 triggers, 15 functions, 2 views, 4 sequences, 5 extensions."
+      - "validate:baseline-environment and db:sandbox:rebuild --check fail closed: SUPABASE_SANDBOX_* variables are unconfigured; the account's second project (PG-OS-CRM006B-R2-Rollback) is INACTIVE and its purpose is unconfirmed."
+      - "43 new tests cover environment identity, baseline safety, schema diff, and rebuild result semantics; npm test passes 73 files/415 tests; validate:phase18b passes."
+      - "No sandbox rebuild, no normalized diff, no remote write, no baseline migration generation was executed."
+    rollback: "Remove the candidate baseline directory, staging-catalog.json, and CX-0193 scripts/tests/commands; no database rollback is required."
   - id: CX-0201
     title: "Align workflow persistence"
     status: BLOCKED

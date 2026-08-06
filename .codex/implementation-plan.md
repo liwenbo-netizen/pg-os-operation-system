@@ -31,6 +31,25 @@ CX-0190: BLOCKED     # no-production-project denylist contract unresolved
 CX-0201: BLOCKED     # must not be auto-unblocked by CX-0192
 ```
 
+## CX-0193 (2026-08-06)
+
+CX-0193 built the canonical-baseline toolchain and generated a **read-only candidate baseline** from the
+staging source, but sandbox verification is blocked:
+
+- Candidate: `supabase/baseline-candidate/` (178 tables, 3106 columns, 528 constraints, 399 indexes,
+  125 policies, 51 triggers, 15 functions, 2 views, 4 sequences, 5 extensions) plus
+  `.codex/schema-baseline/staging-catalog.json`. The candidate is **not** part of the formal migration chain.
+- Tooling: `validate:baseline-environment`, `db:schema:baseline:generate`, `validate:schema-baseline`,
+  `db:sandbox:rebuild`, `db:schema:diff`, `validate:baseline-reconstructability`, `validate:cx0193` (43 tests).
+- Blockers: the account's second project (`PG-OS-CRM006B-R2-Rollback`) is `INACTIVE` and has no
+  `SUPABASE_SANDBOX_*` environment configuration; its purpose as a disposable sandbox is unconfirmed.
+  Per task safety rules, no write or reset was attempted.
+- Outcome: `baseline_reconstructability: NOT_PROVEN`; `CX-0193: BLOCKED`; `CX-0190: BLOCKED`;
+  `CX-0201: BLOCKED`.
+- Required human action: confirm/activate a migration sandbox project and populate the new
+  `.env.example` sandbox keys in `.env.migration.local` (ref, host, marker, confirmations, write flag),
+  then rerun `db:sandbox:rebuild` and `db:schema:diff`.
+
 ## Immediate Sequencing Rule
 
 CX-0004 is complete. It proved that the existing six `Opportunity.stage` values already matched both SQL constraints and repaired only the validator's parsing scope. `npm run validate:domain-schema` and `npm run validate:phase18b` now pass.

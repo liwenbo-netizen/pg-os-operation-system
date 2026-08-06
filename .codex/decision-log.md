@@ -170,4 +170,28 @@ decision:
     CX-0401: "Edge Function HTTP contracts (state, available transitions, gate results, evaluate, execute) with stable error codes and JWT role mapping"
   rollback: "Default-off feature flags and kill switch from CX-0102; versioned RPC functions; expand/contract migrations; no browser-write fallback."
 ```
+
+## CX-0193
+
+```yaml
+decision:
+  id: CX-0193
+  issue: "Can the remote Staging schema be reconstructed from a canonical schema-only baseline?"
+  result: BLOCKED
+  baseline_reconstructability: NOT_PROVEN
+  candidate_baseline_generated: true
+  candidate_location: supabase/baseline-candidate
+  generation_method: "Management API read-only pg_catalog extraction; schema-only render in dependency order"
+  object_counts: { tables: 178, columns: 3106, constraints: 528, indexes: 399, policies: 125, triggers: 51, functions: 15, views: 2, sequences: 4, extensions: 5 }
+  sandbox:
+    configured: false
+    rebuilds_executed: 0
+    blocker: "Second project (PG-OS-CRM006B-R2-Rollback) is INACTIVE and its purpose is unconfirmed; SUPABASE_SANDBOX_* variables are absent."
+  remote_writes: false
+  staging_source_writes: false
+  migration_history_repair: false
+  legacy_migrations: { count: 24, preserved: true, canonical_status: NOT_DECIDED }
+  resolution: "Keep candidate baseline as a non-chain artifact; require user confirmation/activation of a migration sandbox and population of the new env keys before any rebuild; do not force PROVEN by ignoring unknown differences."
+  rollback: "Remove supabase/baseline-candidate, staging-catalog.json, and CX-0193 scripts/tests/commands; no remote change requires rollback."
+```
 ```

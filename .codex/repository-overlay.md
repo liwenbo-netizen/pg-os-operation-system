@@ -55,7 +55,10 @@ modules:
   domain_models:
     paths: [src/types/domain.ts, src/types/api.ts]
   database_migrations:
-    paths: [supabase/migrations, supabase/policies/rls_policies.sql, supabase/seed]
+    paths: [supabase/migrations, supabase/policies/rls_policies.sql, supabase/seed, supabase/baseline-candidate]
+  baseline_tooling:
+    paths: [scripts/baselineSafety.mjs, scripts/validate-baseline-environment.mjs, scripts/generate-schema-baseline.mjs, scripts/validate-schema-baseline.mjs, scripts/db-sandbox-rebuild.mjs, scripts/db-schema-diff.mjs, scripts/validate-baseline-reconstructability.mjs]
+    status: "CX-0193 tooling complete; sandbox rebuild blocked"
   application_services:
     paths: [src/services]
   api_layer:
@@ -230,4 +233,12 @@ blocked_commands:
 required_approval:
   - "Resolve the approved safety contract for an account with exactly one owner-attested non-production Project: either provision a separate production denylist target or explicitly approve a no-production-project marker design."
   - "Keep PG_OS_ENABLE_MIGRATION_WRITE=false until that decision, remote Schema baseline review, and an executable rollback path are complete."
+cx0193:
+  status: BLOCKED
+  reconstruction_status: NOT_PROVEN
+  candidate_baseline: supabase/baseline-candidate
+  staging_source: "SUPABASE_STAGING_PROJECT_REF (ACTIVE_HEALTHY, read-only)"
+  sandbox: "NOT_CONFIGURED; management API shows a second INACTIVE project (PG-OS-CRM006B-R2-Rollback) whose purpose is unconfirmed"
+  sandbox_write: false
+  required_human_action: "Confirm the second project (or an active replacement) as the disposable migration sandbox and populate SUPABASE_SANDBOX_PROJECT_REF/HOST plus PG_OS_MIGRATION_SANDBOX_* confirmations in the Git-ignored migration environment."
 ```

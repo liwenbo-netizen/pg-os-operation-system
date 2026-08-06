@@ -1,0 +1,45 @@
+{
+  "task_id": "CX-0193",
+  "generated_at": "2026-08-06T09:41:23.476Z",
+  "source_project_ref_env": "SUPABASE_STAGING_PROJECT_REF",
+  "source_identity_verified": true,
+  "source_writes": false,
+  "method": "Management API read-only pg_catalog extraction, schema-only render",
+  "files": [
+    "00_extensions.sql",
+    "10_public_schema.sql"
+  ],
+  "object_counts": {
+    "extensions": 5,
+    "tables": 178,
+    "columns": 3106,
+    "constraints": 528,
+    "indexes": 399,
+    "policies": 125,
+    "triggers": 51,
+    "functions": 15,
+    "views": 2,
+    "sequences": 4
+  },
+  "object_classification": {
+    "PG_OS_APPLICATION_MANAGED": 371,
+    "SUPABASE_PLATFORM_MANAGED": 0,
+    "EXTENSION_MANAGED": 5,
+    "LEGACY_UNKNOWN": 0,
+    "EXCLUDED_WITH_REASON": [
+      "auth schema (Supabase platform managed)",
+      "storage schema (Supabase platform managed)",
+      "supabase_migrations schema (migration history repair is forbidden)",
+      "real business data (schema-only extraction)",
+      "owner statements (non-portable; rendered without OWNER TO)",
+      "postgres/supabase_admin grants (platform roles)"
+    ]
+  },
+  "static_review": {
+    "status": "PASS",
+    "notes": [
+      "10_public_schema.sql: 3 environment-specific GRANT statement(s) require review."
+    ]
+  },
+  "formal_migration_chain": false
+}

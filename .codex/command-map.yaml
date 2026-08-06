@@ -133,6 +133,55 @@ commands:
     cx0190_result: BLOCKED
     evidence: "The aggregate gate begins with a passing CLI check, then fails closed on the absent production Project Ref/Host denylist. CLI authentication and remote Migration History reads pass; dry run, schema diff, idempotency, rollback, and cleanup remain unverified."
 
+  baseline_environment_check:
+    command: "npm run validate:baseline-environment"
+    source: "CX-0193"
+    safety: "Read-only environment identity and write-approval gate; no network or database access."
+    cx0193_result: BLOCKED
+    evidence: "Fails closed because SUPABASE_SANDBOX_* variables are unconfigured and the second project purpose is unconfirmed (management API name PG-OS-CRM006B-R2-Rollback is INACTIVE)."
+
+  schema_baseline_generate:
+    command: "npm run db:schema:baseline:generate"
+    source: "CX-0193"
+    safety: "Runs 12 read-only SELECT catalog queries through the Supabase Management API read-only endpoint against the staging source; writes local candidate SQL only."
+    cx0193_result: PASS
+    evidence: "Generated supabase/baseline-candidate (178 tables, 3106 columns, 125 policies, 51 triggers, 15 functions) and .codex/schema-baseline/staging-catalog.json; no remote writes."
+
+  schema_baseline_static_check:
+    command: "npm run validate:schema-baseline"
+    source: "CX-0193"
+    safety: "Local static review of candidate baseline files; no network or database access."
+    cx0193_result: PASS
+    evidence: "2 SQL files validated; 3 environment-specific GRANT statements listed for review; candidate is not part of the formal migration chain."
+
+  sandbox_rebuild:
+    command: "npm run db:sandbox:rebuild"
+    source: "CX-0193"
+    safety: "Writes only to the confirmed migration sandbox; requires explicit PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE=true plus marker/confirmations and Management API project identity verification. Default --check is read-only."
+    cx0193_result: BLOCKED
+    evidence: "No sandbox environment configured; the only second project is INACTIVE and its purpose is unconfirmed. Zero sandbox rebuilds executed."
+
+  schema_diff:
+    command: "npm run db:schema:diff"
+    source: "CX-0193"
+    safety: "Compares two local catalog snapshot JSON files with normalization; no network or database access."
+    cx0193_result: NOT_RUN
+    evidence: "Requires a rebuilt sandbox snapshot, which is blocked."
+
+  reconstructability_check:
+    command: "npm run validate:baseline-reconstructability"
+    source: "CX-0193"
+    safety: "Read-only evaluation of rebuild logs plus normalized diff; no network or database access."
+    cx0193_result: NOT_RUN
+    evidence: "Requires two successful sandbox rebuild logs and a clean normalized diff."
+
+  cx0193_focused_tests:
+    command: "npm run validate:cx0193"
+    source: "CX-0193"
+    safety: "Vitest only."
+    cx0193_result: PASS
+    evidence: "6 files / 43 tests."
+
   live_uat_write:
     commands:
       - "verify:uat-live-writes"

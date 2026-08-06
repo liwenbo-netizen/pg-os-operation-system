@@ -1,0 +1,189 @@
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { formatFailures, normalizeRef, splitTopLevelStatements } from "./baselineSafety.mjs";
+import { validateBaselineEnvironment } from "./validate-baseline-environment.mjs";
+
+export function sandboxRebuildGate(environment, options = {}) {
+  const failures = validateBaselineEnvironment(environment, {
+    now: options.now,
+    requireSandboxWrite: options.requireWrite ?? false
+  });
+
+  const sandboxRef = normalizeRef(environment.SUPABASE_SANDBOX_PROJECT_REF);
+  const project = options.project ?? null;
+  if (project) {
+    if (project.id !== sandboxRef) {
+      failures.push("Verified project identity does not match SUPABASE_SANDBOX_PROJECT_REF.");
+    }
+    if (!project.database?.host?.includes(sandboxRef)) {
+      failures.push("Verified project host does not match the sandbox Project Ref.");
+    }
+    if (project.status !== "ACTIVE_HEALTHY" && project.status !== "ACTIVE") {
+      failures.push(`Sandbox project is not active (status=${project.status ?? "unknown"}); rebuild is impossible.`);
+    }
+  }
+
+  return [...new Set(failures)];
+}
+
+export function planBatches(files, maxStatementsPerBatch = 25) {
+  const batches = [];
+  for (const [file, sql] of Object.entries(files)) {
+    const statements = splitTopLevelStatements(sql);
+    for (let i = 0; i < statements.length; i += maxStatementsPerBatch) {
+      batches.push({
+        file,
+        index: batches.length,
+        statements: statements.slice(i, i + maxStatementsPerBatch)
+      });
+    }
+  }
+  return batches;
+}
+
+export async function executeSandboxRebuild({
+  environment,
+  files,
+  project,
+  options = {},
+  executeBatchImpl
+}) {
+  const requireWrite = options.apply === true;
+  const gateFailures = sandboxRebuildGate(environment, { requireWrite, project, now: options.now });
+  if (gateFailures.length > 0) {
+    return {
+      overall: "BLOCKED",
+      gate: gateFailures,
+      batches: [],
+      reset: options.reset === true,
+      staging_source_write: false,
+      finished_at: new Date().toISOString()
+    };
+  }
+
+  const batches = planBatches(files, options.maxStatementsPerBatch);
+  const results = [];
+  let overall = "SUCCESS";
+  let reset = options.reset === true;
+  const token = environment.SUPABASE_ACCESS_TOKEN;
+  const sandboxRef = normalizeRef(environment.SUPABASE_SANDBOX_PROJECT_REF);
+  const baseUrl = options.baseUrl ?? "https://api.supabase.com/v1/projects";
+  const executor = executeBatchImpl ?? defaultExecuteBatch;
+
+  if (reset) {
+    const resetSql = "drop schema if exists public cascade; create schema public;";
+    const resetResult = await executor(token, sandboxRef, baseUrl, resetSql);
+    if (resetResult.status !== "ok") {
+      return {
+        overall: "FAILED",
+        gate: [],
+        batches: [{ file: "reset", index: 0, status: "failed", error: resetResult.error, statement_count: 1, duration_ms: resetResult.duration_ms }],
+        reset: true,
+        staging_source_write: false,
+        finished_at: new Date().toISOString()
+      };
+    }
+  }
+
+  for (const batch of batches) {
+    const started = Date.now();
+    const sql = batch.statements.join(";\n");
+    const result = await executor(token, sandboxRef, baseUrl, sql);
+    const durationMs = Date.now() - started;
+    const status = result.status === "ok" ? "success" : "failed";
+    if (status === "failed") overall = "FAILED";
+    results.push({
+      file: batch.file,
+      index: batch.index,
+      status,
+      error: result.error ?? null,
+      statement_count: batch.statements.length,
+      duration_ms: durationMs
+    });
+    if (status === "failed") break;
+  }
+
+  return {
+    overall,
+    gate: [],
+    batches: results,
+    reset,
+    staging_source_write: false,
+    started_at: options.startedAt ?? new Date().toISOString(),
+    finished_at: new Date().toISOString()
+  };
+}
+
+async function defaultExecuteBatch(token, projectRef, baseUrl, sql) {
+  try {
+    const response = await fetch(`${baseUrl}/${encodeURIComponent(projectRef)}/database/query`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ query: sql }),
+      signal: AbortSignal.timeout(120_000)
+    });
+    if (!response.ok) {
+      return { status: "failed", error: `HTTP ${response.status}` };
+    }
+    return { status: "ok", error: null };
+  } catch {
+    return { status: "failed", error: "request failed before a response was received" };
+  }
+}
+
+function readCandidateFiles(root = process.cwd()) {
+  const directory = `${root}/supabase/baseline-candidate`;
+  if (!existsSync(directory)) {
+    throw new Error("supabase/baseline-candidate does not exist.");
+  }
+  const files = {};
+  for (const entry of readdirSync(directory).sort()) {
+    if (entry.endsWith(".sql")) files[entry] = readFileSync(`${directory}/${entry}`, "utf8");
+  }
+  return files;
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const apply = args.includes("--apply");
+  const reset = args.includes("--reset");
+  const outputPath = args.find((arg) => arg.startsWith("--output="))?.slice("--output=".length);
+
+  try {
+    const files = readCandidateFiles();
+    const result = await executeSandboxRebuild({
+      environment: process.env,
+      files,
+      options: { apply, reset, now: new Date() }
+    });
+
+    if (result.overall === "BLOCKED") {
+      console.error(formatFailures("Sandbox rebuild blocked by safety gate:", result.gate));
+      process.exit(1);
+    }
+    if (result.overall === "FAILED") {
+      const failed = result.batches.find((batch) => batch.status === "failed");
+      console.error(`Sandbox rebuild FAILED at batch ${failed?.index ?? "?"} (${failed?.file ?? "reset"}): ${failed?.error ?? "unknown error"}`);
+      if (outputPath) writeLog(outputPath, result);
+      process.exit(1);
+    }
+    console.log(`Sandbox rebuild SUCCESS (${result.batches.length} batch(es), reset=${result.reset}).`);
+    console.log("staging_source_writes: false");
+    if (outputPath) writeLog(outputPath, result);
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : "Sandbox rebuild failed.");
+    process.exit(1);
+  }
+}
+
+function writeLog(path, value) {
+  const outputPath = resolve(process.cwd(), path);
+  mkdirSync(dirname(outputPath), { recursive: true });
+  writeFileSync(outputPath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+}
+
+if (fileURLToPath(import.meta.url) === process.argv[1]) await main();
