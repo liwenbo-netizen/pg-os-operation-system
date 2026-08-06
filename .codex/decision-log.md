@@ -194,4 +194,23 @@ decision:
   resolution: "Keep candidate baseline as a non-chain artifact; require user confirmation/activation of a migration sandbox and population of the new env keys before any rebuild; do not force PROVEN by ignoring unknown differences."
   rollback: "Remove supabase/baseline-candidate, staging-catalog.json, and CX-0193 scripts/tests/commands; no remote change requires rollback."
 ```
+
+## CX-0193-RETRY
+
+```yaml
+decision:
+  id: CX-0193-RETRY
+  issue: "Retry sandbox rebuild and baseline verification after the user's continuation request."
+  result: BLOCKED
+  sandbox_identity_verified: false
+  reasons:
+    - "SUPABASE_SANDBOX_PROJECT_REF/DB_HOST and all PG_OS_MIGRATION_SANDBOX_* confirmation keys are absent from .env.migration.local."
+    - "Management API shows the only second project (PG-OS-CRM006B-R2-Rollback) as INACTIVE; its purpose as a migration sandbox is unconfirmed."
+  writes_attempted: 0
+  source_writes: 0
+  command_changes:
+    - "package.json validate:baseline-environment now runs with --env-file=.env.migration.local so the documented command reflects real environment state."
+  resolution: "Do not attempt sandbox writes; keep CX-0193 BLOCKED and reconstruction NOT_PROVEN until the user configures and activates a migration sandbox."
+  rollback: "Revert the package.json command change if desired; no remote change requires rollback."
+```
 ```

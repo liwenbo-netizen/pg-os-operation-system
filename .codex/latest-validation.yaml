@@ -1,8 +1,9 @@
 task_id: CX-0193
-captured_at: "2026-08-06T17:50:00+08:00"
+captured_at: "2026-08-06T19:10:00+08:00"
 result: BLOCKED
 task_type: READ_ONLY_AND_SANDBOX
 baseline_reconstructability: NOT_PROVEN
+retry_round: 2
 product_code_changed: false
 runtime_application_behavior_changed: false
 validation_code_changed: true
@@ -86,6 +87,14 @@ validation:
   sandbox_rebuild_check: BLOCKED
   schema_diff: NOT_RUN
   reconstructability: NOT_RUN
+  retry_2026_08_06:
+    baseline_environment: BLOCKED
+    sandbox_rebuild_check: BLOCKED
+    schema_baseline_static_check: PASS
+    cx0193_focused_tests: PASS
+    writes_attempted: 0
+    sandbox_keys_configured: false
+    second_project_status: INACTIVE
   cx0193_focused_tests:
     status: PASS
     test_files: 6

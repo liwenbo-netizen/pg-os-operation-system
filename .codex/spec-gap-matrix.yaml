@@ -183,6 +183,7 @@ codex_task_cards:
       - "validate:baseline-environment and db:sandbox:rebuild --check fail closed: SUPABASE_SANDBOX_* variables are unconfigured; the account's second project (PG-OS-CRM006B-R2-Rollback) is INACTIVE and its purpose is unconfirmed."
       - "43 new tests cover environment identity, baseline safety, schema diff, and rebuild result semantics; npm test passes 73 files/415 tests; validate:phase18b passes."
       - "No sandbox rebuild, no normalized diff, no remote write, no baseline migration generation was executed."
+      - "Retry 2026-08-06: sandbox identity re-verified as NOT_CONFIGURED (SUPABASE_SANDBOX_* keys still missing; management API second project remains INACTIVE); npm run validate:baseline-environment and db:sandbox:rebuild --check fail closed; no write attempted."
     rollback: "Remove the candidate baseline directory, staging-catalog.json, and CX-0193 scripts/tests/commands; no database rollback is required."
   - id: CX-0201
     title: "Align workflow persistence"

@@ -50,6 +50,11 @@ staging source, but sandbox verification is blocked:
   `.env.example` sandbox keys in `.env.migration.local` (ref, host, marker, confirmations, write flag),
   then rerun `db:sandbox:rebuild` and `db:schema:diff`.
 
+Retry on 2026-08-06 (second CX-0193 request) ended the same way: the sandbox keys are still absent and
+the only second project (`PG-OS-CRM006B-R2-Rollback`) remains `INACTIVE`, so identity verification fails
+closed and no rebuild/diff/write was attempted. `validate:baseline-environment` now loads the protected
+env file (`--env-file=.env.migration.local`) so its output reflects the real blocked state.
+
 ## Immediate Sequencing Rule
 
 CX-0004 is complete. It proved that the existing six `Opportunity.stage` values already matched both SQL constraints and repaired only the validator's parsing scope. `npm run validate:domain-schema` and `npm run validate:phase18b` now pass.

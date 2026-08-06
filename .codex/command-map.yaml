@@ -139,6 +139,7 @@ commands:
     safety: "Read-only environment identity and write-approval gate; no network or database access."
     cx0193_result: BLOCKED
     evidence: "Fails closed because SUPABASE_SANDBOX_* variables are unconfigured and the second project purpose is unconfirmed (management API name PG-OS-CRM006B-R2-Rollback is INACTIVE)."
+    retry_2026_08_06: "Command now loads --env-file=.env.migration.local; fails closed only on missing sandbox keys. Staging identity/read-only checks pass."
 
   schema_baseline_generate:
     command: "npm run db:schema:baseline:generate"
@@ -160,6 +161,7 @@ commands:
     safety: "Writes only to the confirmed migration sandbox; requires explicit PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE=true plus marker/confirmations and Management API project identity verification. Default --check is read-only."
     cx0193_result: BLOCKED
     evidence: "No sandbox environment configured; the only second project is INACTIVE and its purpose is unconfirmed. Zero sandbox rebuilds executed."
+    retry_2026_08_06: "db:sandbox:rebuild --check re-ran and failed closed; --apply --reset was not attempted per task stop rules."
 
   schema_diff:
     command: "npm run db:schema:diff"

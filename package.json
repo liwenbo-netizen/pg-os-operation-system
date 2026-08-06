@@ -23,7 +23,7 @@
     "validate:no-production-project": "vitest run scripts/supabaseMigrationSafety.test.mjs scripts/read-only-schema-baseline.test.mjs",
     "db:schema:baseline:read-only": "node --env-file=.env.migration.local scripts/read-only-schema-baseline.mjs --output=.codex/schema-baseline/CX-0190.json",
     "validate:migration-safety": "npm run validate:supabase-cli && npm run validate:migration-environment && npm run validate:production-denylist && npm run validate:no-production-project",
-    "validate:baseline-environment": "node scripts/validate-baseline-environment.mjs",
+    "validate:baseline-environment": "node --env-file=.env.migration.local scripts/validate-baseline-environment.mjs",
     "db:schema:baseline:generate": "node --env-file=.env.migration.local scripts/generate-schema-baseline.mjs",
     "validate:schema-baseline": "node scripts/validate-schema-baseline.mjs",
     "db:sandbox:rebuild": "node --env-file=.env.migration.local scripts/db-sandbox-rebuild.mjs",
