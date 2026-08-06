@@ -1,0 +1,220 @@
+version: 1
+task: W0_REPOSITORY_RECONNAISSANCE
+specifications:
+  v18: "docs/PG_OS_AI_Native_Specification_V1.8.0_Codex_Implementation_Ready_Final_20260731.md"
+  workflow_machine: "docs/PG_OS_Workflow_Machine_V2.5.0_Codex_Ready_20260731.yaml"
+  backlog: "docs/PG_OS_Codex_Implementation_Backlog_V1.0_20260731.md"
+
+status_definitions:
+  SKIP_PRESENT_AND_VALIDATED: "The task's required W0 output already exists and has W0 evidence. This does not assert every product feature is complete."
+  READY: "The gap is evidenced, its dependencies are satisfied, and it is the next permitted product slice after baseline repair."
+  BLOCKED: "The task is ordered behind unfinished dependency work, an unresolved baseline failure, or an unavailable environment capability."
+
+baseline_blockers:
+  - id: "B0-DOMAIN-SCHEMA"
+    status: RESOLVED
+    impact: "The local CI UAT gate is green after CX-0004."
+    evidence:
+      - "src/types/domain.ts:568-577 and both SQL constraints already contain discovery, need_confirmed, proposal_drafting, proposal_review, won, lost."
+      - "CX-0004 replaced broad stage regex extraction with TypeScript AST-scoped Opportunity.stage extraction."
+      - "npm run validate:domain-schema and npm run validate:phase18b pass."
+    remediation_scope: "Completed without schema, migration, seed, or data changes."
+  - id: "B0-LIVE-MIGRATION"
+    status: BLOCKED
+    impact: "No live migration verification can be executed from the local repository."
+    evidence:
+      - "supabase@2.110.0 is pinned in package.json/package-lock.json and npm run validate:supabase-cli passes through project-local npx execution."
+      - "supabase/config.toml and fail-closed CLI/environment/denylist validators exist; Docker was not started or required."
+      - "Protected local Staging identity, database credentials, marker and access token are configured in a Git-ignored migration environment with writes disabled."
+      - "CLI authentication and a read-only remote Migration History query pass; the account exposes exactly one owner-attested cleanable, traffic-free and non-sensitive Project."
+      - "No real production Project Ref/Host exists for the mandatory denylist, so the environment gate continues to fail closed."
+    remediation_scope: "Resolve the no-production-project denylist contract without fabricated values, then execute read-only Schema baseline inspection before any migration write."
+  - id: "B0-SEED-PACKAGE"
+    status: BLOCKED
+    impact: "Complete China-media seed package validation is unavailable."
+    evidence:
+      - "npm run validate:china-media:seed passed 3 precheck tests then required --package or PGOS_CHINA_MEDIA_SEED_PACKAGE."
+    remediation_scope: "Supply the archived seed package path through the validator's supported input."
+
+capability_assessment:
+  - id: "CAP-WORKFLOW-MACHINE"
+    assessment: PRESENT_VALIDATED
+    specification: "V1.8 sections 9-12, 15.9 and Workflow Machine V2.5 transition catalog"
+    evidence:
+      - "scripts/workflowMachineLoader.mjs resolves the sole canonical source using a module-relative URL and rejects unsafe YAML tags, unknown aliases, oversized input, duplicate mapping keys, and unsupported structures."
+      - "scripts/validate-workflow-machine.mjs loads docs/PG_OS_Workflow_Machine_V2.5.0_Codex_Ready_20260731.yaml and validates V1.8.0 / V2.5.0 versions, required registries, references, and the Codex task DAG."
+      - "scripts/workflowMachineLoader.test.mjs: 10 regression tests; npm run validate:workflow-machine and npm test pass."
+    implication: "The canonical V2.5 definition is now safely loadable and statically validated. It is not yet a runtime transition source of truth; execution remains deferred to later Workflow Kernel tasks."
+  - id: "CAP-TRANSITION-ATOMICITY"
+    assessment: PARTIAL
+    specification: "V1.8 INV-006, INV-007, sections 11, 12 and 15.3-15.5"
+    evidence:
+      - "src/services/guardService.ts:49-382 implements client-domain guards."
+      - "supabase/migrations/202607260001_media_onboarding_stage_gates.sql defines a media stage-gate trigger."
+      - "src/repositories/supabaseWorkflowRepository.ts:1818-1838 performs per-table browser upserts without a visible transaction/version predicate."
+    implication: "Existing guards and trigger are valuable, but do not evidence a universal atomic/idempotent server transition executor."
+  - id: "CAP-AUDIT-OUTBOX-TIMERS"
+    assessment: PARTIAL
+    specification: "V1.8 sections 6.23-6.26, 12, 15.7-15.8 and 17"
+    evidence:
+      - "Audit repositories and business-audit coverage services exist under src/repositories and src/services."
+      - "No durable outbox or server-side timer/job implementation was found in src, scripts, or supabase."
+    implication: "Audit coverage exists; after-commit delivery and workflow timing remain unproven."
+  - id: "CAP-AUTHORIZATION"
+    assessment: PARTIAL
+    specification: "V1.8 sections 13, 14.18 and 16"
+    evidence:
+      - "src/repositories/authSessionRepository.ts:286-324 resolves Supabase profiles and user_roles."
+      - "src/services/rbacService.ts, guardService.ts and rlsService.ts provide role/capability checks."
+      - "supabase/migrations/202606290002_rls_policies.sql provides SQL RLS policy DDL."
+    implication: "Current authorization is substantial, but canonical roles, delegation, field ownership, and negative server tests must be compared before replacement."
+  - id: "CAP-API-ORCHESTRATION"
+    assessment: PARTIAL
+    specification: "V1.8 section 16"
+    evidence:
+      - "src/lib/supabase.ts creates a browser client."
+      - "src/repositories/workflowRepositoryFactory.ts selects the browser Supabase adapter."
+      - "No server route/controller layer was found in the repository scan."
+    implication: "Existing client/repository contracts are adapter points; the specification's server API contract is not yet verified."
+  - id: "CAP-ROLE-UX"
+    assessment: PARTIAL
+    specification: "V1.8 sections 13, 14 and 18"
+    evidence:
+      - "src/app/AppShell.tsx and src/pages/workbench/WorkbenchOperationsPage.tsx implement a role-oriented shell/workbench."
+      - "src/pages/media/TechnicalIntegrationWorkspace.tsx has guided checklist UI."
+      - "No reusable V1.8 workflow-machine-driven guided UI foundation was found."
+    implication: "Adapt existing shell/components rather than build a parallel design system."
+  - id: "CAP-FEATURE-FLAGS"
+    assessment: PRESENT_VALIDATED
+    specification: "V1.8 sections 15 and 20; backlog CX-0102"
+    evidence:
+      - "src/config/workflowFeatureFlags.ts defines workflow_machine_v25_provider and workflow_machine_v25_validation_only with owner, default false, zero rollout, removal date, removal condition, and kill-switch metadata."
+      - "src/services/workflowDefinitionCompatibility.ts resolves Legacy, validation-only, explicit V2.5, and kill-switch modes without importing the compatibility layer into App.tsx."
+      - "scripts/workflowDefinitionCompatibility.test.mjs passes 14 focused tests covering defaults, immutability, failures, no silent fallback, and configuration isolation."
+    implication: "A reversible definition-provider seam now exists. It does not execute transitions or change the current application path."
+  - id: "CAP-MIGRATION-DOCUMENTATION"
+    assessment: CONFLICT
+    specification: "V1.8 INV-045 and section 20"
+    evidence:
+      - "supabase/README.md documents migration order through 202607260001_media_onboarding_stage_gates.sql."
+      - "supabase/migrations contains newer 202607270001 through 202607300001 SQL files."
+    implication: "Documented deployment order is stale relative to repository files."
+  - id: "CAP-BUILD-PERFORMANCE"
+    assessment: PARTIAL
+    specification: "V1.8 implementation quality and usability expectations"
+    evidence:
+      - "npm run build passed but emitted a 1,294.31 kB minified JavaScript chunk warning."
+    implication: "Defer code splitting to a measured performance slice; it is not a W0 code change."
+
+codex_task_cards:
+  - id: CX-0001
+    title: "Create repository map"
+    status: SKIP_PRESENT_AND_VALIDATED
+    evidence: [".codex/repo-map.md", "AGENTS.md W0 requirement"]
+  - id: CX-0002
+    title: "Establish baseline"
+    status: SKIP_PRESENT_AND_VALIDATED
+    evidence: [".codex/baseline-report.md", ".codex/command-map.yaml", "npm ci, lint, test, build and validators executed in W0"]
+  - id: CX-0003
+    title: "Create specification gap matrix"
+    status: SKIP_PRESENT_AND_VALIDATED
+    evidence: [".codex/spec-gap-matrix.yaml", ".codex/implementation-plan.md"]
+  - id: CX-0004
+    title: "Align Opportunity.stage Domain and Database Schema"
+    status: COMPLETED
+    evidence:
+      - "scripts/validate-domain-schema-alignment.mjs uses TypeScript AST extraction scoped to the unique Opportunity declaration."
+      - "scripts/validate-domain-schema-alignment.test.mjs covers unrelated stage fields before/after Opportunity, formatting, true mismatch, missing stage, missing declaration, and duplicate declarations."
+      - "npm run validate:domain-schema, npm run validate:phase18b, npm run lint, npm run build, and npm test pass."
+    rollback: "Revert the validator and its regression test; no schema/data rollback is required."
+  - id: CX-0101
+    title: "Add versioned machine loading"
+    status: COMPLETED
+    evidence:
+      - "scripts/workflowMachineLoader.mjs loads the canonical V2.5 YAML through a repository-relative Node URL without a machine-path hard code or external dependency."
+      - "The loader performs restricted, non-executing YAML parsing; V1.8.0/V2.5.0 version checks; required-registry checks; transition, guided-flow and task-DAG reference checks; and deep-freezes the result."
+      - "npm run validate:workflow-machine reports 16 roles, 42 transitions and 19 tasks; scripts/workflowMachineLoader.test.mjs passes 10 focused tests."
+      - "No application entry imports the loader, and no state transition, API, schema, data, audit, or UI behavior was modified."
+    rollback: "Remove the loader, validation command and focused test. The existing application has no runtime dependency on this static validation path."
+  - id: CX-0102
+    title: "Establish adapters and feature flags"
+    status: COMPLETED
+    evidence:
+      - "src/services/workflowDefinitionCompatibility.ts provides the read-only interface plus Legacy and V2.5 adapters; the default and missing-flag paths return the Legacy provider without loading V2.5."
+      - "src/config/workflowFeatureFlags.ts defines two temporary default-off flags with PG_OS ownership, zero rollout, 2027-01-31 removal date, and kill-switch support."
+      - "Explicit V2.5 initialization fails with actionable error codes; validation-only failures retain Legacy and report invalid health; kill-switch mode does not invoke the V2.5 factory."
+      - "npm run validate:workflow-compatibility passes 14 tests; npm test passes 65 files / 353 tests; validate:workflow-machine, domain-schema, phase2, phase18b, lint, and build pass."
+    rollback: "Leave both flags false or activate the kill switch; remove the compatibility modules, focused test, and package script. No schema or data rollback is required."
+  - id: CX-0190
+    title: "Prepare Supabase migration safety environment"
+    status: BLOCKED
+    evidence:
+      - "REMOTE_STAGING_SUPABASE is approved; supabase@2.110.0 is an exact project devDependency and supabase/config.toml exists."
+      - "scripts/supabaseMigrationSafety.mjs and direct tests enforce exact CLI locking, staging marker, target identity, production Project Ref/Host separation, and explicit write enablement without logging secret values."
+      - "npm run validate:supabase-cli passes; protected local Staging identity, database credentials, marker and access token are configured in a Git-ignored migration environment with PG_OS_ENABLE_MIGRATION_WRITE=false."
+      - "Supabase CLI authentication passes, the protected Project identity matches the existing application configuration, and a read-only remote Migration History query succeeds."
+      - "The account exposes exactly one Project; owner attestation says it is cleanable, traffic-free and non-sensitive, so no separate production Project Ref/Host is available for the required denylist."
+      - "The environment and production-denylist validators fail closed only on SUPABASE_PRODUCTION_PROJECT_REF and SUPABASE_PRODUCTION_DB_HOST."
+      - "No remote link, SQL, schema change, migration, backfill or cleanup was executed."
+    required_human_inputs:
+      - "Resolve whether CX-0190 will provision a separate production-denylist target or amend the contract with an explicit no-production-project marker; do not invent placeholder Project values."
+    rollback: "Revoke the temporary CLI token, rotate the database password again, remove the Git-ignored migration environment, and revert migration-safety scripts/tests, package scripts/dependency, Supabase init files, README, and .codex records. No schema/data rollback is required."
+  - id: CX-0201
+    title: "Align workflow persistence"
+    status: BLOCKED
+    evidence:
+      - "CX-0102 is complete, so the task dependency is satisfied."
+      - "Current per-table upserts are documented at src/repositories/supabaseWorkflowRepository.ts:1818-1838."
+      - "CX-0190 remains BLOCKED: protected Staging access is verified, but the mandatory production Project Ref/Host denylist and remote rehearsal evidence are unavailable."
+  - id: CX-0202
+    title: "Implement transition execution"
+    status: BLOCKED
+    evidence: ["Backlog declares dependency CX-0201.", "V2.5 specifies transaction/idempotency/optimistic locks in docs workflow-machine YAML:590+. "]
+  - id: CX-0203
+    title: "Implement guards, checklists and target resolvers"
+    status: BLOCKED
+    evidence: ["Backlog declares dependency CX-0202.", "Existing client guards: src/services/guardService.ts:49-382."]
+  - id: CX-0204
+    title: "Implement audit, outbox and timers"
+    status: BLOCKED
+    evidence: ["Backlog declares dependency CX-0202.", "Audit exists; no durable outbox/timer implementation found."]
+  - id: CX-0301
+    title: "Implement missing readiness and passport objects"
+    status: BLOCKED
+    evidence: ["Backlog declares dependency CX-0204.", "Existing onboarding/integration domain types: src/types/domain.ts:117-381."]
+  - id: CX-0302
+    title: "Implement roles, data scopes and field ownership"
+    status: BLOCKED
+    evidence: ["Backlog declares dependency CX-0301.", "Existing partial role/RLS evidence: src/repositories/authSessionRepository.ts:286-324 and src/services/rlsService.ts:73-99."]
+  - id: CX-0401
+    title: "Implement workflow APIs"
+    status: BLOCKED
+    evidence: ["Backlog declares dependencies CX-0203 and CX-0302.", "No server API layer is currently verified; browser Supabase client is at src/lib/supabase.ts."]
+  - id: CX-0402
+    title: "Implement role, readiness and guided APIs"
+    status: BLOCKED
+    evidence: ["Backlog declares dependencies CX-0301, CX-0401 and CX-0102."]
+  - id: CX-0501
+    title: "Implement workspace and reusable guided UI foundation"
+    status: BLOCKED
+    evidence: ["Backlog declares dependency CX-0402.", "Existing UI adaptation points: src/app/AppShell.tsx and src/pages/media/TechnicalIntegrationWorkspace.tsx."]
+  - id: CX-0502
+    title: "Implement role flows incrementally"
+    status: BLOCKED
+    evidence: ["Backlog declares dependency CX-0501.", "Current route catalog: src/routes/routes.ts."]
+  - id: CX-0601
+    title: "Implement composite readiness and sellability"
+    status: BLOCKED
+    evidence: ["Backlog declares dependencies CX-0301, CX-0402 and CX-0502."]
+  - id: CX-0602
+    title: "Implement gray, ramp and safety controls"
+    status: BLOCKED
+    evidence: ["Backlog declares dependencies CX-0204 and CX-0401."]
+  - id: CX-0701
+    title: "Backfill and verify historical data"
+    status: BLOCKED
+    evidence: ["Backlog declares dependencies CX-0201, CX-0301 and CX-0601.", "Live migration capability is unavailable in W0."]
+  - id: CX-0702
+    title: "Roll out by role and complete final verification"
+    status: BLOCKED
+    evidence: ["Backlog declares dependencies CX-0502, CX-0601, CX-0602 and CX-0701.", "No feature-flag system is present."]

@@ -1,0 +1,98 @@
+task_id: CX-0190
+captured_at: "2026-08-02T00:20:00+08:00"
+result: BLOCKED
+product_code_changed: false
+runtime_application_behavior_changed: false
+validation_code_changed: true
+documentation_changed: true
+changed_files:
+  - .codex/repository-overlay.md
+  - .codex/baseline-report.md
+  - .codex/command-map.yaml
+  - .codex/spec-gap-matrix.yaml
+  - .codex/implementation-plan.md
+  - .codex/decision-log.md
+  - .codex/validation/CX-0190.md
+  - .codex/latest-validation.yaml
+  - package.json
+  - package-lock.json
+  - .env.example
+  - supabase/config.toml
+  - supabase/.gitignore
+  - supabase/README.md
+  - scripts/supabaseMigrationSafety.mjs
+  - scripts/supabaseMigrationSafety.test.mjs
+  - scripts/validate-supabase-cli.mjs
+  - scripts/validate-migration-environment.mjs
+  - scripts/validate-production-denylist.mjs
+  - scripts/validate-secret-hygiene.mjs
+  - scripts/validate-secret-hygiene.test.mjs
+schema_or_data_changed: false
+dependencies_changed: true
+ci_changed: false
+environment_template_changed: true
+migration_executed: false
+production_accessed: false
+remote_staging_accessed: true
+blockers:
+  - "Protected Staging identity, database credentials, marker and access token are configured and verified, but the mandatory production Project Ref/Host denylist is absent."
+  - "The Supabase account exposes exactly one owner-attested non-production Project; no real production identity exists and placeholder denylist values are prohibited."
+  - "No executable Dry Run, Schema Diff, rollback, idempotency, or cleanup path can be truthfully verified."
+validation:
+  node_runtime:
+    local: "v24.15.0"
+    ci: "22"
+    approved_cli_compatibility: PASS
+  secret_hygiene: PASS
+  supabase_cli_version_check: PASS
+  supabase_cli_authentication: PASS
+  staging_database_credentials: PASS
+  remote_migration_history_read: PASS
+  migration_environment_safety_check: BLOCKED
+  migration_dry_run: BLOCKED
+  schema_diff: BLOCKED
+  migration_safety_gate: BLOCKED
+  workflow_machine_static_validation:
+    status: PASS
+    roles: 16
+    transitions: 42
+    tasks: 19
+  workflow_compatibility:
+    status: PASS
+    test_files: 1
+    tests: 14
+  domain_schema: PASS
+  phase2_static_sql:
+    status: PASS
+    tables: 37
+    policies: 66
+    migration_applied: false
+  lint: PASS
+  migration_safety_focused_tests:
+    status: PASS
+    test_files: 1
+    tests: 6
+  unit_and_repository_tests:
+    status: PASS
+    test_files: 66
+    tests: 359
+  build:
+    status: PASS_WITH_WARNING
+    warning: "Vite JS chunk is 1294.31 kB minified, above the 500 kB warning threshold."
+  ci_local_uat:
+    status: PASS
+    database_migration_evidence: false
+pre_existing_failures: []
+new_failures: []
+artifacts:
+  - .codex/validation/CX-0190.md
+  - .codex/decision-log.md
+  - .codex/spec-gap-matrix.yaml
+  - .codex/implementation-plan.md
+  - .codex/command-map.yaml
+  - .codex/repository-overlay.md
+rollback: "Revoke the temporary CLI token, rotate the database password again, remove the Git-ignored migration environment, and revert migration-safety scripts/tests, package scripts/dependency, environment template, Supabase init files, README, and .codex records. No schema/data rollback is required."
+next_task:
+  id: CX-0201
+  status: BLOCKED
+  reason: "CX-0190 cannot complete until the no-production-project denylist contract is explicitly resolved and remote Schema baseline/dry-run/cleanup evidence passes."

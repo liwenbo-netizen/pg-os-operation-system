@@ -1,0 +1,180 @@
+version: 1
+task: W0_REPOSITORY_RECONNAISSANCE
+captured_at: "2026-08-01T20:20:00+08:00"
+working_directory: "C:/Users/Admin/Documents/PG OS Operation System"
+source_evidence:
+  - package.json
+  - .github/workflows/ci.yml
+  - vercel.json
+  - supabase/README.md
+
+commands:
+  install:
+    command: "npm ci"
+    source: ".github/workflows/ci.yml and vercel.json"
+    safety: "writes node_modules only; does not change package manifests or lockfile"
+    w0_result: PASS
+    evidence: "added 145 packages in 33.9s"
+
+  format_check:
+    command: null
+    source: "package.json"
+    w0_result: NOT_DISCOVERED
+    evidence: "No format or prettier script is declared."
+
+  lint:
+    command: "npm run lint"
+    source: "package.json"
+    w0_result: PASS
+    evidence: "Executes tsc --noEmit."
+
+  typecheck:
+    command: "npm run lint"
+    source: "package.json"
+    w0_result: PASS
+    evidence: "The repository aliases lint to tsc --noEmit; there is no separate typecheck script."
+
+  unit_and_repository_tests:
+    command: "npm test"
+    source: "package.json"
+    w0_result: PASS
+    evidence: "Vitest: 63 files and 322 tests passed."
+
+  focused_static_sql_check:
+    command: "npm run validate:phase2"
+    source: "package.json"
+    w0_result: PASS
+    evidence: "Phase 2 SQL validation: 37 tables and 66 policies."
+
+  schema_alignment:
+    command: "npm run validate:domain-schema"
+    source: "package.json"
+    w0_result: FAIL
+    evidence: "Opportunity.stage domain values are absent/misaligned with the base schema and alignment migration constraint."
+
+  workflow_machine_static_validation:
+    command: "npm run validate:workflow-machine"
+    source: "package.json; added by CX-0101"
+    safety: "Read-only Node static validation of the canonical versioned YAML; no workflow state mutation."
+    cx0101_result: PASS
+    evidence: "Loads docs/PG_OS_Workflow_Machine_V2.5.0_Codex_Ready_20260731.yaml through the repository-relative loader and validates versions, registries, references, and the task DAG."
+
+  workflow_compatibility_validation:
+    command: "npm run validate:workflow-compatibility"
+    source: "package.json; added by CX-0102"
+    safety: "Read-only Vitest contract coverage for default Legacy selection, V2.5 definition reads, flags, kill switch, and initialization failure behavior."
+    cx0102_result: PASS
+    evidence: "scripts/workflowDefinitionCompatibility.test.mjs: 14 tests passed; no application entry, database, route, or transition execution is involved."
+
+  ci_local_gate:
+    command: "npm run validate:phase18b"
+    source: ".github/workflows/ci.yml"
+    w0_result: FAIL
+    evidence: "Secret hygiene, test, lint and build passed; domain-schema failed."
+
+  china_media_seed_validation:
+    command: "npm run validate:china-media:seed"
+    source: "package.json"
+    w0_result: BLOCKED
+    evidence: "3 precheck tests passed; runtime validator needs --package or PGOS_CHINA_MEDIA_SEED_PACKAGE."
+    required_environment:
+      - "PGOS_CHINA_MEDIA_SEED_PACKAGE"
+
+  generated_seed_write:
+    command: "npm run generate:china-media:seed-sql"
+    source: "package.json"
+    safety: "writes supabase/seed/202607100002_china_media_ecosystem_seed.sql"
+    w0_result: NOT_RUN
+    reason: "W0 forbids product, database and business-configuration changes."
+
+  live_migration:
+    command: null
+    source: "supabase/migrations and supabase/README.md"
+    w0_result: BLOCKED
+    evidence: "Supabase CLI was not installed/discoverable; no repository-local migration command was declared."
+    required_capability: "Approved Supabase CLI/project configuration and a non-production or approved target."
+
+  supabase_cli_version_check:
+    command: "npm run validate:supabase-cli"
+    source: "CX-0190 remote-staging reassessment"
+    cx0190_result: PASS
+    safety: "Checks package.json, package-lock.json, supabase/config.toml, and project-local CLI version without connecting to a database."
+    evidence: "supabase is pinned to 2.110.0; project-local npx execution reports 2.110.0 using the official package's Windows Go binary override."
+
+  migration_environment_safety_check:
+    command: "npm run validate:migration-environment"
+    source: "CX-0190 remote-staging reassessment"
+    cx0190_result: BLOCKED
+    evidence: "Protected Staging identity, DB URL/password, marker and access token are Git-ignored and verified with writes disabled; only the required production Project Ref/Host denylist remains absent."
+    required_capability: "Resolve the no-production-project denylist contract without fabricated values."
+
+  production_denylist_check:
+    command: "npm run validate:production-denylist"
+    source: "CX-0190"
+    cx0190_result: BLOCKED
+    safety: "Compares normalized identities and logs only failure descriptions, never supplied values."
+    evidence: "The command fails closed because Staging and production denylist variables have not been injected."
+
+  migration_dry_run:
+    command: null
+    source: "CX-0190"
+    cx0190_result: BLOCKED
+    evidence: "Cannot safely apply migrations without both an approved CLI and a verified non-production target."
+
+  schema_diff:
+    command: null
+    source: "CX-0190"
+    cx0190_result: BLOCKED
+    evidence: "Neither Supabase CLI nor pg_dump is available, and no isolated database exists for before/after comparison."
+
+  migration_safety_gate:
+    command: "npm run validate:migration-safety"
+    source: "CX-0190"
+    cx0190_result: BLOCKED
+    evidence: "The aggregate gate begins with a passing CLI check, then fails closed on the absent production Project Ref/Host denylist. CLI authentication and remote Migration History reads pass; dry run, schema diff, idempotency, rollback, and cleanup remain unverified."
+
+  live_uat_write:
+    commands:
+      - "verify:uat-live-writes"
+      - "uat:cm5b:live"
+      - "uat:cm5c:live"
+      - "uat:cm5d:live"
+    source: "package.json"
+    safety: "writes to a configured live Supabase target"
+    w0_result: NOT_RUN
+    reason: "W0 is read-only and must not perform business writes."
+
+  production_build:
+    command: "npm run build"
+    source: "package.json and vercel.json"
+    w0_result: PASS_WITH_WARNING
+    evidence: "1,294.31 kB minified JS chunk exceeds Vite's 500 kB warning threshold."
+
+  e2e:
+    command: null
+    source: "package.json and repository file scan"
+    w0_result: NOT_DISCOVERED
+    evidence: "No Playwright or Cypress command/configuration was found."
+
+  production_smoke:
+    commands:
+      - "npm run smoke:production"
+      - "npm run smoke:production:auth"
+      - "npm run smoke:production:manual-login"
+    source: "package.json"
+    w0_result: NOT_RUN
+    reason: "Production/network validation is outside read-only W0."
+
+ci:
+  workflow: ".github/workflows/ci.yml"
+  trigger:
+    - "push to master"
+    - "pull_request to master"
+  node_version: "22"
+  command: "npm run validate:phase18b"
+  current_w0_assessment: "Would fail at domain-schema until the Opportunity.stage alignment is repaired."
+
+known_absences:
+  - "No repository-declared formatter check."
+  - "No repository-declared live Supabase migration command."
+  - "No separate end-to-end browser runner."
