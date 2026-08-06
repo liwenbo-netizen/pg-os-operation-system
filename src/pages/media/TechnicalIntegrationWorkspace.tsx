@@ -250,8 +250,11 @@ export function TechnicalIntegrationWorkspace({
   const project = workspace.project;
   const [profileDraft, setProfileDraft] = useState(() => createProfileDraft(publisher, state));
   const [activeWorkspaceView, setActiveWorkspaceView] = useState<
-    "handoff" | "guided" | "profile" | "overview" | "gates" | "evidence"
-  >("handoff");
+    "execute" | "plan" | "records"
+  >("execute");
+  const [activePlanView, setActivePlanView] = useState<
+    "overview" | "profile" | "gates" | "handoff"
+  >("overview");
   const [activeProfileStep, setActiveProfileStep] = useState(0);
   const [activeWorkflowPhase, setActiveWorkflowPhase] = useState<IntegrationWorkflowPhaseIndex>(0);
   const [selectedCheckCode, setSelectedCheckCode] = useState("");
@@ -394,7 +397,7 @@ export function TechnicalIntegrationWorkspace({
     if (preferred) {
       setActiveWorkflowPhase(preferred.workflowPhase);
       setSelectedCheckCode(preferred.template.code);
-      if (requested) setActiveWorkspaceView("guided");
+      if (requested) setActiveWorkspaceView("execute");
     }
   }, [
     initialCheckCode,
@@ -477,12 +480,13 @@ export function TechnicalIntegrationWorkspace({
   function openWorkflowPhase(
     phaseIndex: IntegrationWorkflowPhaseIndex,
     checkCode?: string,
-    view: "guided" | "gates" = "guided"
+    destination: "execute" | "plan" = "execute"
   ) {
     setActiveWorkflowPhase(phaseIndex);
     const firstItem = workspace.items.find((item) => item.workflowPhase === phaseIndex);
     setSelectedCheckCode(checkCode ?? firstItem?.template.code ?? "");
-    setActiveWorkspaceView(view);
+    setActiveWorkspaceView(destination);
+    if (destination === "plan") setActivePlanView("gates");
   }
 
   function evidenceLabel(type: IntegrationEvidenceType) {
@@ -712,12 +716,9 @@ export function TechnicalIntegrationWorkspace({
         aria-label={zh ? "技术接入工作台视图" : "Technical integration workspace views"}
       >
         {([
-          ["handoff", zh ? "工程交接" : "Engineering handoff"],
-          ["guided", zh ? "阶段执行" : "Gate execution"],
-          ["profile", zh ? "方案与技术资料" : "Solution & technical data"],
-          ["overview", zh ? "项目全貌" : "Project overview"],
-          ["gates", zh ? "全量清单" : "Full checklist"],
-          ["evidence", zh ? "证据与上线审批" : "Evidence & approval"]
+          ["execute", zh ? "当前执行" : "Current execution"],
+          ["plan", zh ? "项目计划" : "Project plan"],
+          ["records", zh ? "记录中心" : "Records"]
         ] as const).map(([view, label]) => (
           <button
             key={view}
@@ -736,7 +737,300 @@ export function TechnicalIntegrationWorkspace({
         ))}
       </div>
 
-      <section className={activeWorkspaceView === "handoff" ? "border-b border-slate-200" : "hidden"}>
+      {activeWorkspaceView === "plan" ? (
+        <div
+          className="flex overflow-x-auto border-b border-slate-200 bg-slate-50/70 px-5 py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          aria-label={zh ? "项目计划工具" : "Project planning tools"}
+        >
+          {([
+            ["overview", zh ? "生命周期计划" : "Lifecycle plan"],
+            ["profile", zh ? "方案配置" : "Solution setup"],
+            ["gates", zh ? "全量清单" : "Full checklist"],
+            ["handoff", zh ? "交接资料包" : "Handoff packet"]
+          ] as const).map(([view, label]) => (
+            <button
+              key={view}
+              className={`h-9 shrink-0 rounded-md px-3 text-xs font-semibold ${
+                activePlanView === view
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-600 hover:bg-white hover:text-slate-950"
+              }`}
+              type="button"
+              onClick={() => setActivePlanView(view)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {activeWorkspaceView === "execute" ? (
+        <section className="border-b border-slate-200 bg-slate-50/40">
+          <div className="grid xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="border-b border-slate-200 p-5 xl:border-b-0 xl:border-r">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="max-w-3xl">
+                  <p className="text-xs font-semibold text-blue-700">
+                    {zh ? "项目驾驶舱" : "PROJECT COCKPIT"}
+                  </p>
+                  <h2 className="mt-2 text-xl font-semibold leading-7 text-slate-950">
+                    {primaryCoordinationPhase.nextItem
+                      ? zh
+                        ? primaryCoordinationPhase.nextItem.template.titleZh
+                        : primaryCoordinationPhase.nextItem.template.title
+                      : project?.next_action ??
+                        (zh ? "当前阶段已完成" : "Current gate is complete")}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {zh
+                      ? `${publisher.name} 当前位于 Gate ${String(primaryCoordinationPhase.index).padStart(2, "0")}，围绕当前交付目标推进。`
+                      : `${publisher.name} is at Gate ${String(primaryCoordinationPhase.index).padStart(2, "0")}, focused on the current gate deliverable.`}
+                  </p>
+                </div>
+                <button
+                  className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700"
+                  type="button"
+                  onClick={() =>
+                    openWorkflowPhase(
+                      primaryCoordinationPhase.index,
+                      primaryCoordinationPhase.nextItem?.template.code
+                    )
+                  }
+                >
+                  {zh ? "继续当前任务" : "Continue current task"}
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </button>
+              </div>
+
+              <dl className="mt-5 grid border-y border-slate-200 sm:grid-cols-2 2xl:grid-cols-4">
+                <div className="border-b border-slate-200 py-3 pr-4 sm:border-r 2xl:border-b-0">
+                  <dt className="text-xs font-semibold text-slate-500">
+                    {zh ? "接入路线" : "Integration route"}
+                  </dt>
+                  <dd className="mt-2 text-sm font-semibold text-slate-900">
+                    {channelDefinition
+                      ? zh
+                        ? channelDefinition.nameZh
+                        : channelDefinition.name
+                      : zh
+                        ? "待确认"
+                        : "Pending"}
+                    {" · "}
+                    {modeDefinition
+                      ? zh
+                        ? modeDefinition.nameZh
+                        : modeDefinition.name
+                      : zh
+                        ? "待确认"
+                        : "Pending"}
+                  </dd>
+                </div>
+                <div className="border-b border-slate-200 py-3 sm:pl-4 2xl:border-b-0 2xl:border-r 2xl:pr-4">
+                  <dt className="text-xs font-semibold text-slate-500">
+                    {zh ? "当前阶段" : "Current gate"}
+                  </dt>
+                  <dd className="mt-2 text-sm font-semibold text-slate-900">
+                    {String(primaryCoordinationPhase.index).padStart(2, "0")} ·{" "}
+                    {zh
+                      ? primaryCoordinationPhase.nameZh
+                      : primaryCoordinationPhase.name}
+                  </dd>
+                </div>
+                <div className="border-b border-slate-200 py-3 pr-4 sm:border-r sm:pl-0 2xl:border-b-0 2xl:pl-4">
+                  <dt className="text-xs font-semibold text-slate-500">
+                    {zh ? "预计完成" : "Expected completion"}
+                  </dt>
+                  <dd
+                    className={`mt-2 text-sm font-semibold ${
+                      nextMilestoneDate ? "text-slate-900" : "text-amber-700"
+                    }`}
+                  >
+                    {formatScheduleDate(nextMilestoneDate, locale)}
+                  </dd>
+                </div>
+                <div className="py-3 sm:pl-4">
+                  <dt className="text-xs font-semibold text-slate-500">
+                    {zh ? "阻塞与风险" : "Blockers and risk"}
+                  </dt>
+                  <dd
+                    className={`mt-2 text-sm font-semibold ${
+                      currentBlocker || riskPhaseCount
+                        ? "text-rose-700"
+                        : "text-emerald-700"
+                    }`}
+                  >
+                    {currentBlocker
+                      ? zh
+                        ? "1 个当前阻塞"
+                        : "1 active blocker"
+                      : riskPhaseCount
+                        ? `${riskPhaseCount} ${zh ? "个风险阶段" : "gate(s) at risk"}`
+                        : zh
+                          ? "无活动阻塞"
+                          : "No active blocker"}
+                  </dd>
+                </div>
+              </dl>
+
+              <p
+                className={`mt-4 text-sm leading-6 ${
+                  currentBlocker
+                    ? "font-semibold text-rose-700"
+                    : "text-slate-600"
+                }`}
+              >
+                <strong>{zh ? "当前状态：" : "Current state: "}</strong>
+                {currentBlocker ??
+                  (zh
+                    ? primaryCoordinationPhase.outputZh
+                    : primaryCoordinationPhase.output)}
+              </p>
+            </div>
+
+            <aside
+              className="bg-white p-5"
+              aria-label={zh ? "项目协同信息" : "Project coordination"}
+            >
+              <div className="flex items-center gap-2">
+                <Users className="size-4 text-blue-600" aria-hidden="true" />
+                <h3 className="text-sm font-semibold text-slate-950">
+                  {zh ? "协同与交付" : "Coordination"}
+                </h3>
+              </div>
+              <dl className="mt-4 space-y-4">
+                <div>
+                  <dt className="text-xs font-semibold text-slate-500">
+                    {zh ? "当前处理人" : "Current handler"}
+                  </dt>
+                  <dd className="mt-1 text-sm font-semibold text-slate-900">
+                    {coordinationOwners
+                      .map((role) => getRoleDisplayName(role, locale))
+                      .join(" / ")}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold text-slate-500">
+                    {zh ? "阶段主责" : "Gate accountable"}
+                  </dt>
+                  <dd className="mt-1 text-sm text-slate-700">
+                    {accountableCoordinationOwners
+                      .map((role) => getRoleDisplayName(role, locale))
+                      .join(" / ")}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold text-slate-500">
+                    {zh ? "需要配合" : "Collaborators"}
+                  </dt>
+                  <dd className="mt-2 flex flex-wrap gap-2">
+                    {coordinationCollaborators.length > 0 ? (
+                      coordinationCollaborators.map((role) => (
+                        <StatusBadge key={role} tone="neutral">
+                          {getRoleDisplayName(role, locale)}
+                        </StatusBadge>
+                      ))
+                    ) : (
+                      <span className="text-sm text-slate-500">
+                        {zh
+                          ? "当前无需额外协作"
+                          : "No additional coordination"}
+                      </span>
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold text-slate-500">
+                    {zh ? "媒体研发联系人" : "Media engineering contact"}
+                  </dt>
+                  <dd className="mt-1 text-sm text-slate-700">
+                    {workspace.profile?.media_engineering_contact ||
+                      (zh ? "待补充" : "Missing")}
+                  </dd>
+                </div>
+              </dl>
+            </aside>
+          </div>
+
+          <div className="border-t border-slate-200 bg-white">
+            <div className="flex items-center justify-between gap-3 px-5 py-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-950">
+                  {zh ? "媒体接入生命周期" : "Integration lifecycle"}
+                </h3>
+                <p className="mt-1 text-xs text-slate-500">
+                  {zh
+                    ? "点击已解锁阶段，切换当前执行上下文。"
+                    : "Select any unlocked gate to change the execution context."}
+                </p>
+              </div>
+              <span className="shrink-0 text-xs font-semibold text-slate-500">
+                {scheduleCoverage}/{workspace.phases.length}{" "}
+                {zh ? "已排期" : "scheduled"}
+              </span>
+            </div>
+            <div className="flex overflow-x-auto border-t border-slate-200 [scrollbar-width:thin]">
+              {workspace.phases.map((phase) => {
+                const selected = phase.index === activeWorkflowPhase;
+                const locked = phase.status === "locked";
+                return (
+                  <button
+                    key={phase.code}
+                    className={`min-h-24 w-40 shrink-0 border-r border-slate-200 px-3 py-3 text-left ${
+                      selected
+                        ? "bg-blue-50"
+                        : phase.status === "complete"
+                          ? "bg-emerald-50/40"
+                          : "bg-white hover:bg-slate-50"
+                    } ${locked ? "cursor-not-allowed opacity-55" : ""}`}
+                    type="button"
+                    disabled={locked}
+                    onClick={() =>
+                      openWorkflowPhase(
+                        phase.index,
+                        phase.nextItem?.template.code
+                      )
+                    }
+                  >
+                    <span className="flex items-center justify-between gap-2">
+                      <span
+                        className={`text-xs font-semibold ${
+                          selected ? "text-blue-700" : "text-slate-500"
+                        }`}
+                      >
+                        Gate {String(phase.index).padStart(2, "0")}
+                      </span>
+                      {phase.status === "complete" ? (
+                        <CheckCircle2
+                          className="size-4 text-emerald-600"
+                          aria-hidden="true"
+                        />
+                      ) : locked ? (
+                        <LockKeyhole
+                          className="size-4 text-slate-400"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <CircleDot
+                          className="size-4 text-blue-600"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </span>
+                    <span className="mt-2 block text-xs font-semibold leading-5 text-slate-900">
+                      {zh ? phase.nameZh : phase.name}
+                    </span>
+                    <span className="mt-1 block text-[11px] text-slate-500">
+                      {phase.completedCount}/{phase.total}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <section className={activeWorkspaceView === "plan" && activePlanView === "handoff" ? "border-b border-slate-200" : "hidden"}>
         <div className="border-b border-slate-200 bg-white px-5 py-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
@@ -1164,7 +1458,7 @@ export function TechnicalIntegrationWorkspace({
         </div>
       </section>
 
-      <section className={activeWorkspaceView === "guided" ? "border-b border-slate-200" : "hidden"}>
+      <section className={activeWorkspaceView === "execute" ? "border-b border-slate-200" : "hidden"}>
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div>
             <p className="text-xs font-semibold text-blue-700">
@@ -1644,7 +1938,7 @@ export function TechnicalIntegrationWorkspace({
         </div>
       </section>
 
-      <section className={activeWorkspaceView === "overview" ? "border-b border-slate-200" : "hidden"}>
+      <section className={activeWorkspaceView === "plan" && activePlanView === "overview" ? "border-b border-slate-200" : "hidden"}>
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-base font-semibold text-slate-950">
             {zh ? "项目协同驾驶舱" : "Project coordination cockpit"}
@@ -1705,7 +1999,7 @@ export function TechnicalIntegrationWorkspace({
             <button
               className="h-9 border-b border-amber-700 text-sm font-semibold text-amber-800"
               type="button"
-              onClick={() => setActiveWorkspaceView("profile")}
+              onClick={() => setActivePlanView("profile")}
             >
               {zh ? "设置 Pilot 日期" : "Set pilot date"}
             </button>
@@ -1944,7 +2238,7 @@ export function TechnicalIntegrationWorkspace({
         </div>
       </section>
 
-      <section className={activeWorkspaceView === "profile" ? "border-b border-slate-200" : "hidden"}>
+      <section className={activeWorkspaceView === "plan" && activePlanView === "profile" ? "border-b border-slate-200" : "hidden"}>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div>
             <h2 className="text-base font-semibold text-slate-950">
@@ -2451,7 +2745,7 @@ export function TechnicalIntegrationWorkspace({
         </div>
       </section>
 
-      <section className={activeWorkspaceView === "gates" ? "border-b border-slate-200" : "hidden"}>
+      <section className={activeWorkspaceView === "plan" && activePlanView === "gates" ? "border-b border-slate-200" : "hidden"}>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div>
             <h2 className="text-base font-semibold text-slate-950">{zh ? "接入阶段门与可执行清单" : "Integration stage gates and checklist"}</h2>
@@ -2491,7 +2785,7 @@ export function TechnicalIntegrationWorkspace({
                   title={phase.lockedReason}
                   disabled={locked}
                   onClick={() => {
-                    openWorkflowPhase(phase.index, phase.nextItem?.template.code, "gates");
+                    openWorkflowPhase(phase.index, phase.nextItem?.template.code, "plan");
                   }}
                 >
                   <span className="flex items-center justify-between gap-2">
@@ -2701,7 +2995,7 @@ export function TechnicalIntegrationWorkspace({
         </div>
       </section>
 
-      <section className={activeWorkspaceView === "evidence" ? "border-b border-slate-200" : "hidden"}>
+      <section className={activeWorkspaceView === "records" ? "border-b border-slate-200" : "hidden"}>
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-base font-semibold text-slate-950">{zh ? "联调摘要证据" : "Integration summary evidence"}</h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -2783,7 +3077,7 @@ export function TechnicalIntegrationWorkspace({
         </div>
       </section>
 
-      <section className={activeWorkspaceView === "evidence" ? "grid lg:grid-cols-[minmax(0,1fr)_360px]" : "hidden"}>
+      <section className={activeWorkspaceView === "records" ? "grid lg:grid-cols-[minmax(0,1fr)_360px]" : "hidden"}>
         <div className="p-5">
           <h2 className="text-base font-semibold text-slate-950">{zh ? "项目阻塞与上线门禁" : "Project blocker and readiness gate"}</h2>
           {project?.blocker ? (
