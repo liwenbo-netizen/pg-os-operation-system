@@ -127,4 +127,22 @@ describe("executeSandboxRebuild", () => {
     expect(result.overall).toBe("BLOCKED");
     expect(executed).toBe(false);
   });
+
+  it("never executes batches without explicit --apply approval", async () => {
+    let executed = false;
+    const env = { ...environment, PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE: "true" };
+    const result = await executeSandboxRebuild({
+      environment: env,
+      files,
+      project,
+      options: { apply: false, now: new Date("2026-08-06T00:00:00Z") },
+      executeBatchImpl: async () => {
+        executed = true;
+        return { status: "ok", error: null };
+      }
+    });
+    expect(result.overall).toBe("BLOCKED");
+    expect(result.gate.some((failure) => failure.includes("--apply"))).toBe(true);
+    expect(executed).toBe(false);
+  });
 });

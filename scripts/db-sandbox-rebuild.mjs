@@ -50,6 +50,16 @@ export async function executeSandboxRebuild({
   executeBatchImpl
 }) {
   const requireWrite = options.apply === true;
+  if (options.apply !== true) {
+    return {
+      overall: "BLOCKED",
+      gate: ["Explicit --apply approval is required before any sandbox SQL batch may execute."],
+      batches: [],
+      reset: false,
+      staging_source_write: false,
+      finished_at: new Date().toISOString()
+    };
+  }
   const gateFailures = sandboxRebuildGate(environment, { requireWrite, project, now: options.now });
   if (gateFailures.length > 0) {
     return {
@@ -115,6 +125,25 @@ export async function executeSandboxRebuild({
   };
 }
 
+export async function verifySandboxProjectIdentity({
+  environment,
+  baseUrl = "https://api.supabase.com/v1/projects",
+  fetchImpl = globalThis.fetch
+}) {
+  const token = environment.SUPABASE_ACCESS_TOKEN;
+  const sandboxRef = normalizeRef(environment.SUPABASE_SANDBOX_PROJECT_REF);
+  if (!token) throw new Error("SUPABASE_ACCESS_TOKEN is required for sandbox identity verification.");
+  if (!sandboxRef) throw new Error("SUPABASE_SANDBOX_PROJECT_REF is required.");
+  const response = await fetchImpl(`${baseUrl}/${encodeURIComponent(sandboxRef)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(60_000)
+  });
+  if (!response.ok) {
+    throw new Error(`Sandbox identity verification returned HTTP ${response.status}.`);
+  }
+  return response.json();
+}
+
 async function defaultExecuteBatch(token, projectRef, baseUrl, sql) {
   try {
     const response = await fetch(`${baseUrl}/${encodeURIComponent(projectRef)}/database/query`, {
@@ -150,14 +179,44 @@ function readCandidateFiles(root = process.cwd()) {
 async function main() {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
+  const check = args.includes("--check");
   const reset = args.includes("--reset");
   const outputPath = args.find((arg) => arg.startsWith("--output="))?.slice("--output=".length);
 
   try {
+    if (check && apply) {
+      throw new Error("--check and --apply are mutually exclusive.");
+    }
+    if (check) {
+      const gateFailures = sandboxRebuildGate(process.env, {
+        requireWrite: false,
+        now: new Date()
+      });
+      if (gateFailures.length > 0) {
+        console.error(formatFailures("Sandbox rebuild blocked by safety gate:", gateFailures));
+        process.exit(1);
+      }
+      const project = await verifySandboxProjectIdentity({ environment: process.env });
+      const identityFailures = sandboxRebuildGate(process.env, {
+        requireWrite: false,
+        now: new Date(),
+        project
+      });
+      if (identityFailures.length > 0) {
+        console.error(formatFailures("Sandbox identity verification failed:", identityFailures));
+        process.exit(1);
+      }
+      console.log("Sandbox rebuild check passed (no SQL executed).");
+      console.log(`sandbox_status: ${project.status}`);
+      console.log("staging_source_writes: false");
+      console.log("sandbox_writes: 0");
+      return;
+    }
     const files = readCandidateFiles();
     const result = await executeSandboxRebuild({
       environment: process.env,
       files,
+      project: await verifySandboxProjectIdentity({ environment: process.env }),
       options: { apply, reset, now: new Date() }
     });
 
