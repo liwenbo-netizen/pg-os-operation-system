@@ -175,9 +175,9 @@ codex_task_cards:
     rollback: "Remove the CX-0192 validation record and revert the refreshed local schema baseline; no remote change occurred."
   - id: CX-0193
     title: "Build and verify canonical schema baseline"
-    status: READY_FOR_SECOND_REBUILD
+    status: COMPLETED
     type: "READ_ONLY + SANDBOX"
-    baseline_reconstructability: PARTIALLY_VERIFIED
+    baseline_reconstructability: PROVEN
     evidence:
       - "supabase/baseline-candidate generated from staging source via Management API read-only catalog extraction: 178 tables, 3106 columns, 528 constraints, 399 indexes, 125 policies, 51 triggers, 15 functions, 2 views, 4 sequences, 5 extensions."
       - "validate:baseline-environment and db:sandbox:rebuild --check fail closed: SUPABASE_SANDBOX_* variables are unconfigured; the account's second project (PG-OS-CRM006B-R2-Rollback) is INACTIVE and its purpose is unconfirmed."
@@ -186,6 +186,7 @@ codex_task_cards:
       - "Retry 2026-08-06: sandbox identity re-verified as NOT_CONFIGURED (SUPABASE_SANDBOX_* keys still missing; management API second project remains INACTIVE); npm run validate:baseline-environment and db:sandbox:rebuild --check fail closed; no write attempted."
       - "Retry 2026-08-06 (round 3): task claimed sandbox prepared, but env files contain no sandbox keys and the management API second project is still INACTIVE; both gates fail closed; zero writes."
       - "First rebuild 2026-08-07: sandbox ACTIVE_HEALTHY; 236/236 baseline batches succeeded after fixing renderer defects (generated columns, FK/unique-index ordering, tagged dollar quotes, transport retries); first normalized schema diff PASS with 0 unexplained differences across tables/columns/constraints/indexes/RLS/policies/triggers/functions/views/sequences/extensions/grants."
+      - "Second rebuild 2026-08-07: same baseline hash a9f1fce5..., 236/236 batches SUCCESS; second diff PASS with 0 unexplained differences; repeatability PASS; failure recovery VERIFIED from real failure->reset->success chain plus 57 focused tests; CX-0193 COMPLETED / PROVEN."
     rollback: "Remove the candidate baseline directory, staging-catalog.json, and CX-0193 scripts/tests/commands; no database rollback is required."
   - id: CX-0201
     title: "Align workflow persistence"

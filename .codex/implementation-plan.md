@@ -71,6 +71,12 @@ baseline_reconstructability: PARTIALLY_VERIFIED
 Remaining before PROVEN: second reset+rebuild and second diff (repeatability), failure-recovery evidence,
 then the reconstructability gate. CX-0190/CX-0201 stay BLOCKED.
 
+On 2026-08-07 the second rebuild (same baseline hash `a9f1fce5…`) completed 236/236 batches, the second
+normalized diff passed with 0 unexplained differences, repeatability PASSED, and failure recovery was
+verified from the real failure→reset→success chain plus 57 focused tests. CX-0193 is **COMPLETED** with
+`baseline_reconstructability: PROVEN`. The candidate baseline is NOT yet adopted; CX-0194 is the next task.
+CX-0190 and CX-0201 remain BLOCKED.
+
 ## Immediate Sequencing Rule
 
 CX-0004 is complete. It proved that the existing six `Opportunity.stage` values already matched both SQL constraints and repaired only the validator's parsing scope. `npm run validate:domain-schema` and `npm run validate:phase18b` now pass.

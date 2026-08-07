@@ -252,4 +252,27 @@ decision:
   next_step: "Second reset+rebuild and second diff required before PROVEN; CX-0194/CX-0201 not started."
   rollback: "Sandbox is disposable; candidate baseline and catalog/diff evidence are local artifacts. No production or migration-chain change."
 ```
+
+## CX-0193-PROVEN
+
+```yaml
+decision:
+  id: CX-0193-PROVEN
+  issue: "Second sandbox rebuild, repeatability, failure recovery, and final reconstructability decision."
+  result: PROVEN
+  cx0193_status: COMPLETED
+  baseline_reconstructability: PROVEN
+  baseline_hash: a9f1fce5bc61c936b0c0933405b9d3222628f690b4756b16369b5eb9798a149d
+  rebuild_1_retry_1: SUCCESS (236/236)
+  rebuild_2: SUCCESS (236/236)
+  schema_diff_1: PASS (0 unexplained)
+  schema_diff_2: PASS (0 unexplained)
+  repeatability: PASS
+  failure_recovery: VERIFIED
+  staging_source_writes: 0
+  secrets_exposed: false
+  next_task: CX-0194 (NOT_STARTED)
+  note: "Candidate baseline remains outside the formal migration chain; adoption requires CX-0194. CX-0190 and CX-0201 stay BLOCKED."
+  rollback: "Sandbox is disposable; local evidence and docs can be reverted; no production/migration-chain change was made."
+```
 ```

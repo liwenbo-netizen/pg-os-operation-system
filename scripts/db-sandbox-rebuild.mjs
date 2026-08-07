@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { formatFailures, normalizeRef, splitTopLevelStatements } from "./baselineSafety.mjs";
 import { validateBaselineEnvironment } from "./validate-baseline-environment.mjs";
@@ -43,6 +44,17 @@ export function planBatches(files, maxStatementsPerBatch = 25) {
   return batches;
 }
 
+export function computeBaselineHash(files) {
+  const hash = createHash("sha256");
+  for (const name of Object.keys(files).sort()) {
+    hash.update(name);
+    hash.update("\0");
+    hash.update(files[name]);
+    hash.update("\0");
+  }
+  return hash.digest("hex");
+}
+
 export async function executeSandboxRebuild({
   environment,
   files,
@@ -74,6 +86,7 @@ export async function executeSandboxRebuild({
   }
 
   const batches = planBatches(files, options.maxStatementsPerBatch);
+  const baselineHash = computeBaselineHash(files);
   const results = [];
   let overall = "SUCCESS";
   let reset = options.reset === true;
@@ -118,6 +131,8 @@ export async function executeSandboxRebuild({
   return {
     overall,
     gate: [],
+    baseline_hash: baselineHash,
+    baseline_files: Object.keys(files).sort(),
     batches: results,
     reset,
     staging_source_write: false,

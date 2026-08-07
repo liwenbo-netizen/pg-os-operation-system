@@ -1,9 +1,9 @@
 task_id: CX-0193
-captured_at: "2026-08-07T13:50:00+08:00"
-result: READY_FOR_SECOND_REBUILD
-task_type: FIRST_REBUILD_AND_DIFF
-baseline_reconstructability: PARTIALLY_VERIFIED
-retry_round: 4
+captured_at: "2026-08-07T17:10:00+08:00"
+result: COMPLETED
+task_type: SECOND_REBUILD_AND_PROVEN
+baseline_reconstructability: PROVEN
+retry_round: 5
 product_code_changed: false
 runtime_application_behavior_changed: false
 validation_code_changed: true
@@ -87,6 +87,7 @@ rebuild_1:
   baseline_batches_succeeded: 236
   baseline_batches_failed: 0
   result: SUCCESS
+  baseline_hash: a9f1fce5bc61c936b0c0933405b9d3222628f690b4756b16369b5eb9798a149d
 schema_diff_1:
   matched_tables: 178
   missing_tables: 0
@@ -105,6 +106,34 @@ schema_diff_1:
   excluded_differences: 0
   unexplained_differences: 0
   result: PASS
+rebuild_2:
+  target_identity_verified: true
+  reset_completed: true
+  baseline_hash: a9f1fce5bc61c936b0c0933405b9d3222628f690b4756b16369b5eb9798a149d
+  baseline_batches_total: 236
+  baseline_batches_succeeded: 236
+  baseline_batches_failed: 0
+  result: SUCCESS
+schema_diff_2:
+  matched_tables: 178
+  missing_tables: 0
+  extra_tables: 0
+  column_differences: 0
+  constraint_differences: 0
+  index_differences: 0
+  rls_differences: 0
+  policy_differences: 0
+  trigger_differences: 0
+  function_differences: 0
+  view_differences: 0
+  sequence_differences: 0
+  extension_differences: 0
+  grant_differences: 0
+  excluded_differences: 0
+  unexplained_differences: 0
+  result: PASS
+repeatability: PASS
+failure_recovery: VERIFIED
 validation:
   baseline_environment: BLOCKED
   schema_baseline_generate: PASS
@@ -148,7 +177,7 @@ validation:
   unit_and_repository_tests:
     status: PASS
     test_files: 73
-    tests: 427
+    tests: 429
   build:
     status: PASS_WITH_WARNING
     warning: "Existing Vite bundle-size warning not processed this round."
@@ -161,15 +190,15 @@ pre_existing_failures:
   - "Vite bundle-size warning deferred"
 new_failures: []
 blockers:
-  - "Migration sandbox is not configured and the second project is INACTIVE with unconfirmed purpose."
-  - "Sandbox rebuild and normalized schema diff cannot run; PROVEN is not claimed."
-  - "CX-0190 and CX-0201 remain BLOCKED."
+  - "CX-0190 remains BLOCKED (no-production-project denylist contract)."
+  - "CX-0201 remains BLOCKED and was not started."
+  - "Candidate baseline not yet adopted into the formal migration chain (CX-0194)."
 artifacts:
   - .codex/validation/CX-0193.md
   - supabase/baseline-candidate/manifest.yaml
   - .codex/schema-baseline/staging-catalog.json
 rollback: "Remove candidate baseline files, staging-catalog.json, CX-0193 scripts/tests/commands, and revert package.json/.env.example additions. No remote change occurred, so no database rollback is required."
 next_task:
-  id: CX-0193-RETRY
-  status: BLOCKED
-  reason: "Requires user confirmation/activation of a migration sandbox and population of SUPABASE_SANDBOX_* environment keys before sandbox rebuild and normalized diff can run."
+  id: CX-0194
+  status: NOT_STARTED
+  reason: "Adopt canonical migration baseline after PROVEN reconstructability."

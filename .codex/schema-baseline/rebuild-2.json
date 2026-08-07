@@ -1,0 +1,1903 @@
+{
+  "overall": "SUCCESS",
+  "gate": [],
+  "baseline_hash": "a9f1fce5bc61c936b0c0933405b9d3222628f690b4756b16369b5eb9798a149d",
+  "baseline_files": [
+    "00_extensions.sql",
+    "10_public_schema.sql"
+  ],
+  "batches": [
+    {
+      "file": "00_extensions.sql",
+      "index": 0,
+      "status": "success",
+      "error": null,
+      "statement_count": 5,
+      "duration_ms": 2687
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 1,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1615
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 2,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3581
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 3,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2972
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 4,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3793
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 5,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2405
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 6,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2029
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 7,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1928
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 8,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3975
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 9,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1524
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 10,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1548
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 11,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2748
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 12,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1472
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 13,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1579
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 14,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1595
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 15,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1618
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 16,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1536
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 17,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2455
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 18,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2019
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 19,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1886
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 20,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1716
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 21,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2281
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 22,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1621
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 23,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1511
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 24,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1766
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 25,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4712
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 26,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3380
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 27,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1534
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 28,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3993
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 29,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2357
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 30,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1740
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 31,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1434
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 32,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1638
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 33,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2662
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 34,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2390
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 35,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3140
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 36,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1435
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 37,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1535
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 38,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2473
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 39,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5265
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 40,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2093
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 41,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2558
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 42,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1546
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 43,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2143
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 44,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1533
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 45,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3278
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 46,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3073
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 47,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1742
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 48,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1841
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 49,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1536
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 50,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1536
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 51,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2252
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 52,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1845
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 53,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1535
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 54,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1434
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 55,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2968
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 56,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1537
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 57,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2561
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 58,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1701
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 59,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1882
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 60,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1822
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 61,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4797
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 62,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4543
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 63,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5119
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 64,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2664
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 65,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1513
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 66,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1694
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 67,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1604
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 68,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2970
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 69,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2871
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 70,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1738
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 71,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2049
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 72,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2825
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 73,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1679
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 74,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1643
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 75,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1634
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 76,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2970
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 77,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2968
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 78,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1840
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 79,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1539
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 80,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2765
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 81,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1434
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 82,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2457
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 83,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1741
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 84,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2661
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 85,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2458
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 86,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1491
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 87,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1581
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 88,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1946
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 89,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4404
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 90,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2458
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 91,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1425
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 92,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1850
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 93,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1536
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 94,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1638
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 95,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1847
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 96,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2557
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 97,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1535
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 98,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1844
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 99,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1472
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 100,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1497
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 101,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1433
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 102,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1744
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 103,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1637
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 104,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2355
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 105,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2049
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 106,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1639
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 107,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2437
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 108,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1462
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 109,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1743
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 110,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1643
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 111,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1516
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 112,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2062
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 113,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 6197
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 114,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3639
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 115,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1613
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 116,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1414
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 117,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1379
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 118,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1433
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 119,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1452
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 120,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1436
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 121,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1630
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 122,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1541
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 123,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1438
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 124,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1764
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 125,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1812
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 126,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2594
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 127,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1542
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 128,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2221
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 129,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2537
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 130,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4308
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 131,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2998
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 132,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1719
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 133,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1430
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 134,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2307
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 135,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2002
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 136,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1941
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 137,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1749
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 138,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2456
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 139,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2640
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 140,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1489
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 141,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 6828
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 142,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2115
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 143,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1426
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 144,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2458
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 145,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2295
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 146,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1802
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 147,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1947
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 148,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1363
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 149,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2204
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 150,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1389
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 151,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 7792
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 152,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2223
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 153,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1464
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 154,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1473
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 155,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3609
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 156,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2202
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 157,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1453
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 158,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1483
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 159,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1607
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 160,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1404
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 161,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2583
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 162,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2315
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 163,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5184
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 164,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3243
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 165,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1593
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 166,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2562
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 167,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2119
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 168,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1456
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 169,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1420
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 170,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1516
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 171,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1774
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 172,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1379
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 173,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 16029
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 174,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2374
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 175,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1626
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 176,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1455
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 177,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1453
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 178,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1788
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 179,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4104
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 180,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2300
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 181,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1491
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 182,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2808
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 183,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1661
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 184,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1368
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 185,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1461
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 186,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1442
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 187,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1770
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 188,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3082
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 189,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1439
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 190,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3168
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 191,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2038
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 192,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1905
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 193,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1873
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 194,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 6440
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 195,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2318
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 196,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2191
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 197,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1480
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 198,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1725
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 199,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1983
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 200,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1569
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 201,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1585
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 202,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1379
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 203,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1429
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 204,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1514
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 205,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1813
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 206,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2171
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 207,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4003
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 208,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2283
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 209,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1853
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 210,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2231
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 211,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2358
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 212,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2480
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 213,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1371
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 214,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1765
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 215,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2109
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 216,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1604
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 217,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1385
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 218,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2151
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 219,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3219
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 220,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1980
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 221,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1680
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 222,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2291
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 223,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1504
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 224,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1391
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 225,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1677
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 226,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1921
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 227,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2150
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 228,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2422
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 229,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1782
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 230,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1472
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 231,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1857
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 232,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1437
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 233,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1712
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 234,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1605
+    },
+    {
+      "file": "10_public_schema.sql",
+      "index": 235,
+      "status": "success",
+      "error": null,
+      "statement_count": 7,
+      "duration_ms": 2776
+    }
+  ],
+  "reset": true,
+  "staging_source_write": false,
+  "started_at": "2026-08-07T08:56:39.102Z",
+  "finished_at": "2026-08-07T08:56:39.105Z"
+}

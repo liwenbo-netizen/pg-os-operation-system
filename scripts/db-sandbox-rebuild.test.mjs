@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultExecuteBatch, executeSandboxRebuild, planBatches, sandboxRebuildGate } from "./db-sandbox-rebuild.mjs";
+import { computeBaselineHash, defaultExecuteBatch, executeSandboxRebuild, planBatches, sandboxRebuildGate } from "./db-sandbox-rebuild.mjs";
 
 const environment = {
   SUPABASE_STAGING_PROJECT_REF: "aaaaaaaaaaaaaaaaaaaa",
@@ -90,6 +90,19 @@ describe("planBatches", () => {
   });
 });
 
+describe("computeBaselineHash", () => {
+  it("is deterministic for identical file sets", () => {
+    const files = { "a.sql": "select 1;", "b.sql": "select 2;" };
+    expect(computeBaselineHash(files)).toBe(computeBaselineHash({ ...files }));
+  });
+
+  it("changes when baseline content changes", () => {
+    const before = computeBaselineHash({ "a.sql": "select 1;" });
+    const after = computeBaselineHash({ "a.sql": "select 2;" });
+    expect(before).not.toBe(after);
+  });
+});
+
 describe("executeSandboxRebuild", () => {
   it("marks the overall result FAILED and never success when a batch fails", async () => {
     const env = { ...environment, PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE: "true" };
@@ -121,6 +134,7 @@ describe("executeSandboxRebuild", () => {
     expect(result.overall).toBe("SUCCESS");
     expect(result.reset).toBe(true);
     expect(result.staging_source_write).toBe(false);
+    expect(result.baseline_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("returns BLOCKED without executing anything when the gate fails", async () => {
