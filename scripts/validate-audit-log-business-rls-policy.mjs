@@ -10,7 +10,7 @@ function readJson(root, fileName) {
   return JSON.parse(readText(root, fileName));
 }
 
-export const phase30Migration = "supabase/migrations/202607020001_audit_logs_business_write_policy.sql";
+export const phase30Migration = "supabase/migrations/20260807120000_pg_os_canonical_baseline.sql";
 
 export function validatePackageScripts(packageJson) {
   const scripts = packageJson.scripts ?? {};
@@ -54,33 +54,37 @@ export function validateAuditLogBusinessRlsPolicy(root) {
   const readme = readText(root, "supabase/README.md");
   const report = readText(root, "docs/development-package/phase-30-audit-logs-business-rls-policy.md");
 
-  for (const source of [migration, mirror]) {
-    for (const expected of [
-      "drop policy if exists audit_logs_insert_business",
-      "create policy audit_logs_insert_business",
-      "for insert with check",
-      "actor_user_id = auth.uid()",
-      "object_type in",
-      "'publisher'",
-      "'proposal'",
-      "'campaign'",
-      "'settlement'",
-      "'contract'",
-      "phase28_core_business_action",
-      "not public.has_role('audit_viewer')",
-      "drop policy if exists audit_logs_update_own_business",
-      "create policy audit_logs_update_own_business",
-      "for update using",
-      "with check"
-    ]) {
-      if (!source.includes(expected)) {
-        failures.push(`Audit log business RLS SQL must include ${expected}.`);
-      }
+  // The canonical baseline renders policies without drop statements (fresh chain).
+  for (const expected of [
+    'create policy "audit_logs_insert_business"',
+    "for INSERT",
+    "with check",
+    "actor_user_id = auth.uid()",
+    "object_type = ANY",
+    "'publisher'",
+    "'proposal'",
+    "'campaign'",
+    "'settlement'",
+    "'contract'",
+    "phase28_core_business_action",
+    "has_role('audit_viewer'::text)",
+    'create policy "audit_logs_update_own_business"',
+    "for UPDATE",
+    "using"
+  ]) {
+    if (!migration.includes(expected)) {
+      failures.push(`Canonical baseline must include ${expected}.`);
     }
   }
 
-  if (!readme.includes("202607020001_audit_logs_business_write_policy.sql")) {
-    failures.push("supabase/README.md must list the Phase 30 migration in order.");
+  for (const expected of ["audit_logs_insert_business", "audit_logs_update_own_business"]) {
+    if (!mirror.includes(expected)) {
+      failures.push(`RLS mirror must include ${expected}.`);
+    }
+  }
+
+  if (!readme.includes("20260807120000_pg_os_canonical_baseline.sql")) {
+    failures.push("supabase/README.md must list the canonical baseline migration.");
   }
 
   for (const expected of [

@@ -35,7 +35,7 @@ export function validateUatScriptPersistence(root) {
     "src/repositories/uatScriptResultRepository.ts",
     "src/repositories/uatScriptResultRepository.test.ts",
     "src/services/uatScriptService.ts",
-    "supabase/migrations/202607020003_uat_script_results.sql",
+    "supabase/migrations/20260807120000_pg_os_canonical_baseline.sql",
     "supabase/README.md",
     "docs/development-package/phase-34-uat-script-supabase-persistence.md"
   ];
@@ -54,7 +54,7 @@ export function validateUatScriptPersistence(root) {
   const repository = readText(root, "src/repositories/uatScriptResultRepository.ts");
   const repositoryTest = readText(root, "src/repositories/uatScriptResultRepository.test.ts");
   const service = readText(root, "src/services/uatScriptService.ts");
-  const migration = readText(root, "supabase/migrations/202607020003_uat_script_results.sql");
+  const migration = readText(root, "supabase/migrations/20260807120000_pg_os_canonical_baseline.sql");
   const readme = readText(root, "supabase/README.md");
   const report = readText(root, "docs/development-package/phase-34-uat-script-supabase-persistence.md");
 
@@ -99,20 +99,21 @@ export function validateUatScriptPersistence(root) {
   }
 
   for (const expected of [
-    "create table if not exists public.uat_script_runs",
-    "create table if not exists public.uat_script_step_results",
+    'create table "public"."uat_script_runs"',
+    'create table "public"."uat_script_step_results"',
     "enable row level security",
     "uat_script_runs_write_signoff",
     "uat_script_step_results_write_signoff",
-    "'ceo','operations_director','system_admin','audit_viewer'"
+    "'ceo'::text",
+    "'audit_viewer'::text"
   ]) {
     if (!migration.includes(expected)) {
       failures.push(`Phase 34 migration must include ${expected}.`);
     }
   }
 
-  if (!readme.includes("202607020003_uat_script_results.sql")) {
-    failures.push("supabase/README.md must list the Phase 34 UAT result migration.");
+  if (!readme.includes("20260807120000_pg_os_canonical_baseline.sql")) {
+    failures.push("supabase/README.md must list the canonical baseline migration.");
   }
 
   for (const expected of [

@@ -88,6 +88,9 @@ export async function executeSandboxRebuild({
   const batches = planBatches(files, options.maxStatementsPerBatch);
   const baselineHash = computeBaselineHash(files);
   const results = [];
+  const historyVersions = [];
+  const lastBatchIndexByFile = new Map();
+  for (const batch of batches) lastBatchIndexByFile.set(batch.file, batch.index);
   let overall = "SUCCESS";
   let reset = options.reset === true;
   const token = environment.SUPABASE_ACCESS_TOKEN;
@@ -126,6 +129,24 @@ export async function executeSandboxRebuild({
       duration_ms: durationMs
     });
     if (status === "failed") break;
+    if (options.recordHistory === true && lastBatchIndexByFile.get(batch.file) === batch.index) {
+      const version = batch.file.split("_", 1)[0];
+      const historySql = `insert into supabase_migrations.schema_migrations (version) values ('${version}') on conflict (version) do nothing;`;
+      const historyResult = await executor(token, sandboxRef, baseUrl, historySql);
+      if (historyResult.status !== "ok") {
+        overall = "FAILED";
+        results.push({
+          file: `${batch.file} (history)`,
+          index: batch.index,
+          status: "failed",
+          error: historyResult.error ?? "migration history write failed",
+          statement_count: 1,
+          duration_ms: 0
+        });
+        break;
+      }
+      historyVersions.push(version);
+    }
   }
 
   return {
@@ -133,6 +154,8 @@ export async function executeSandboxRebuild({
     gate: [],
     baseline_hash: baselineHash,
     baseline_files: Object.keys(files).sort(),
+    history_versions: historyVersions,
+    migrations_applied: historyVersions.length,
     batches: results,
     reset,
     staging_source_write: false,
@@ -201,13 +224,13 @@ export async function defaultExecuteBatch(token, projectRef, baseUrl, sql, optio
   return lastResult;
 }
 
-function readCandidateFiles(root = process.cwd()) {
-  const directory = `${root}/supabase/baseline-candidate`;
+function readCandidateFiles(root = process.cwd(), source = "baseline-candidate") {
+  const directory = `${root}/supabase/${source}`;
   if (!existsSync(directory)) {
-    throw new Error("supabase/baseline-candidate does not exist.");
+    throw new Error(`supabase/${source} does not exist.`);
   }
   const files = {};
-  for (const entry of readdirSync(directory).sort()) {
+  for (const entry of readdirSync(directory).filter((name) => name.endsWith(".sql")).sort()) {
     if (entry.endsWith(".sql")) files[entry] = readFileSync(`${directory}/${entry}`, "utf8");
   }
   return files;
@@ -221,6 +244,8 @@ async function main() {
   const outputPath = args.find((arg) => arg.startsWith("--output="))?.slice("--output=".length);
   const maxBatchArg = args.find((arg) => arg.startsWith("--max-batch="))?.slice("--max-batch=".length);
   const maxStatementsPerBatch = maxBatchArg ? Number(maxBatchArg) : undefined;
+  const sourceArg = args.find((arg) => arg.startsWith("--source="))?.slice("--source=".length);
+  const recordHistory = args.includes("--record-history");
 
   try {
     if (check && apply) {
@@ -253,7 +278,7 @@ async function main() {
       console.log("sandbox_writes: 0");
       return;
     }
-    const files = readCandidateFiles();
+    const files = readCandidateFiles(process.cwd(), sourceArg ?? "baseline-candidate");
     const result = await executeSandboxRebuild({
       environment: process.env,
       files,
@@ -262,6 +287,7 @@ async function main() {
         apply,
         reset,
         now: new Date(),
+        recordHistory,
         ...(maxStatementsPerBatch ? { maxStatementsPerBatch } : {})
       }
     });

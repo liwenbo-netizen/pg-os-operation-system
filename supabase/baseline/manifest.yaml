@@ -1,0 +1,30 @@
+canonical_baseline:
+  version: "20260807120000"
+  adopted_from: CX-0193
+  source_commit: "9be2500"
+  candidate_sha256: "a9f1fce5bc61c936b0c0933405b9d3222628f690b4756b16369b5eb9798a149d"
+  canonical_file_sha256: "59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb"
+  semantic_hash: "59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb"
+  adopted_at: "2026-08-07T00:00:00+08:00"
+  schema_counts:
+    tables: 178
+    columns: 3106
+    constraints: 528
+    indexes: 399
+    policies: 125
+    triggers: 51
+    functions: 15
+    views: 2
+    sequences: 4
+    extensions: 5
+  reconstruction:
+    rebuild_count: 2
+    normalized_schema_diff: 0
+    failure_recovery: VERIFIED
+  historical_cutoff:
+    local_legacy_migrations: 24
+    remote_legacy_history: 66
+    remote_original_sql_available: false
+  authority:
+    pre_baseline_history: HISTORICAL_REFERENCE_ONLY
+    baseline_and_future_migrations: CANONICAL

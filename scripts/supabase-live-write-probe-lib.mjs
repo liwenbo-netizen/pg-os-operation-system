@@ -65,7 +65,7 @@ const probeChecks = [
     roles: ["legal_manager"],
     tables: ["contracts"],
     expected: "allowed",
-    migration: "supabase/migrations/202606290005_contracts_write_policy.sql"
+    migration: "supabase/migrations/20260807120000_pg_os_canonical_baseline.sql"
   },
   {
     id: "audit_viewer_blocked",

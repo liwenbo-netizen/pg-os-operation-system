@@ -1,34 +1,27 @@
 # Supabase
 
-This folder contains PG OS Phase 2 database artifacts.
+This folder contains PG OS database artifacts.
 
-## Migration Order
+## Canonical Migration Chain (CX-0194 Gate A)
 
-1. `migrations/202606290001_base_schema.sql`
-2. `migrations/202606290002_rls_policies.sql`
-3. `migrations/202606290004_user_roles_self_read_policy.sql`
-4. `migrations/202606290005_contracts_write_policy.sql`
-5. `migrations/202606290006_opportunity_stage_domain_alignment.sql`
-6. `migrations/202607020001_audit_logs_business_write_policy.sql`
-7. `migrations/202607020002_media_manager_integration_project_policy.sql`
-8. `migrations/202607020003_uat_script_results.sql`
-9. `migrations/202607040001_contract_uat_seed.sql`
-10. `migrations/202607100001_china_media_ecosystem_schema.sql`
-11. `migrations/202607120001_trusted_supply_candidate_readiness.sql`
-12. `migrations/202607160001_integration_execution_readiness.sql`
-13. `migrations/202607170001_commercial_validation_handoff.sql`
-14. `migrations/202607170002_trusted_supply_qualification.sql`
-15. `migrations/202607170003_trusted_supply_packages.sql`
-16. `migrations/202607170004_commercial_test_publisher_status_sync.sql`
-17. `migrations/202607220001_publisher_traffic_evidence_history.sql`
-18. `migrations/202607260001_media_onboarding_stage_gates.sql`
-19. `migrations/202607270001_sdk_integration_playbook_foundation.sql`
-20. `migrations/202607280001_sdk_cross_role_check_ownership.sql`
-21. `migrations/202607280002_multichannel_integration_assessment.sql`
-22. `migrations/202607280003_integration_pilot_scale_owner_policy.sql`
-23. `migrations/202607290001_integration_commercial_gate_owners.sql`
-24. `migrations/202607300001_publisher_technical_handoff.sql`
-25. `seed/202606290003_uat_seed.sql`
-26. `seed/202607100002_china_media_ecosystem_seed.sql`
+The active migration chain starts at the canonical baseline:
+
+1. `migrations/20260807120000_pg_os_canonical_baseline.sql`
+   - Adopted from the CX-0193 PROVEN candidate baseline (hash
+     `a9f1fce5bc61c936b0c0933405b9d3222628f690b4756b16369b5eb9798a149d`).
+   - Manifest: `baseline/manifest.yaml`; provenance: `baseline/README.md`.
+2. Future migrations must use versions strictly newer than `20260807120000`
+   and must never reintroduce legacy pre-baseline versions.
+
+## Seeds
+
+- `seed/202606290003_uat_seed.sql`
+- `seed/202607100002_china_media_ecosystem_seed.sql`
+
+## Legacy Historical Reference
+
+The 24 pre-baseline migrations are archived verbatim in
+`migrations-legacy/pre-canonical-baseline/` and must NOT be used for new database
+rebuilds. See `migrations-legacy/README.md` and `ARCHIVE.md`.
 
 The RLS policy file is mirrored in `policies/rls_policies.sql` for review.

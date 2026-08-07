@@ -34,7 +34,7 @@ export function validateWorkflowDirtySave(root) {
     "src/repositories/supabaseWorkflowRepository.ts",
     "src/repositories/workflowRepository.test.ts",
     "scripts/validate-uat.mjs",
-    "supabase/migrations/202607020002_media_manager_integration_project_policy.sql",
+    "supabase/migrations/20260807120000_pg_os_canonical_baseline.sql",
     "supabase/policies/rls_policies.sql",
     "supabase/README.md",
     "docs/development-package/phase-31-workflow-dirty-save-rls-warning-cleanup.md"
@@ -53,7 +53,7 @@ export function validateWorkflowDirtySave(root) {
   const repository = readText(root, "src/repositories/supabaseWorkflowRepository.ts");
   const repositoryTests = readText(root, "src/repositories/workflowRepository.test.ts");
   const uatGate = readText(root, "scripts/validate-uat.mjs");
-  const integrationPolicy = readText(root, "supabase/migrations/202607020002_media_manager_integration_project_policy.sql");
+  const integrationPolicy = readText(root, "supabase/migrations/20260807120000_pg_os_canonical_baseline.sql");
   const policyMirror = readText(root, "supabase/policies/rls_policies.sql");
   const supabaseReadme = readText(root, "supabase/README.md");
   const report = readText(root, "docs/development-package/phase-31-workflow-dirty-save-rls-warning-cleanup.md");
@@ -94,8 +94,8 @@ export function validateWorkflowDirtySave(root) {
     }
   }
 
-  if (!supabaseReadme.includes("202607020002_media_manager_integration_project_policy.sql")) {
-    failures.push("supabase/README.md must list the Phase 31B integration project policy migration.");
+  if (!supabaseReadme.includes("20260807120000_pg_os_canonical_baseline.sql")) {
+    failures.push("supabase/README.md must list the canonical baseline migration.");
   }
 
   for (const expected of [

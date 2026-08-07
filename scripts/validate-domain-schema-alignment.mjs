@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { baselineFileName } from "./validate-migration-chain.mjs";
 import ts from "typescript";
 
 export function extractOpportunityStageValuesFromDomain(contents) {
@@ -67,7 +68,9 @@ export function extractOpportunityStageValuesFromDomain(contents) {
 }
 
 export function extractOpportunityStageValuesFromSchema(contents) {
-  const match = contents.match(/constraint\s+chk_opportunity_stage\s+check\s*\(\s*stage\s+in\s*\(([^)]+)\)\s*\)/i);
+  const canonicalMatch = contents.match(/constraint\s+"?chk_opportunity_stage"?\s+check\s*\(\s*\(?\s*stage\s*=\s*any\s*\(\s*array\[([^\]]+)\]/i);
+  const legacyMatch = contents.match(/constraint\s+chk_opportunity_stage\s+check\s*\(\s*stage\s+in\s*\(([^)]+)\)\s*\)/i);
+  const match = canonicalMatch ?? legacyMatch;
   if (!match) {
     return [];
   }
@@ -125,9 +128,10 @@ export function validateOpportunityStageAlignment({ domain, schema, migration })
 function main() {
   const root = process.cwd();
   const domain = readFileSync(resolve(root, "src/types/domain.ts"), "utf8");
-  const schema = readFileSync(resolve(root, "supabase/migrations/202606290001_base_schema.sql"), "utf8");
-  const migration = readFileSync(resolve(root, "supabase/migrations/202606290006_opportunity_stage_domain_alignment.sql"), "utf8");
-  const { domainValues, failures } = validateOpportunityStageAlignment({ domain, schema, migration });
+  // CX-0194 Gate A: the canonical baseline is the active migration chain and the
+  // single source for the SQL-side Opportunity.stage constraint.
+  const canonical = readFileSync(resolve(root, `supabase/migrations/${baselineFileName}`), "utf8");
+  const { domainValues, failures } = validateOpportunityStageAlignment({ domain, schema: canonical, migration: canonical });
 
   if (failures.length > 0) {
     console.error("Domain/schema alignment validation failed:");

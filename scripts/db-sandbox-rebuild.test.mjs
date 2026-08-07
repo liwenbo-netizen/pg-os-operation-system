@@ -137,6 +137,47 @@ describe("executeSandboxRebuild", () => {
     expect(result.baseline_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  it("records migration history after each file when --record-history is set", async () => {
+    const env = { ...environment, PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE: "true" };
+    const multiFiles = {
+      "20260807120000_baseline.sql": "select 1; select 2;",
+      "20260807130000_next.sql": "select 3;"
+    };
+    const sqlCalls = [];
+    const result = await executeSandboxRebuild({
+      environment: env,
+      files: multiFiles,
+      project,
+      options: { apply: true, recordHistory: true, maxStatementsPerBatch: 1, now: new Date("2026-08-06T00:00:00Z") },
+      executeBatchImpl: async (_token, _ref, _base, sql) => {
+        sqlCalls.push(sql);
+        return { status: "ok", error: null };
+      }
+    });
+    expect(result.overall).toBe("SUCCESS");
+    expect(result.history_versions).toEqual(["20260807120000", "20260807130000"]);
+    expect(result.migrations_applied).toBe(2);
+    expect(sqlCalls.filter((sql) => sql.includes("schema_migrations"))).toHaveLength(2);
+  });
+
+  it("fails when migration history recording fails", async () => {
+    const env = { ...environment, PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE: "true" };
+    let call = 0;
+    const result = await executeSandboxRebuild({
+      environment: env,
+      files: { "20260807120000_baseline.sql": "select 1;" },
+      project,
+      options: { apply: true, recordHistory: true, now: new Date("2026-08-06T00:00:00Z") },
+      executeBatchImpl: async (_token, _ref, _base, sql) => {
+        call += 1;
+        if (sql.includes("schema_migrations")) return { status: "failed", error: "history denied" };
+        return { status: "ok", error: null };
+      }
+    });
+    expect(result.overall).toBe("FAILED");
+    expect(call).toBe(2);
+  });
+
   it("returns BLOCKED without executing anything when the gate fails", async () => {
     let executed = false;
     const result = await executeSandboxRebuild({

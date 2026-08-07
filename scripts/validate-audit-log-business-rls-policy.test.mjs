@@ -18,7 +18,7 @@ describe("validate-audit-log-business-rls-policy", () => {
   });
 
   it("tracks the Phase 30 migration path", () => {
-    expect(phase30Migration).toBe("supabase/migrations/202607020001_audit_logs_business_write_policy.sql");
+    expect(phase30Migration).toBe("supabase/migrations/20260807120000_pg_os_canonical_baseline.sql");
   });
 
   it("accepts the checked-in audit log business RLS policy", () => {
