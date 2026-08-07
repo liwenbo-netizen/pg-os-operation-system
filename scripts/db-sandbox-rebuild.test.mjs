@@ -157,7 +157,8 @@ describe("executeSandboxRebuild", () => {
     expect(result.overall).toBe("SUCCESS");
     expect(result.history_versions).toEqual(["20260807120000", "20260807130000"]);
     expect(result.migrations_applied).toBe(2);
-    expect(sqlCalls.filter((sql) => sql.includes("schema_migrations"))).toHaveLength(2);
+    expect(sqlCalls.filter((sql) => sql.includes("schema_migrations"))).toHaveLength(3);
+    expect(sqlCalls[0]).toContain("create schema if not exists supabase_migrations");
   });
 
   it("fails when migration history recording fails", async () => {
@@ -170,12 +171,13 @@ describe("executeSandboxRebuild", () => {
       options: { apply: true, recordHistory: true, now: new Date("2026-08-06T00:00:00Z") },
       executeBatchImpl: async (_token, _ref, _base, sql) => {
         call += 1;
-        if (sql.includes("schema_migrations")) return { status: "failed", error: "history denied" };
+        if (sql.includes("insert into supabase_migrations.schema_migrations")) return { status: "failed", error: "history denied" };
         return { status: "ok", error: null };
       }
     });
     expect(result.overall).toBe("FAILED");
-    expect(call).toBe(2);
+    expect(call).toBe(3);
+    expect(result.batches.some((batch) => batch.file.includes("(history)") && batch.status === "failed")).toBe(true);
   });
 
   it("returns BLOCKED without executing anything when the gate fails", async () => {

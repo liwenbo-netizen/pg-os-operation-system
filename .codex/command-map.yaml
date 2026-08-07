@@ -185,6 +185,24 @@ commands:
     safety: "Vitest only."
     cx0193_result: PASS
     evidence: "6 files / 43 tests."
+  migration_chain_check:
+    command: "npm run validate:migration-chain"
+    source: "CX-0194"
+    safety: "Local static validation of the canonical migration chain (version order, uniqueness, baseline-first, frozen hashes, legacy exclusion, semantic hash)."
+    cx0194_result: PASS
+    evidence: "Active chain has 1 file (20260807120000_pg_os_canonical_baseline.sql); legacy active_chain=false."
+  cx0194_focused_tests:
+    command: "npm run validate:cx0194"
+    source: "CX-0194"
+    safety: "Vitest only."
+    cx0194_result: PASS
+    evidence: "1 file / 6 tests."
+  canonical_sandbox_rebuild:
+    command: "npm run db:sandbox:rebuild -- --apply --reset --source=migrations --record-history --output=<evidence>.json"
+    source: "CX-0194 Gate A"
+    safety: "Writes only to the verified migration sandbox; applies the official supabase/migrations chain and records supabase_migrations.schema_migrations rows (create-if-missing, on conflict do nothing)."
+    cx0194_result: PASS
+    evidence: "canonical-rebuild-1.json / canonical-rebuild-2.json / canonical-cleanup.json: 235 batches each, history=[20260807120000], diffs 0."
 
   live_uat_write:
     commands:

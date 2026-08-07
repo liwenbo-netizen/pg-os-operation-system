@@ -77,6 +77,12 @@ verified from the real failure→reset→success chain plus 57 focused tests. CX
 `baseline_reconstructability: PROVEN`. The candidate baseline is NOT yet adopted; CX-0194 is the next task.
 CX-0190 and CX-0201 remain BLOCKED.
 
+CX-0194 Gate A completed on 2026-08-07: canonical baseline `20260807120000` adopted (manifest + frozen
+hashes), 24 legacy migrations archived, `validate:migration-chain` enforced, sandbox canonical-chain
+rebuilds 1 and 2 SUCCESS with history `[20260807120000]` and 0-diff, incremental fixture contract verified
+and cleaned. Status: `CX-0194: READY_FOR_STAGING_HISTORY_ADOPTION` (`gate_a: COMPLETED`, `gate_b: NOT_STARTED`).
+ADR-002 recommends OPTION_A (`migration repair --status applied 20260807120000`) for Gate B.
+
 ## Immediate Sequencing Rule
 
 CX-0004 is complete. It proved that the existing six `Opportunity.stage` values already matched both SQL constraints and repaired only the validator's parsing scope. `npm run validate:domain-schema` and `npm run validate:phase18b` now pass.

@@ -56,6 +56,9 @@ modules:
     paths: [src/types/domain.ts, src/types/api.ts]
   database_migrations:
     paths: [supabase/migrations, supabase/policies/rls_policies.sql, supabase/seed, supabase/baseline-candidate]
+  canonical_chain:
+    paths: [supabase/migrations, supabase/baseline/manifest.yaml, supabase/migrations-legacy/pre-canonical-baseline]
+    status: "CX-0194 Gate A COMPLETED; canonical baseline 20260807120000 is the active chain; 24 legacy migrations archived"
   baseline_tooling:
     paths: [scripts/baselineSafety.mjs, scripts/validate-baseline-environment.mjs, scripts/generate-schema-baseline.mjs, scripts/validate-schema-baseline.mjs, scripts/db-sandbox-rebuild.mjs, scripts/db-schema-diff.mjs, scripts/validate-baseline-reconstructability.mjs]
     status: "CX-0193 tooling complete; sandbox rebuild blocked"

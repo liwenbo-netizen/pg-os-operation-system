@@ -275,4 +275,22 @@ decision:
   note: "Candidate baseline remains outside the formal migration chain; adoption requires CX-0194. CX-0190 and CX-0201 stay BLOCKED."
   rollback: "Sandbox is disposable; local evidence and docs can be reverted; no production/migration-chain change was made."
 ```
+
+## CX-0194-GATE-A
+
+```yaml
+decision:
+  id: CX-0194-GATE-A
+  issue: "Adopt the CX-0193 PROVEN baseline as the canonical migration chain and archive pre-baseline migrations."
+  result: READY_FOR_STAGING_HISTORY_ADOPTION
+  canonical_baseline_version: "20260807120000"
+  baseline_hashes: { candidate: a9f1fce5bc61c936b0c0933405b9d3222628f690b4756b16369b5eb9798a149d, canonical: 59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb }
+  legacy_archive: { count: 24, content_unchanged: true, active_chain: false }
+  sandbox: { rebuild_1: SUCCESS, rebuild_2: SUCCESS, history: [20260807120000], diff_zero: true, incremental_contract: VERIFIED }
+  staging_adoption_recommendation: OPTION_A (migration repair --status applied 20260807120000)
+  staging_writes: 0
+  gate_b: NOT_STARTED
+  note: "CX-0190 and CX-0201 remain BLOCKED. Gate B requires explicit approval and a no-production recheck."
+  rollback: "Revert adoption commit / restore legacy paths; sandbox disposable; staging untouched."
+```
 ```

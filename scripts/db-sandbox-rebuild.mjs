@@ -113,6 +113,25 @@ export async function executeSandboxRebuild({
     }
   }
 
+  if (options.recordHistory === true) {
+    const ensureHistoryTable = "create schema if not exists supabase_migrations; create table if not exists supabase_migrations.schema_migrations (version text primary key);";
+    const historyPrep = await executor(token, sandboxRef, baseUrl, ensureHistoryTable);
+    if (historyPrep.status !== "ok") {
+      return {
+        overall: "FAILED",
+        gate: [],
+        baseline_hash: baselineHash,
+        baseline_files: Object.keys(files).sort(),
+        history_versions: [],
+        migrations_applied: 0,
+        batches: [{ file: "history-prep", index: 0, status: "failed", error: historyPrep.error ?? "migration history table creation failed", statement_count: 1, duration_ms: 0 }],
+        reset,
+        staging_source_write: false,
+        finished_at: new Date().toISOString()
+      };
+    }
+  }
+
   for (const batch of batches) {
     const started = Date.now();
     const sql = batch.statements.join(";\n");
