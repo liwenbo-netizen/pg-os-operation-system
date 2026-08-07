@@ -60,6 +60,11 @@ describe("validateBaselineEnvironment", () => {
     expect(failures.some((failure) => failure.includes("must equal false by default"))).toBe(true);
   });
 
+  it("accepts any sandbox write flag value for read-only capture checks", () => {
+    const env = { ...base, PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE: "true" };
+    expect(validateBaselineEnvironment(env, { now, acceptAnySandboxWriteFlag: true })).toEqual([]);
+  });
+
   it("fails when the review date has expired", () => {
     const env = {
       ...base,

@@ -83,6 +83,24 @@ describe("diffSnapshots", () => {
     expect(diffResultPasses(diff)).toBe(false);
   });
 
+  it("passes when constraints differ only in PostgreSQL array-cast canonicalization", () => {
+    const source = {
+      ...base,
+      constraints: [
+        { table: "team_members", name: "team_members_role_standard_chk", type: "CHECK", definition: "CHECK (((role)::text = ANY ((ARRAY['ceo'::character varying, 'sales'::character varying])::text[])))" }
+      ]
+    };
+    const rebuilt = {
+      ...base,
+      constraints: [
+        { table: "team_members", name: "team_members_role_standard_chk", type: "CHECK", definition: "CHECK (((role)::text = ANY (ARRAY[('ceo'::character varying)::text, ('sales'::character varying)::text])))" }
+      ]
+    };
+    const diff = diffSnapshots(source, rebuilt);
+    expect(diff.constraint_differences).toEqual([]);
+    expect(diffResultPasses(diff)).toBe(true);
+  });
+
   it("fails on RLS and policy differences", () => {
     const rebuilt = {
       ...base,
@@ -109,6 +127,28 @@ describe("diffSnapshots", () => {
     const diff = diffSnapshots(source, rebuilt);
     expect(diff.trigger_differences.length).toBeGreaterThan(0);
     expect(diff.function_differences.length).toBeGreaterThan(0);
+    expect(diffResultPasses(diff)).toBe(false);
+  });
+
+  it("fails on extension differences", () => {
+    const source = { ...base, extensions: [{ name: "pgcrypto", schema: "extensions" }] };
+    const rebuilt = { ...base, extensions: [] };
+    const diff = diffSnapshots(source, rebuilt);
+    expect(diff.extension_differences.length).toBeGreaterThan(0);
+    expect(diffResultPasses(diff)).toBe(false);
+  });
+
+  it("fails on grant differences", () => {
+    const source = {
+      ...base,
+      table_grants: [{ object: "publishers", kind: "r", role: "anon", privilege: "SELECT" }]
+    };
+    const rebuilt = {
+      ...base,
+      table_grants: [{ object: "publishers", kind: "r", role: "authenticated", privilege: "SELECT" }]
+    };
+    const diff = diffSnapshots(source, rebuilt);
+    expect(diff.grant_differences.length).toBeGreaterThan(0);
     expect(diffResultPasses(diff)).toBe(false);
   });
 });

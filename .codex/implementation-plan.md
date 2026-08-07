@@ -58,6 +58,19 @@ env file (`--env-file=.env.migration.local`) so its output reflects the real blo
 A third retry (same day) again found no sandbox configuration in `.env.migration.local`/other env files
 and the second project still `INACTIVE`; both environment gates failed closed and no write was attempted.
 
+On 2026-08-07 the first sandbox rebuild completed successfully (236/236 batches) and the first normalized
+schema diff passed with **0 unexplained differences** across all compared dimensions. Three diff artifacts
+(two check-constraint casts and one view predicate) were proven semantically equivalent by read-only SELECT
+probes and normalized narrowly; no real business difference was excluded. Status:
+
+```yaml
+CX-0193: READY_FOR_SECOND_REBUILD
+baseline_reconstructability: PARTIALLY_VERIFIED
+```
+
+Remaining before PROVEN: second reset+rebuild and second diff (repeatability), failure-recovery evidence,
+then the reconstructability gate. CX-0190/CX-0201 stay BLOCKED.
+
 ## Immediate Sequencing Rule
 
 CX-0004 is complete. It proved that the existing six `Opportunity.stage` values already matched both SQL constraints and repaired only the validator's parsing scope. `npm run validate:domain-schema` and `npm run validate:phase18b` now pass.

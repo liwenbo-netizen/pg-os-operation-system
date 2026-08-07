@@ -54,8 +54,14 @@ export function formatFailures(title, failures) {
 export function splitTopLevelStatements(sql) {
   const statements = [];
   let current = "";
-  let inFunctionBody = false;
+  const quoteStack = [];
   let i = 0;
+  const dollarDelimiterAt = (index) => {
+    if (sql[index] !== "$") return null;
+    if (sql[index + 1] === "$") return "$$";
+    const match = /^\$[A-Za-z_][A-Za-z0-9_]*\$/.exec(sql.slice(index, index + 64));
+    return match ? match[0] : null;
+  };
   while (i < sql.length) {
     const ch = sql[i];
     const next = sql[i + 1] ?? "";
@@ -69,12 +75,20 @@ export function splitTopLevelStatements(sql) {
       i = end === -1 ? sql.length : end + 2;
       continue;
     }
-    if (ch === "$" && next === "$") {
-      inFunctionBody = !inFunctionBody;
-      current += ch;
-      i += 1;
-      continue;
+    if (ch === "$") {
+      const delimiter = dollarDelimiterAt(i);
+      if (delimiter) {
+        if (quoteStack.length === 0 || quoteStack[quoteStack.length - 1] !== delimiter) {
+          quoteStack.push(delimiter);
+        } else {
+          quoteStack.pop();
+        }
+        current += delimiter;
+        i += delimiter.length;
+        continue;
+      }
     }
+    const inFunctionBody = quoteStack.length > 0;
     if (!inFunctionBody && (ch === "'" || ch === '"')) {
       const quote = ch;
       current += ch;

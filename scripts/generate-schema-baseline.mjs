@@ -34,6 +34,7 @@ const catalogQueries = {
       'not_null', a.attnotnull,
       'default', case when d.adrelid is not null then pg_get_expr(d.adbin, d.adrelid) else null end,
       'identity', a.attidentity,
+      'generated', a.attgenerated,
       'ordinal', a.attnum
     ) order by t.relname, a.attnum), '[]'::jsonb) as data
     from pg_attribute a
@@ -132,11 +133,13 @@ const catalogQueries = {
 export async function collectCatalogSnapshot({
   environment,
   baseUrl = "https://api.supabase.com/v1/projects",
-  fetchImpl = globalThis.fetch
+  fetchImpl = globalThis.fetch,
+  targetRef
 }) {
   const token = environment.SUPABASE_ACCESS_TOKEN;
   if (!token) throw new Error("SUPABASE_ACCESS_TOKEN is required for catalog collection.");
-  const ref = environment.SUPABASE_STAGING_PROJECT_REF;
+  const ref = targetRef ?? environment.SUPABASE_STAGING_PROJECT_REF;
+  if (!ref) throw new Error("A target project ref is required for catalog collection.");
   const snapshot = { captured_at: new Date().toISOString(), project_ref: "PROTECTED_LOCAL_ENVIRONMENT" };
   for (const [name, sql] of Object.entries(catalogQueries)) {
     const response = await fetchImpl(`${baseUrl}/${encodeURIComponent(ref)}/database/query/read-only`, {
@@ -197,6 +200,9 @@ export function renderBaseline(snapshot) {
       .map((column) => {
         let line = `  ${quoteIdent(column.name)} ${column.type}`;
         line += renderIdentity(column.identity);
+        if (column.generated === "s") {
+          return `${line} generated always as (${column.default ?? ""}) stored${column.not_null ? " not null" : ""}`;
+        }
         if (column.not_null) line += " not null";
         if (column.default) line += ` default ${column.default}`;
         return line;
@@ -208,12 +214,28 @@ export function renderBaseline(snapshot) {
   });
   parts.push(`-- PG_OS_APPLICATION_MANAGED tables\n${tableParts.join("\n\n")}`);
 
-  const constraintSql = (snapshot.constraints ?? [])
+  const constraintRows = snapshot.constraints ?? [];
+  const nonForeignKeyConstraints = constraintRows.filter((constraint) => constraint.type !== "f");
+  const foreignKeyConstraints = constraintRows.filter((constraint) => constraint.type === "f");
+  const constraintSql = nonForeignKeyConstraints
     .map((constraint) => `alter table ${quoteIdent("public")}.${quoteIdent(constraint.table)} add constraint ${quoteIdent(constraint.name)} ${constraint.definition};`)
     .join("\n");
-  parts.push(`-- PG_OS_APPLICATION_MANAGED constraints\n${constraintSql}`);
+  parts.push(`-- PG_OS_APPLICATION_MANAGED constraints (non-FK)\n${constraintSql}`);
 
-  const indexSql = (snapshot.indexes ?? [])
+  const indexRows = snapshot.indexes ?? [];
+  const uniqueIndexSql = indexRows
+    .filter((index) => /create\s+unique\s+index\b/i.test(index.definition))
+    .map((index) => `${index.definition.replace(/^create\s+unique\s+index\b/i, "create unique index")};`)
+    .join("\n");
+  parts.push(`-- PG_OS_APPLICATION_MANAGED unique indexes\n${uniqueIndexSql}`);
+
+  const foreignKeySql = foreignKeyConstraints
+    .map((constraint) => `alter table ${quoteIdent("public")}.${quoteIdent(constraint.table)} add constraint ${quoteIdent(constraint.name)} ${constraint.definition};`)
+    .join("\n");
+  parts.push(`-- PG_OS_APPLICATION_MANAGED foreign keys\n${foreignKeySql}`);
+
+  const indexSql = indexRows
+    .filter((index) => !/create\s+unique\s+index\b/i.test(index.definition))
     .map((index) => {
       const definition = index.definition.replace(/^create\s+index\b/i, "create index");
       return `${definition};`;

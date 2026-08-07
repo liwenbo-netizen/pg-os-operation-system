@@ -7,7 +7,8 @@ import { validateBaselineEnvironment } from "./validate-baseline-environment.mjs
 export function sandboxRebuildGate(environment, options = {}) {
   const failures = validateBaselineEnvironment(environment, {
     now: options.now,
-    requireSandboxWrite: options.requireWrite ?? false
+    requireSandboxWrite: options.requireWrite ?? false,
+    acceptAnySandboxWriteFlag: options.acceptAnySandboxWriteFlag ?? false
   });
 
   const sandboxRef = normalizeRef(environment.SUPABASE_SANDBOX_PROJECT_REF);
@@ -144,24 +145,45 @@ export async function verifySandboxProjectIdentity({
   return response.json();
 }
 
-async function defaultExecuteBatch(token, projectRef, baseUrl, sql) {
-  try {
-    const response = await fetch(`${baseUrl}/${encodeURIComponent(projectRef)}/database/query`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ query: sql }),
-      signal: AbortSignal.timeout(120_000)
-    });
-    if (!response.ok) {
-      return { status: "failed", error: `HTTP ${response.status}` };
+export async function defaultExecuteBatch(token, projectRef, baseUrl, sql, options = {}) {
+  const { fetchImpl = globalThis.fetch, maxRetries = 3, retryDelayMs = 2000 } = options;
+  const sleep = (ms) => new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
+  let lastResult = { status: "failed", error: "unknown transport failure" };
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    try {
+      const response = await fetchImpl(`${baseUrl}/${encodeURIComponent(projectRef)}/database/query`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ query: sql }),
+        signal: AbortSignal.timeout(120_000)
+      });
+      if (response.ok) return { status: "ok", error: null };
+      let detail = "";
+      try {
+        const payload = await response.json();
+        detail = typeof payload?.message === "string" ? payload.message : JSON.stringify(payload).slice(0, 500);
+      } catch {
+        detail = "";
+      }
+      lastResult = { status: "failed", error: `HTTP ${response.status}${detail ? `: ${detail.slice(0, 500)}` : ""}` };
+      if ((response.status >= 500 || response.status === 429) && attempt < maxRetries) {
+        await sleep(retryDelayMs);
+        continue;
+      }
+      return lastResult;
+    } catch {
+      lastResult = { status: "failed", error: "request failed before a response was received" };
+      if (attempt < maxRetries) {
+        await sleep(retryDelayMs);
+        continue;
+      }
+      return lastResult;
     }
-    return { status: "ok", error: null };
-  } catch {
-    return { status: "failed", error: "request failed before a response was received" };
   }
+  return lastResult;
 }
 
 function readCandidateFiles(root = process.cwd()) {
@@ -182,6 +204,8 @@ async function main() {
   const check = args.includes("--check");
   const reset = args.includes("--reset");
   const outputPath = args.find((arg) => arg.startsWith("--output="))?.slice("--output=".length);
+  const maxBatchArg = args.find((arg) => arg.startsWith("--max-batch="))?.slice("--max-batch=".length);
+  const maxStatementsPerBatch = maxBatchArg ? Number(maxBatchArg) : undefined;
 
   try {
     if (check && apply) {
@@ -190,6 +214,7 @@ async function main() {
     if (check) {
       const gateFailures = sandboxRebuildGate(process.env, {
         requireWrite: false,
+        acceptAnySandboxWriteFlag: true,
         now: new Date()
       });
       if (gateFailures.length > 0) {
@@ -199,6 +224,7 @@ async function main() {
       const project = await verifySandboxProjectIdentity({ environment: process.env });
       const identityFailures = sandboxRebuildGate(process.env, {
         requireWrite: false,
+        acceptAnySandboxWriteFlag: true,
         now: new Date(),
         project
       });
@@ -217,7 +243,12 @@ async function main() {
       environment: process.env,
       files,
       project: await verifySandboxProjectIdentity({ environment: process.env }),
-      options: { apply, reset, now: new Date() }
+      options: {
+        apply,
+        reset,
+        now: new Date(),
+        ...(maxStatementsPerBatch ? { maxStatementsPerBatch } : {})
+      }
     });
 
     if (result.overall === "BLOCKED") {

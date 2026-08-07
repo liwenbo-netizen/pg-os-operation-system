@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { splitTopLevelStatements } from "./baselineSafety.mjs";
 import { validateSchemaBaseline } from "./validate-schema-baseline.mjs";
 
 const clean = {
@@ -77,5 +78,34 @@ describe("validateSchemaBaseline", () => {
   it("fails when no files are provided", () => {
     const result = validateSchemaBaseline({});
     expect(result.failures.length).toBeGreaterThan(0);
+  });
+});
+
+describe("splitTopLevelStatements with tagged dollar quotes", () => {
+  it("keeps a $function$ body with internal semicolons as one statement", () => {
+    const sql = `
+create or replace function public.touch_publisher() returns trigger language plpgsql as $function$
+begin
+  insert into public.publishers_audit (publisher_id) values (new.id);
+  update public.publishers set updated_at = now() where id = new.id;
+  return new;
+end;
+$function$;
+create table public.after_fn (id integer);
+`;
+    const statements = splitTopLevelStatements(sql);
+    expect(statements.length).toBe(2);
+    expect(statements[0]).toContain("create or replace function public.touch_publisher()");
+    expect(statements[0]).toContain("$function$");
+    expect(statements[1]).toContain("create table public.after_fn");
+  });
+
+  it("handles nested different dollar-quote tags", () => {
+    const sql = `create function public.f() returns text language sql as $outer$
+  select $inner$hello$inner$::text;
+$outer$;`;
+    const statements = splitTopLevelStatements(sql);
+    expect(statements.length).toBe(1);
+    expect(statements[0]).toContain("$inner$hello$inner$");
   });
 });

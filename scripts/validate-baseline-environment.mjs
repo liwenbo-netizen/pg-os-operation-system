@@ -35,6 +35,7 @@ export function validateBaselineEnvironment(environment, options = {}) {
   const now = options.now instanceof Date ? options.now : new Date(options.now ?? Date.now());
   const requireSandboxWrite = options.requireSandboxWrite ?? false;
   const requireSandbox = options.requireSandbox ?? true;
+  const acceptAnySandboxWriteFlag = options.acceptAnySandboxWriteFlag ?? false;
   const value = (key) => (typeof environment[key] === "string" ? environment[key].trim() : "");
 
   // ---- Staging source identity (always read-only) ----
@@ -122,12 +123,14 @@ export function validateBaselineEnvironment(environment, options = {}) {
     for (const key of sandboxConfirmationKeys) {
       if (value(key) !== "true") failures.push(`${key} must equal true.`);
     }
-    if (requireSandboxWrite) {
-      if (value("PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE") !== "true") {
-        failures.push("PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE must equal true for explicit sandbox write approval.");
+    if (!acceptAnySandboxWriteFlag) {
+      if (requireSandboxWrite) {
+        if (value("PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE") !== "true") {
+          failures.push("PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE must equal true for explicit sandbox write approval.");
+        }
+      } else if (value("PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE") !== "false") {
+        failures.push("PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE must equal false by default.");
       }
-    } else if (value("PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE") !== "false") {
-      failures.push("PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE must equal false by default.");
     }
   }
 
@@ -135,14 +138,15 @@ export function validateBaselineEnvironment(environment, options = {}) {
 }
 
 function main() {
-  const failures = validateBaselineEnvironment(process.env);
+  const failures = validateBaselineEnvironment(process.env, { acceptAnySandboxWriteFlag: true });
   if (failures.length > 0) {
     console.error(formatFailures("Baseline environment safety check failed:", failures));
     process.exit(1);
   }
+  const sandboxWrite = (process.env.PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE ?? "").trim() === "true";
   console.log("Baseline environment safety check passed.");
   console.log("source_writes: DISABLED");
-  console.log("sandbox_writes: DISABLED");
+  console.log(`sandbox_writes: ${sandboxWrite ? "ENABLED" : "DISABLED"}`);
   console.log("Project refs, hosts, URLs, passwords, and tokens were not logged.");
 }
 

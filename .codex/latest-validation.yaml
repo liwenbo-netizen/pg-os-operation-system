@@ -1,9 +1,9 @@
 task_id: CX-0193
-captured_at: "2026-08-06T19:35:00+08:00"
-result: BLOCKED
-task_type: READ_ONLY_AND_SANDBOX
-baseline_reconstructability: NOT_PROVEN
-retry_round: 2
+captured_at: "2026-08-07T13:50:00+08:00"
+result: READY_FOR_SECOND_REBUILD
+task_type: FIRST_REBUILD_AND_DIFF
+baseline_reconstructability: PARTIALLY_VERIFIED
+retry_round: 4
 product_code_changed: false
 runtime_application_behavior_changed: false
 validation_code_changed: true
@@ -80,6 +80,31 @@ legacy_local_migrations:
   count: 24
   status: PRESERVED_AS_HISTORICAL_REFERENCE
   canonical_status: NOT_DECIDED
+rebuild_1:
+  target_identity_verified: true
+  reset_completed: true
+  baseline_batches_total: 236
+  baseline_batches_succeeded: 236
+  baseline_batches_failed: 0
+  result: SUCCESS
+schema_diff_1:
+  matched_tables: 178
+  missing_tables: 0
+  extra_tables: 0
+  column_differences: 0
+  constraint_differences: 0
+  index_differences: 0
+  rls_differences: 0
+  policy_differences: 0
+  trigger_differences: 0
+  function_differences: 0
+  view_differences: 0
+  sequence_differences: 0
+  extension_differences: 0
+  grant_differences: 0
+  excluded_differences: 0
+  unexplained_differences: 0
+  result: PASS
 validation:
   baseline_environment: BLOCKED
   schema_baseline_generate: PASS
@@ -123,7 +148,7 @@ validation:
   unit_and_repository_tests:
     status: PASS
     test_files: 73
-    tests: 415
+    tests: 427
   build:
     status: PASS_WITH_WARNING
     warning: "Existing Vite bundle-size warning not processed this round."

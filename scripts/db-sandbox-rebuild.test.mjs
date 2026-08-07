@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { executeSandboxRebuild, planBatches, sandboxRebuildGate } from "./db-sandbox-rebuild.mjs";
+import { defaultExecuteBatch, executeSandboxRebuild, planBatches, sandboxRebuildGate } from "./db-sandbox-rebuild.mjs";
 
 const environment = {
   SUPABASE_STAGING_PROJECT_REF: "aaaaaaaaaaaaaaaaaaaa",
@@ -67,6 +67,17 @@ describe("sandboxRebuildGate", () => {
       now: new Date("2026-08-06T00:00:00Z")
     });
     expect(failures.some((failure) => failure.includes("not active"))).toBe(true);
+  });
+
+  it("passes read-only checks even when the sandbox write flag is enabled", () => {
+    const env = { ...environment, PG_OS_ENABLE_MIGRATION_SANDBOX_WRITE: "true" };
+    const failures = sandboxRebuildGate(env, {
+      project,
+      requireWrite: false,
+      acceptAnySandboxWriteFlag: true,
+      now: new Date("2026-08-06T00:00:00Z")
+    });
+    expect(failures).toEqual([]);
   });
 });
 
@@ -144,5 +155,39 @@ describe("executeSandboxRebuild", () => {
     expect(result.overall).toBe("BLOCKED");
     expect(result.gate.some((failure) => failure.includes("--apply"))).toBe(true);
     expect(executed).toBe(false);
+  });
+});
+
+describe("defaultExecuteBatch", () => {
+  it("retries transient 5xx failures and succeeds", async () => {
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      if (calls < 3) return { ok: false, status: 503, json: async () => ({ message: "upstream connect error" }) };
+      return { ok: true, status: 200, json: async () => ({}) };
+    };
+    const result = await defaultExecuteBatch("token", "bbbbbbbbbbbbbbbbbbbb", "https://api.supabase.com/v1/projects", "select 1", {
+      fetchImpl,
+      maxRetries: 3,
+      retryDelayMs: 1
+    });
+    expect(result.status).toBe("ok");
+    expect(calls).toBe(3);
+  });
+
+  it("fails fast on SQL-level 400 errors without retrying", async () => {
+    let calls = 0;
+    const fetchImpl = async () => {
+      calls += 1;
+      return { ok: false, status: 400, json: async () => ({ message: "syntax error" }) };
+    };
+    const result = await defaultExecuteBatch("token", "bbbbbbbbbbbbbbbbbbbb", "https://api.supabase.com/v1/projects", "bad sql", {
+      fetchImpl,
+      maxRetries: 3,
+      retryDelayMs: 1
+    });
+    expect(result.status).toBe("failed");
+    expect(result.error).toContain("syntax error");
+    expect(calls).toBe(1);
   });
 });

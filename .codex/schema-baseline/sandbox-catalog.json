@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-07T06:06:02.655Z",
+  "captured_at": "2026-08-07T06:06:53.144Z",
   "project_ref": "PROTECTED_LOCAL_ENVIRONMENT",
   "extensions": [
     {
@@ -33320,7 +33320,7 @@
       "name": "channel_technical_profiles_channel_type_check",
       "type": "c",
       "table": "channel_technical_profiles",
-      "definition": "CHECK (((channel_type)::text = ANY ((ARRAY['mobile_app'::character varying, 'ctv'::character varying, 'dooh'::character varying, 'web'::character varying, 'openrtb'::character varying, 'vast'::character varying, 'sdk'::character varying, 'api'::character varying])::text[])))"
+      "definition": "CHECK (((channel_type)::text = ANY (ARRAY[('mobile_app'::character varying)::text, ('ctv'::character varying)::text, ('dooh'::character varying)::text, ('web'::character varying)::text, ('openrtb'::character varying)::text, ('vast'::character varying)::text, ('sdk'::character varying)::text, ('api'::character varying)::text])))"
     },
     {
       "name": "channel_technical_profiles_pkey",
@@ -34022,7 +34022,7 @@
       "name": "chk_media_ecosystem_score_bounds",
       "type": "c",
       "table": "media_ecosystem_opportunities",
-      "definition": "CHECK ((((strategic_segment_score >= 0) AND (strategic_segment_score <= 20)) AND ((user_scale_score >= 0) AND (user_scale_score <= 15)) AND ((ad_context_score >= 0) AND (ad_context_score <= 15)) AND ((integration_feasibility_score >= 0) AND (integration_feasibility_score <= 15)) AND ((advertiser_demand_score >= 0) AND (advertiser_demand_score <= 15)) AND ((commercial_feasibility_score >= 0) AND (commercial_feasibility_score <= 10)) AND ((risk_control_score >= 0) AND (risk_control_score <= 10))))"
+      "definition": "CHECK (((strategic_segment_score >= 0) AND (strategic_segment_score <= 20) AND ((user_scale_score >= 0) AND (user_scale_score <= 15)) AND ((ad_context_score >= 0) AND (ad_context_score <= 15)) AND ((integration_feasibility_score >= 0) AND (integration_feasibility_score <= 15)) AND ((advertiser_demand_score >= 0) AND (advertiser_demand_score <= 15)) AND ((commercial_feasibility_score >= 0) AND (commercial_feasibility_score <= 10)) AND ((risk_control_score >= 0) AND (risk_control_score <= 10))))"
     },
     {
       "name": "chk_media_ecosystem_seed_only_safety",
@@ -34922,7 +34922,7 @@
       "name": "pgos_remediation_closure_items_priority_check",
       "type": "c",
       "table": "pgos_remediation_closure_items",
-      "definition": "CHECK (((priority)::text = ANY ((ARRAY['P0'::character varying, 'P1'::character varying, 'P2'::character varying])::text[])))"
+      "definition": "CHECK (((priority)::text = ANY (ARRAY[('P0'::character varying)::text, ('P1'::character varying)::text, ('P2'::character varying)::text])))"
     },
     {
       "name": "pgos_schema_migrations_pkey",
@@ -35522,7 +35522,7 @@
       "name": "team_members_role_standard_chk",
       "type": "c",
       "table": "team_members",
-      "definition": "CHECK (((role)::text = ANY ((ARRAY['ceo'::character varying, 'operations_director'::character varying, 'sales_head'::character varying, 'sales'::character varying, 'account_cs'::character varying, 'media_director'::character varying, 'media_manager'::character varying, 'ad_ops'::character varying, 'integration'::character varying, 'rd'::character varying, 'finance'::character varying, 'legal'::character varying, 'data_analyst'::character varying, 'auditor'::character varying, 'admin'::character varying])::text[])))"
+      "definition": "CHECK (((role)::text = ANY (ARRAY[('ceo'::character varying)::text, ('operations_director'::character varying)::text, ('sales_head'::character varying)::text, ('sales'::character varying)::text, ('account_cs'::character varying)::text, ('media_director'::character varying)::text, ('media_manager'::character varying)::text, ('ad_ops'::character varying)::text, ('integration'::character varying)::text, ('rd'::character varying)::text, ('finance'::character varying)::text, ('legal'::character varying)::text, ('data_analyst'::character varying)::text, ('auditor'::character varying)::text, ('admin'::character varying)::text])))"
     },
     {
       "name": "tech_reference_pkey",
@@ -39501,7 +39501,7 @@
     },
     {
       "name": "vw_expiring_contracts",
-      "definition": " SELECT mc.id,\n    mc.contract_id,\n    mc.contract_name,\n    mc.media_id,\n    mm.media_name,\n    mc.status,\n    mc.expiry_date,\n    mc.auto_renew,\n    mc.auto_renew_days_before,\n    (mc.expiry_date - CURRENT_DATE) AS days_remaining,\n        CASE\n            WHEN (mc.expiry_date < CURRENT_DATE) THEN 'expired'::text\n            WHEN ((mc.expiry_date - CURRENT_DATE) <= 7) THEN 'urgent'::text\n            WHEN ((mc.expiry_date - CURRENT_DATE) <= 30) THEN 'expiring_soon'::text\n            ELSE 'normal'::text\n        END AS urgency\n   FROM (media_contracts mc\n     LEFT JOIN media_master mm ON ((mm.id = mc.media_id)))\n  WHERE (((mc.status)::text = ANY ((ARRAY['已生效'::character varying, '已签署'::character varying])::text[])) AND (mc.expiry_date IS NOT NULL));"
+      "definition": " SELECT mc.id,\n    mc.contract_id,\n    mc.contract_name,\n    mc.media_id,\n    mm.media_name,\n    mc.status,\n    mc.expiry_date,\n    mc.auto_renew,\n    mc.auto_renew_days_before,\n    (mc.expiry_date - CURRENT_DATE) AS days_remaining,\n        CASE\n            WHEN (mc.expiry_date < CURRENT_DATE) THEN 'expired'::text\n            WHEN ((mc.expiry_date - CURRENT_DATE) <= 7) THEN 'urgent'::text\n            WHEN ((mc.expiry_date - CURRENT_DATE) <= 30) THEN 'expiring_soon'::text\n            ELSE 'normal'::text\n        END AS urgency\n   FROM (media_contracts mc\n     LEFT JOIN media_master mm ON ((mm.id = mc.media_id)))\n  WHERE (((mc.status)::text = ANY (ARRAY[('已生效'::character varying)::text, ('已签署'::character varying)::text])) AND (mc.expiry_date IS NOT NULL));"
     }
   ],
   "sequences": [

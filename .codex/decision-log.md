@@ -229,4 +229,27 @@ decision:
   resolution: "Do not trust claims over environment evidence; keep writes disabled until the sandbox project is ACTIVE and the sandbox keys are present in the Git-ignored env file."
   rollback: "None required; no changes beyond documentation."
 ```
+
+## CX-0193-FIRST-REBUILD
+
+```yaml
+decision:
+  id: CX-0193-FIRST-REBUILD
+  issue: "Execute the first sandbox rebuild and normalized diff after sandbox identity was verified."
+  result: READY_FOR_SECOND_REBUILD
+  baseline_reconstructability: PARTIALLY_VERIFIED
+  rebuild_1: SUCCESS (236/236 batches, reset completed)
+  schema_diff_1: PASS (0 unexplained differences)
+  renderer_fixes:
+    - "generated columns rendered as GENERATED ALWAYS AS ... STORED"
+    - "unique indexes created before referencing foreign keys"
+    - "tagged dollar quotes ($function$/$fn$) preserved in statement splitting"
+    - "transient 5xx/network failures retried idempotently; SQL 400s fail fast"
+  normalization_evidence:
+    - "Read-only SELECT probes on sandbox proved (ARRAY[...])::text[] and ARRAY[(...)::text,...] equivalent (three probes true)."
+    - "Narrow canonicalization applied only to that cast form; no business semantic difference excluded."
+  staging_source_writes: 0
+  next_step: "Second reset+rebuild and second diff required before PROVEN; CX-0194/CX-0201 not started."
+  rollback: "Sandbox is disposable; candidate baseline and catalog/diff evidence are local artifacts. No production or migration-chain change."
+```
 ```

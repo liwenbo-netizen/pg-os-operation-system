@@ -1,16 +1,43 @@
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { formatFailures } from "./baselineSafety.mjs";
+import { collectCatalogSnapshot } from "./generate-schema-baseline.mjs";
+import { validateBaselineEnvironment } from "./validate-baseline-environment.mjs";
 
 function normalizeValue(value) {
-  return String(value ?? "")
+  return normalizeArrayCastCanonical(String(value ?? "")
     .trim()
     .replace(/\s+/g, " ")
-    .toLowerCase();
+    .toLowerCase());
+}
+
+// PostgreSQL re-parses "(ARRAY['v'::type, ...])::text[]" into
+// "ARRAY[('v'::type)::text, ...]" when a constraint/view is re-created.
+// The two forms are semantically equivalent (proven by read-only SELECT probes);
+// this canonicalization makes the comparison textual while preserving semantics.
+function normalizeArrayCastCanonical(value) {
+  const convertItems = (items) => {
+    const elements = items.split(",").map((entry) => entry.trim());
+    if (elements.length === 0) return null;
+    const converted = elements.map((entry) => {
+      const simple = /^'[^']*'::[a-z0-9_ ]+$/.exec(entry);
+      return simple ? `(${entry})::text` : null;
+    });
+    if (converted.some((entry) => entry === null)) return null;
+    return `(array[${converted.join(", ")}])`;
+  };
+  let out = value.replace(/\(\(array\[([^\]]*)\]\)::text\[\]\)/g, (match, items) => convertItems(items) ?? match);
+  out = out.replace(/\(array\[([^\]]*)\]\)::text\[\]/g, (match, items) => convertItems(items) ?? match);
+  return out;
 }
 
 function sortByKey(list, key) {
   return [...list]
-    .map((entry) => ({ ...entry, _key: JSON.stringify(entry[key] ?? "") }))
+    .map((entry) => ({
+      ...entry,
+      _key: JSON.stringify(typeof key === "function" ? key(entry) : entry[key] ?? "")
+    }))
     .sort((a, b) => a._key.localeCompare(b._key))
     .map(({ _key, ...rest }) => rest);
 }
@@ -21,8 +48,9 @@ function keyFor(entry, key) {
 }
 
 function diffList(source, rebuilt, key, label) {
-  const sourceMap = new Map(sortByKey(source, key).map((entry) => [keyFor(entry, key), entry]));
-  const rebuiltMap = new Map(sortByKey(rebuilt, key).map((entry) => [keyFor(entry, key), entry]));
+  const keyForEntry = typeof key === "function" ? key : (entry) => keyFor(entry, key);
+  const sourceMap = new Map(sortByKey(source, key).map((entry) => [keyForEntry(entry), entry]));
+  const rebuiltMap = new Map(sortByKey(rebuilt, key).map((entry) => [keyForEntry(entry), entry]));
   const missing = [...sourceMap.keys()].filter((k) => !rebuiltMap.has(k)).sort();
   const extra = [...rebuiltMap.keys()].filter((k) => !sourceMap.has(k)).sort();
   const differences = [];
@@ -60,7 +88,15 @@ export function normalizeSnapshot(snapshot) {
     functions: sortByKey(normalizeList(snapshot.functions), "name"),
     views: sortByKey(normalizeList(snapshot.views), "name"),
     sequences: sortByKey(normalizeList(snapshot.sequences), "name"),
-    enums: sortByKey(normalizeList(snapshot.enums), "name")
+    enums: sortByKey(normalizeList(snapshot.enums), "name"),
+    extensions: sortByKey(normalizeList(snapshot.extensions), "name"),
+    grants: sortByKey(
+      [
+        ...(Array.isArray(snapshot.table_grants) ? snapshot.table_grants : []).map((entry) => ({ ...entry, object_type: "table" })),
+        ...(Array.isArray(snapshot.schema_grants) ? snapshot.schema_grants : []).map((entry) => ({ ...entry, object_type: "schema" }))
+      ],
+      "object"
+    )
   };
 }
 
@@ -78,6 +114,13 @@ export function diffSnapshots(source, rebuilt) {
   const views = diffList(a.views, b.views, "name", "view");
   const sequences = diffList(a.sequences, b.sequences, "name", "sequence");
   const enums = diffList(a.enums, b.enums, "name", "enum");
+  const extensions = diffList(a.extensions, b.extensions, "name", "extension");
+  const grants = diffList(
+    a.grants,
+    b.grants,
+    (entry) => [entry.object_type, entry.object, entry.role, entry.privilege].join("|"),
+    "grant"
+  );
 
   const rlsDifferences = [];
   const sourceRls = new Map(a.tables.map((table) => [keyFor(table, "name"), table.rls_enabled]));
@@ -112,7 +155,15 @@ export function diffSnapshots(source, rebuilt) {
     ...views.missing.map((name) => `missing view ${name}`),
     ...views.extra.map((name) => `extra view ${name}`),
     ...sequences.differences,
-    ...enums.differences
+    ...sequences.missing.map((name) => `missing sequence ${name}`),
+    ...sequences.extra.map((name) => `extra sequence ${name}`),
+    ...enums.differences,
+    ...extensions.differences,
+    ...extensions.missing.map((name) => `missing extension ${name}`),
+    ...extensions.extra.map((name) => `extra extension ${name}`),
+    ...grants.differences,
+    ...grants.missing.map((name) => `missing grant ${name}`),
+    ...grants.extra.map((name) => `extra grant ${name}`)
   ].sort();
 
   return {
@@ -127,6 +178,9 @@ export function diffSnapshots(source, rebuilt) {
     trigger_differences: [...triggers.missing, ...triggers.extra, ...triggers.differences],
     function_differences: [...functions.missing, ...functions.extra, ...functions.differences],
     view_differences: [...views.missing, ...views.extra, ...views.differences],
+    sequence_differences: [...sequences.missing, ...sequences.extra, ...sequences.differences],
+    extension_differences: [...extensions.missing, ...extensions.extra, ...extensions.differences],
+    grant_differences: [...grants.missing, ...grants.extra, ...grants.differences],
     excluded_differences: [],
     unexplained_differences: [...new Set(unexplainedDifferences)]
   };
@@ -147,19 +201,51 @@ async function main() {
   const sourcePath = process.argv.find((arg) => arg.startsWith("--source="))?.slice("--source=".length);
   const rebuiltPath = process.argv.find((arg) => arg.startsWith("--rebuilt="))?.slice("--rebuilt=".length);
   const outputPath = process.argv.find((arg) => arg.startsWith("--output="))?.slice("--output=".length);
-  if (!sourcePath || !rebuiltPath) {
-    console.error("Usage: db-schema-diff --source=<json> --rebuilt=<json> [--output=<json>]");
-    process.exit(1);
-  }
   try {
-    const { readFileSync, writeFileSync } = await import("node:fs");
-    const source = JSON.parse(readFileSync(sourcePath, "utf8"));
-    const rebuilt = JSON.parse(readFileSync(rebuiltPath, "utf8"));
+    let source;
+    let rebuilt;
+    let output = outputPath;
+    if (!sourcePath || !rebuiltPath) {
+      // Capture mode: read-only catalog collection from staging source and migration sandbox.
+      const failures = validateBaselineEnvironment(process.env, {
+        requireSandbox: true,
+        requireSandboxWrite: false,
+        acceptAnySandboxWriteFlag: true,
+        now: new Date()
+      });
+      if (failures.length > 0) {
+        throw new Error(formatFailures("Schema diff capture blocked by environment safety check:", failures));
+      }
+      source = await collectCatalogSnapshot({
+        environment: process.env,
+        targetRef: process.env.SUPABASE_STAGING_PROJECT_REF
+      });
+      rebuilt = await collectCatalogSnapshot({
+        environment: process.env,
+        targetRef: process.env.SUPABASE_SANDBOX_PROJECT_REF
+      });
+      output ??= resolve(process.cwd(), ".codex", "schema-baseline", "diff-1.json");
+      const baselineDirectory = resolve(process.cwd(), ".codex", "schema-baseline");
+      mkdirSync(baselineDirectory, { recursive: true });
+      writeFileSync(resolve(baselineDirectory, "staging-catalog.json"), `${JSON.stringify(source, null, 2)}\n`, "utf8");
+      writeFileSync(resolve(baselineDirectory, "sandbox-catalog.json"), `${JSON.stringify(rebuilt, null, 2)}\n`, "utf8");
+    } else {
+      source = JSON.parse(readFileSync(sourcePath, "utf8"));
+      rebuilt = JSON.parse(readFileSync(rebuiltPath, "utf8"));
+    }
     const diff = diffSnapshots(source, rebuilt);
-    if (outputPath) writeFileSync(outputPath, `${JSON.stringify(diff, null, 2)}\n`, "utf8");
     const passed = diffResultPasses(diff);
     console.log(`normalized_schema_diff: ${passed ? "PASS" : "FAIL"}`);
+    console.log(`matched_tables: ${diff.matched_tables}`);
+    console.log(`missing_tables: ${diff.missing_tables.length}`);
+    console.log(`extra_tables: ${diff.extra_tables.length}`);
     console.log(`unexplained_differences: ${diff.unexplained_differences.length}`);
+    if (output) {
+      const outputPathResolved = resolve(process.cwd(), output);
+      mkdirSync(dirname(outputPathResolved), { recursive: true });
+      writeFileSync(outputPathResolved, `${JSON.stringify(diff, null, 2)}\n`, "utf8");
+      console.log(`diff_saved: ${outputPathResolved}`);
+    }
     if (!passed) {
       console.error(formatFailures("Normalized schema diff failed:", diff.unexplained_differences.slice(0, 20)));
       process.exit(1);

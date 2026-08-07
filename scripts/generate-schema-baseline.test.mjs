@@ -80,6 +80,60 @@ describe("renderBaseline", () => {
     });
     expect(sql).toContain("partition of \"public\".\"events\" FOR VALUES");
   });
+
+  it("renders generated columns as GENERATED ALWAYS AS ... STORED, not DEFAULT", () => {
+    const sql = renderBaseline({
+      ...snapshot,
+      tables: [{ name: "assessments", rls_enabled: false, force_rls: false, is_partition: false, partition_bound: null, partition_of: null }],
+      columns: [
+        { table: "assessments", name: "score_a", type: "numeric(5,2)", not_null: false, default: null, identity: "", generated: "", ordinal: 1 },
+        { table: "assessments", name: "total_score", type: "numeric(5,2)", not_null: true, default: "round(((score_a + score_b)), 2)", identity: "", generated: "s", ordinal: 2 }
+      ],
+      constraints: [],
+      indexes: [],
+      policies: [],
+      triggers: [],
+      functions: [],
+      views: [],
+      sequences: [],
+      table_grants: [],
+      schema_grants: []
+    });
+    expect(sql).toContain("\"total_score\" numeric(5,2) generated always as (round(((score_a + score_b)), 2)) stored not null");
+    expect(sql).not.toContain("\"total_score\" numeric(5,2) not null default");
+  });
+
+  it("orders unique indexes before foreign keys that reference them", () => {
+    const sql = renderBaseline({
+      ...snapshot,
+      tables: [
+        { name: "parents", rls_enabled: false, force_rls: false, is_partition: false, partition_bound: null, partition_of: null },
+        { name: "children", rls_enabled: false, force_rls: false, is_partition: false, partition_bound: null, partition_of: null }
+      ],
+      columns: [
+        { table: "parents", name: "code", type: "text", not_null: true, default: null, identity: "", generated: "", ordinal: 1 },
+        { table: "children", name: "parent_code", type: "text", not_null: true, default: null, identity: "", generated: "", ordinal: 1 }
+      ],
+      constraints: [
+        { table: "parents", name: "parents_pkey", type: "p", definition: "PRIMARY KEY (code)" },
+        { table: "children", name: "children_parent_fk", type: "f", definition: "FOREIGN KEY (parent_code) REFERENCES public.parents(code)" }
+      ],
+      indexes: [
+        { table: "parents", name: "parents_code_uniq", definition: "CREATE UNIQUE INDEX parents_code_uniq ON public.parents USING btree (code)" }
+      ],
+      policies: [],
+      triggers: [],
+      functions: [],
+      views: [],
+      sequences: [],
+      table_grants: [],
+      schema_grants: []
+    });
+    const uniqueIndexPosition = sql.indexOf("create unique index");
+    const foreignKeyPosition = sql.indexOf("FOREIGN KEY (parent_code)");
+    expect(uniqueIndexPosition).toBeGreaterThan(-1);
+    expect(foreignKeyPosition).toBeGreaterThan(uniqueIndexPosition);
+  });
 });
 
 describe("classifyBaseline", () => {
