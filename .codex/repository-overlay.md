@@ -13,7 +13,7 @@ database: Supabase PostgreSQL with RLS policies and versioned SQL migrations
 ui_framework: React plus Tailwind CSS and Lucide React
 test_frameworks: [Vitest]
 current_branch: master
-current_commit: "af90a5c Guide technical solution setup workflow"
+current_commit: "a7d89d3 CX-0194 Gate A base before Gate B Preflight changes"
 ```
 
 ## 2. Applicable AGENTS.md
@@ -40,8 +40,8 @@ commands:
   schema_lint: npm run validate:domain-schema
   code_generation: npm run generate:china-media:seed-sql
   supabase_cli: npm run validate:supabase-cli
-  migration_dry_run: null
-  schema_diff: null
+  migration_dry_run: "Supabase CLI db push --dry-run with protected non-production DB URL; currently BLOCKED by remote-only legacy versions 000-065"
+  schema_diff: npm run db:schema:diff
   migration_safety_gate: npm run validate:migration-safety
 ```
 
@@ -61,7 +61,7 @@ modules:
     status: "CX-0194 Gate A COMPLETED; canonical baseline 20260807120000 is the active chain; 24 legacy migrations archived"
   baseline_tooling:
     paths: [scripts/baselineSafety.mjs, scripts/validate-baseline-environment.mjs, scripts/generate-schema-baseline.mjs, scripts/validate-schema-baseline.mjs, scripts/db-sandbox-rebuild.mjs, scripts/db-schema-diff.mjs, scripts/validate-baseline-reconstructability.mjs]
-    status: "CX-0193 tooling complete; sandbox rebuild blocked"
+    status: "CX-0193 COMPLETED/PROVEN; two clean Sandbox rebuilds and two zero-diff comparisons; CX-0194 Gate A adopted the Canonical chain"
   application_services:
     paths: [src/services]
   api_layer:
@@ -222,28 +222,32 @@ secret_files:
   migration_secrets_committed: false
 ci_database_job: false
 migration_directory: supabase/migrations
-migration_count: 24
+migration_count: 1
+legacy_migration_archive_count: 24
 remote_migration_history: readable
-remote_schema_drift: unverified
-remote_schema_baseline_required: true
+remote_schema_drift: "2026-08-08 read-only normalized diff PASS; 178 matched tables, 0 unexplained differences"
+remote_schema_baseline_required: false
 static_sql_validation: npm run validate:phase2
 blocked_commands:
-  - validate:migration-environment
-  - validate:production-denylist
-  - db:migration:dry-run
-  - db:schema:diff
-  - validate:migration-safety
+  - "Any remote write command, including migration repair, db push, migration up, linked reset, DDL, and DML"
 required_approval:
-  - "Resolve the approved safety contract for an account with exactly one owner-attested non-production Project: either provision a separate production denylist target or explicitly approve a no-production-project marker design."
-  - "Keep PG_OS_ENABLE_MIGRATION_WRITE=false until that decision, remote Schema baseline review, and an executable rollback path are complete."
+  - "Prove a preservation-compatible Migration History strategy after db push --dry-run rejected remote-only versions 000-065."
+  - "Keep PG_OS_ENABLE_MIGRATION_WRITE=false until the revised strategy passes dry-run and Gate B receives a new explicit authorization."
 cx0193:
-  status: BLOCKED
-  reconstruction_status: NOT_PROVEN
+  status: COMPLETED
+  reconstruction_status: PROVEN
   candidate_baseline: supabase/baseline-candidate
   staging_source: "SUPABASE_STAGING_PROJECT_REF (ACTIVE_HEALTHY, read-only)"
-  sandbox: "NOT_CONFIGURED; management API shows a second INACTIVE project (PG-OS-CRM006B-R2-Rollback) whose purpose is unconfirmed"
+  sandbox: "VERIFIED; two clean rebuilds and failure recovery completed"
   sandbox_write: false
   required_human_action: "Confirm the second project (or an active replacement) as the disposable migration sandbox and populate SUPABASE_SANDBOX_PROJECT_REF/HOST plus PG_OS_MIGRATION_SANDBOX_* confirmations in the Git-ignored migration environment."
   retry_2026_08_06: "Sandbox keys still absent; second project still INACTIVE; no writes attempted."
   retry_2026_08_06_round3: "Task claimed sandbox ready, but evidence shows no sandbox env keys and INACTIVE second project; gates fail closed; no writes."
+  superseded_by: "CX-0193 PROVEN on 2026-08-07"
+cx0194:
+  gate_a: COMPLETED
+  gate_b_preflight: BLOCKED
+  blocker: "Supabase CLI dry-run rejects remote-only legacy versions 000-065; preserving those rows and future CLI compatibility are not yet jointly proven."
+  remote_schema_diff: "PASS; 0 unexplained differences"
+  remote_writes: 0
 ```

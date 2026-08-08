@@ -201,14 +201,18 @@ codex_task_cards:
     evidence: ["Backlog declares dependency CX-0201.", "V2.5 specifies transaction/idempotency/optimistic locks in docs workflow-machine YAML:590+. "]
   - id: CX-0194
     title: "Adopt canonical migration baseline"
-    status: READY_FOR_STAGING_HISTORY_ADOPTION
+    status: BLOCKED
     gate_a: COMPLETED
     gate_b: NOT_STARTED
+    gate_b_preflight: BLOCKED
     evidence:
       - "Canonical baseline 20260807120000 adopted from CX-0193 PROVEN candidate; manifest at supabase/baseline/manifest.yaml; semantic hash 59bfb9e7... matches canonical file."
       - "24 legacy migrations archived verbatim to supabase/migrations-legacy/pre-canonical-baseline (git 100% renames); validate:migration-chain protects the active chain."
       - "Sandbox canonical-chain rebuilds 1 and 2 both SUCCESS (235 batches each), history=[20260807120000], two normalized diffs 0 unexplained; incremental fixture contract verified and cleaned up."
-      - "Staging history adoption options analyzed in ADR-002; OPTION_A recommended; no staging write executed."
+      - "2026-08-08 remote read-only migration list confirms legacy versions 000-065 remain remote-only and canonical 20260807120000 remains local-only."
+      - "Both db push --dry-run and db push --dry-run --include-all fail because remote versions 000-065 are absent locally; the CLI recommends marking all 66 legacy versions reverted, which conflicts with ADR-002 history-preservation requirements."
+      - "2026-08-08 remote read-only normalized Schema Diff remains PASS: 178 matched tables and 0 unexplained differences."
+      - "No remote schema, data, or migration-history write was executed. Gate B is not authorized until a preservation-compatible CLI/history strategy is proven by dry-run."
     rollback: "Revert the adoption commit or restore the legacy archive paths; sandbox is disposable; staging untouched."
   - id: CX-0203
     title: "Implement guards, checklists and target resolvers"

@@ -65,3 +65,17 @@ The modified integration workspace and untracked specifications pre-date W0. The
 ## W0 Exit Decision
 
 Repository discovery is complete and CX-0004 restored the local CI baseline to green. The next planned card is CX-0101, but it has not been implemented in this batch.
+
+## Current Baseline Addendum — CX-0194 Gate B Preflight (2026-08-08)
+
+- CX-0101 and CX-0102 are complete; Workflow V2.5 remains default-off and Legacy remains active.
+- CX-0193 is complete with reconstructability PROVEN.
+- CX-0194 Gate A adopted Canonical migration `20260807120000`; its frozen SHA-256 remains
+  `59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb`.
+- Local Preflight gates pass: 74 test files / 437 tests, Typecheck, Build, phase18b, migration-chain,
+  Workflow Machine, compatibility, and reconstructability.
+- Current read-only Schema Diff passes with 178 matched tables and zero unexplained differences.
+- Gate B Preflight is BLOCKED because Supabase CLI 2.110.0 rejects remote-only history versions
+  `000`-`065` in both normal and `--include-all` dry-run modes. Its suggestion to mark all 66 versions
+  reverted conflicts with ADR-002 history preservation and was not executed.
+- Remote Schema, data, and Migration History writes performed by this Preflight: zero.

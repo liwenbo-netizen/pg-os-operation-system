@@ -33,5 +33,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Run canonical migration and workflow safety gates
+        run: npm run validate:cx0194:preflight
+
       - name: Run local UAT gate
         run: npm run validate:phase18b

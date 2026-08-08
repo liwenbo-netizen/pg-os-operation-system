@@ -4,16 +4,14 @@ PG OS is the Poly-Gamma China business operation system. This repository follows
 
 ## Current Phase
 
-Phase 31 completed Workflow Snapshot Dirty Save / RLS Warning Cleanup:
+CX-0194 Gate A completed Canonical Migration Baseline adoption:
 
-- Supabase workflow repository now keeps a loaded snapshot baseline
-- `saveSnapshot` upserts only rows that are new or changed versus that baseline
-- Unrelated tables are no longer upserted for a single-module workflow action
-- Loaded-baseline snapshot saves skip bulk `audit_logs` writes because Phase 29 direct audit writes are the production audit path
-- Old `module_business_events` rows are not re-upserted after a successful save
-- Added `202607020002_media_manager_integration_project_policy.sql` so `media_manager` can create the initial integration project during publisher onboarding
-- `npm run validate:phase31` validates the dirty save implementation, tests, UAT gate wiring, and report
-- `npm run validate:uat:local` now includes the Phase 31 dirty save gate
+- CX-0193 proved the Canonical Baseline through two clean Sandbox rebuilds and two normalized Schema Diffs with zero unexplained differences
+- `supabase/migrations/20260807120000_pg_os_canonical_baseline.sql` is the sole active migration; 24 earlier migrations are preserved under `supabase/migrations-legacy/`
+- CX-0194 Gate B Preflight is blocked by remote legacy Migration History compatibility; Gate B has not started and remote Migration History is unchanged
+- Workflow Machine V2.5 is statically loadable and validated, but its feature flags default to off
+- Production application behavior remains on the Legacy Workflow provider
+- `npm run validate:cx0194:preflight` enforces the Canonical migration, Workflow, compatibility, and reconstructability safety gates
 
 Earlier completed phases:
 

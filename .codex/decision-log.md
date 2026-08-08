@@ -293,4 +293,27 @@ decision:
   note: "CX-0190 and CX-0201 remain BLOCKED. Gate B requires explicit approval and a no-production recheck."
   rollback: "Revert adoption commit / restore legacy paths; sandbox disposable; staging untouched."
 ```
+
+## CX-0194-GATE-B-PREFLIGHT
+
+```yaml
+decision:
+  id: CX-0194-GATE-B-PREFLIGHT
+  issue: "Prove Canonical migration-history adoption is safe before writing the remote marker."
+  result: BLOCKED
+  local_migration_chain: PASS
+  canonical_hash: 59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb
+  remote_migration_history:
+    legacy_versions: "000-065"
+    canonical_20260807120000: ABSENT
+  remote_schema_diff: "PASS (178 matched tables, 0 unexplained differences)"
+  dry_run:
+    default: "FAIL - remote versions 000-065 are absent from the active local chain"
+    include_all: "FAIL - same migration-history incompatibility"
+  rejected_cli_suggestion: "Do not mark legacy versions 000-065 reverted without a new approved decision; that conflicts with ADR-002 history preservation."
+  remote_writes: 0
+  gate_b_authorized: false
+  next_required_decision: "Design and prove a preservation-compatible migration-history/CLI strategy, then repeat Gate B Preflight."
+  rollback: "Revert the local CI/README/ledger commit; remote database requires no rollback because it was read-only."
+```
 ```

@@ -121,7 +121,7 @@ commands:
     cx0190_result: BLOCKED
     evidence: "Cannot safely apply migrations without both an approved CLI and a verified non-production target."
 
-  schema_diff:
+  schema_diff_cx0190_unavailable:
     command: null
     source: "CX-0190"
     cx0190_result: BLOCKED
@@ -197,6 +197,12 @@ commands:
     safety: "Vitest only."
     cx0194_result: PASS
     evidence: "1 file / 6 tests."
+  cx0194_gate_b_preflight:
+    command: "npm run validate:cx0194:preflight"
+    source: "CX-0194 Gate B Preflight"
+    safety: "Local-only aggregate of migration-chain, baseline, reconstructability, Workflow Machine, and compatibility gates; performs no remote operation."
+    cx0194_preflight_local_result: PASS
+    evidence: "Canonical 20260807120000 is the sole active migration; CX-0193 59 tests, CX-0194 6 tests, Workflow 16 roles/42 transitions/19 tasks, compatibility 14 tests, reconstructability PROVEN."
   canonical_sandbox_rebuild:
     command: "npm run db:sandbox:rebuild -- --apply --reset --source=migrations --record-history --output=<evidence>.json"
     source: "CX-0194 Gate A"
@@ -242,8 +248,10 @@ ci:
     - "push to master"
     - "pull_request to master"
   node_version: "22"
-  command: "npm run validate:phase18b"
-  current_w0_assessment: "Would fail at domain-schema until the Opportunity.stage alignment is repaired."
+  commands:
+    - "npm run validate:cx0194:preflight"
+    - "npm run validate:phase18b"
+  current_assessment: "Local execution passes. GitHub execution is pending push; Gate B Preflight remains blocked by remote migration-history planner incompatibility."
 
 known_absences:
   - "No repository-declared formatter check."

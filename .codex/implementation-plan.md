@@ -83,6 +83,15 @@ rebuilds 1 and 2 SUCCESS with history `[20260807120000]` and 0-diff, incremental
 and cleaned. Status: `CX-0194: READY_FOR_STAGING_HISTORY_ADOPTION` (`gate_a: COMPLETED`, `gate_b: NOT_STARTED`).
 ADR-002 recommends OPTION_A (`migration repair --status applied 20260807120000`) for Gate B.
 
+CX-0194 Gate B Preflight on 2026-08-08 invalidated the assumption that OPTION_A is already compatible
+with the repository's future `db push` path. Both `db push --dry-run` and the `--include-all` variant stop
+because remote legacy versions `000`-`065` are absent from the active local chain; the CLI recommends
+marking all 66 versions reverted, which conflicts with the accepted requirement to preserve that history.
+The current remote read-only Schema Diff still passes with 178 matched tables and zero unexplained
+differences, so the blocker is history/planner compatibility rather than Schema drift. No remote write was
+performed. `CX-0194 Gate B`, `CX-0190`, and `CX-0201` remain `BLOCKED` until a preservation-compatible
+history strategy passes dry-run.
+
 ## Immediate Sequencing Rule
 
 CX-0004 is complete. It proved that the existing six `Opportunity.stage` values already matched both SQL constraints and repaired only the validator's parsing scope. `npm run validate:domain-schema` and `npm run validate:phase18b` now pass.
