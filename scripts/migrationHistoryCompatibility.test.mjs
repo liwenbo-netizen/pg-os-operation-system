@@ -10,6 +10,7 @@ import {
   parseMigrationList,
   redactCliOutput,
   validateCompatibilityManifest,
+  validateAdoptedRemoteProbe,
   validateRemoteProbe,
   validateRepositoryCompatibilityContract
 } from "./migrationHistoryCompatibility.mjs";
@@ -111,6 +112,24 @@ describe("migration history compatibility adapter", () => {
     });
     expect(failures.some((failure) => failure.includes("027"))).toBe(true);
     expect(failures.some((failure) => failure.includes("default dry-run"))).toBe(true);
+  });
+
+  it("accepts the fully adopted ledger only when both dry-run plans are empty", () => {
+    const adoptedRows = alignedRows().map((row) => row.local === manifest.canonical_baseline.version
+      ? { ...row, remote: row.local }
+      : row);
+    expect(validateAdoptedRemoteProbe({
+      migrationRows: adoptedRows,
+      defaultPlan: [],
+      includeAllPlan: [],
+      manifest
+    })).toEqual([]);
+    expect(validateAdoptedRemoteProbe({
+      migrationRows: adoptedRows,
+      defaultPlan: ["unexpected.sql"],
+      includeAllPlan: [],
+      manifest
+    })).toContain("default dry-run must be empty after Gate B adoption.");
   });
 
   it("redacts database URLs and passwords from captured CLI output", () => {

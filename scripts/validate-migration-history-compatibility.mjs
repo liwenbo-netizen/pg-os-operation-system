@@ -10,6 +10,7 @@ import {
   parseDryRunPlan,
   parseMigrationList,
   redactCliOutput,
+  validateAdoptedRemoteProbe,
   validateRemoteProbe,
   validateRepositoryCompatibilityContract
 } from "./migrationHistoryCompatibility.mjs";
@@ -55,12 +56,13 @@ export function validateLocalCompatibility(root = process.cwd()) {
 async function main() {
   const root = process.cwd();
   const remoteReadOnly = process.argv.includes("--remote-read-only");
+  const remoteAdoptedReadOnly = process.argv.includes("--remote-adopted-read-only");
   const { manifest, failures } = validateLocalCompatibility(root);
   if (failures.length > 0) throw new Error(failures.join("\n"));
 
   const { base, temporaryRoot } = materializeTemporaryProject(root, manifest);
   try {
-    if (!remoteReadOnly) {
+    if (!remoteReadOnly && !remoteAdoptedReadOnly) {
       console.log("Migration history compatibility validation passed.");
       console.log("legacy_runtime_markers: 66");
       console.log("repository_active_chain: canonical_only");
@@ -82,16 +84,23 @@ async function main() {
         throw new Error(`${name} failed without performing a write.\n${detail}`);
       }
     }
-    const probeFailures = validateRemoteProbe({
+    const probe = {
       migrationRows: parseMigrationList(`${list.stdout ?? ""}\n${list.stderr ?? ""}`),
       defaultPlan: parseDryRunPlan(`${dryRun.stdout ?? ""}\n${dryRun.stderr ?? ""}`),
       includeAllPlan: parseDryRunPlan(`${includeAll.stdout ?? ""}\n${includeAll.stderr ?? ""}`),
       manifest
-    });
+    };
+    const probeFailures = remoteAdoptedReadOnly
+      ? validateAdoptedRemoteProbe(probe)
+      : validateRemoteProbe(probe);
     if (probeFailures.length > 0) throw new Error(probeFailures.join("\n"));
-    console.log("Remote migration history compatibility dry-run passed.");
-    console.log("legacy_versions_aligned: 66");
-    console.log(`planned_migration: ${manifest.canonical_baseline.file}`);
+    console.log(remoteAdoptedReadOnly
+      ? "Remote adopted migration history verification passed."
+      : "Remote migration history compatibility dry-run passed.");
+    console.log(remoteAdoptedReadOnly ? "history_versions_aligned: 67" : "legacy_versions_aligned: 66");
+    console.log(remoteAdoptedReadOnly
+      ? "planned_migrations: 0"
+      : `planned_migration: ${manifest.canonical_baseline.file}`);
     console.log("remote_schema_writes: 0");
     console.log("remote_data_writes: 0");
     console.log("remote_history_writes: 0");

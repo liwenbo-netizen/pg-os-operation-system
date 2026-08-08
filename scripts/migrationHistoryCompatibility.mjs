@@ -141,6 +141,24 @@ export function validateRemoteProbe({ migrationRows, defaultPlan, includeAllPlan
   return failures;
 }
 
+export function validateAdoptedRemoteProbe({ migrationRows, defaultPlan, includeAllPlan, manifest }) {
+  const failures = [];
+  const expectedVersions = [...legacyLedgerVersions(), manifest.canonical_baseline.version];
+  const rowsByLocal = new Map(migrationRows.map((row) => [row.local, row]));
+  for (const version of expectedVersions) {
+    const row = rowsByLocal.get(version);
+    if (!row || row.remote !== version) {
+      failures.push(`adopted migration ledger version ${version} is not aligned.`);
+    }
+  }
+  if (migrationRows.length !== expectedVersions.length) {
+    failures.push(`adopted migration list must contain exactly ${expectedVersions.length} rows.`);
+  }
+  if (defaultPlan.length > 0) failures.push("default dry-run must be empty after Gate B adoption.");
+  if (includeAllPlan.length > 0) failures.push("include-all dry-run must be empty after Gate B adoption.");
+  return failures;
+}
+
 export function redactCliOutput(output, secrets) {
   return secrets.filter(Boolean).reduce(
     (redacted, secret) => redacted.replaceAll(secret, "<redacted>"),

@@ -1,0 +1,24 @@
+{
+  "task_id": "CX-0194-GATE-B",
+  "captured_at": "2026-08-08T17:13:29.851Z",
+  "target_class": "NO_PRODUCTION_PROJECT",
+  "canonical_version": "20260807120000",
+  "before": {
+    "aligned_legacy_versions": 66,
+    "canonical_history_present": false,
+    "planned_migrations": [
+      "20260807120000_pg_os_canonical_baseline.sql"
+    ]
+  },
+  "write": {
+    "migration_history_rows_added": 1,
+    "schema_writes": 0,
+    "data_writes": 0
+  },
+  "after": {
+    "aligned_history_versions": 67,
+    "canonical_history_present": true,
+    "planned_migrations": []
+  },
+  "result": "PASS"
+}

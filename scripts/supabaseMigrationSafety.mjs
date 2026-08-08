@@ -16,7 +16,8 @@ export const migrationEnvironmentKeys = [
   "SUPABASE_PRODUCTION_PROJECT_REF",
   "SUPABASE_PRODUCTION_DB_HOST",
   "SUPABASE_ACCESS_TOKEN",
-  "PG_OS_ENABLE_MIGRATION_WRITE"
+  "PG_OS_ENABLE_MIGRATION_WRITE",
+  "PG_OS_MIGRATION_WRITE_SCOPE"
 ];
 
 const alwaysRequiredKeys = [
@@ -98,6 +99,7 @@ export function validateMigrationEnvironment(environment, options = {}) {
   const failures = [];
   const requireWrite = options.requireWrite ?? false;
   const requireReadOnly = options.requireReadOnly ?? false;
+  const allowedNoProductionWriteScope = normalized(options.allowedNoProductionWriteScope);
   const now = options.now instanceof Date ? options.now : new Date(options.now ?? Date.now());
   const values = Object.fromEntries(
     migrationEnvironmentKeys.map((key) => [key, normalized(environment[key])])
@@ -142,7 +144,10 @@ export function validateMigrationEnvironment(environment, options = {}) {
     if (confirmedAt !== null && reviewBy !== null && reviewBy <= confirmedAt) {
       failures.push("No-production-project review date must be after the confirmation date.");
     }
-    if (values.PG_OS_ENABLE_MIGRATION_WRITE === "true") {
+    const scopedNoProductionWrite = values.PG_OS_ENABLE_MIGRATION_WRITE === "true"
+      && allowedNoProductionWriteScope
+      && values.PG_OS_MIGRATION_WRITE_SCOPE === allowedNoProductionWriteScope;
+    if (values.PG_OS_ENABLE_MIGRATION_WRITE === "true" && !scopedNoProductionWrite) {
       failures.push("Migration writes are forbidden while no-production-project mode is active.");
     }
   }

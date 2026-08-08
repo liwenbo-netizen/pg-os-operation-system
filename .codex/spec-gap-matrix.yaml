@@ -188,20 +188,21 @@ codex_task_cards:
     rollback: "Remove the candidate baseline directory, staging-catalog.json, and CX-0193 scripts/tests/commands; no database rollback is required."
   - id: CX-0201
     title: "Align workflow persistence"
-    status: BLOCKED
+    status: READY
     evidence:
       - "CX-0102 is complete, so the task dependency is satisfied."
       - "Current per-table upserts are documented at src/repositories/supabaseWorkflowRepository.ts:1818-1838."
-      - "CX-0190 remains BLOCKED: protected Staging access is verified, but the mandatory production Project Ref/Host denylist and remote rehearsal evidence are unavailable."
+      - "CX-0194 Gate B completed on 2026-08-09: remote ledger versions 000-065 plus canonical 20260807120000 align, and both post-adoption dry-run modes plan zero migrations."
+      - "The owner-attested target is a cleanable, non-sensitive NO_PRODUCTION_PROJECT; the scoped Gate B write added one Migration History row and no Schema or business-data writes."
   - id: CX-0202
     title: "Implement transition execution"
     status: BLOCKED
     evidence: ["Backlog declares dependency CX-0201.", "V2.5 specifies transaction/idempotency/optimistic locks in docs workflow-machine YAML:590+. "]
   - id: CX-0194
     title: "Adopt canonical migration baseline"
-    status: READY
+    status: COMPLETED
     gate_a: COMPLETED
-    gate_b: NOT_STARTED
+    gate_b: COMPLETED
     gate_b_preflight: PASSED
     evidence:
       - "Canonical baseline 20260807120000 adopted from CX-0193 PROVEN candidate; manifest at supabase/baseline/manifest.yaml; repository-canonical LF semantic hash 0f78eb8a... matches the canonical file."
@@ -215,7 +216,9 @@ codex_task_cards:
       - "2026-08-09 repeat Preflight passed local safety, canonical-chain, compatibility, full regression and read-only remote checks; 178 tables matched with zero differences and Staging writes remained zero. GitHub CI is pending."
       - "GitHub run 31266562871 failed only on cross-platform SQL hash drift; LF is now enforced by .gitattributes and frozen hashes use committed bytes without SQL semantic changes. Run 31267260465 then exposed a Windows-only temporary cleanup path check; it is now platform-native and fail-closed. 449 tests and all local gates pass."
       - "GitHub remediation run 31267604809 passed for commit 6de8788. CX-0194 is READY for separate Gate B approval; Gate B is still NOT_STARTED and unauthorized."
-    rollback: "Revert the adoption commit or restore the legacy archive paths; sandbox is disposable; staging untouched."
+      - "2026-08-09 explicit Gate B approval executed through the scoped CX-0194 runner. Exactly canonical version 20260807120000 was added to Migration History; post-adoption verification aligned 67 versions and planned 0 migrations."
+      - "Gate B focused tests PASS (3 files / 26 tests), full tests PASS (77 files / 453 tests), Typecheck PASS, Build PASS with the existing bundle warning, and Phase18B PASS."
+    rollback: "Under the same identity and scope gates, mark only 20260807120000 reverted; do not alter legacy versions 000-065. Then revert Gate B tooling after remote rollback verification."
   - id: CX-0195
     title: "Prove preservation-compatible migration history strategy"
     status: COMPLETED

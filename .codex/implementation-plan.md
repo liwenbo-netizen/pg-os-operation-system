@@ -1,7 +1,7 @@
 # PG OS Implementation Plan After W0
 
-**Planning status:** W0, CX-0004, CX-0101, and CX-0102 are complete. The versioned machine now has a default-off, read-only compatibility seam without changing production workflow behavior.
-**Baseline status:** green after CX-0004 repaired the `Opportunity.stage` validator and CX-0101/CX-0102 passed all local gates.
+**Planning status:** W0, CX-0004, CX-0101, CX-0102 and CX-0194 are complete. CX-0201 is the next READY card.
+**Baseline status:** green after canonical version `20260807120000` was adopted into non-production Migration History and the post-adoption plan returned empty.
 
 ## CX-0192 and ADR-001 (2026-08-06)
 
@@ -110,6 +110,12 @@ temporary-cleanup path check; it now uses resolved platform-native parent/name v
 the deletion boundary. Staging writes remain zero. GitHub Actions run `31267604809` passed, so CX-0194 is
 `READY_FOR_GATE_B_APPROVAL`; Gate B itself still requires separate explicit authorization.
 
+CX-0194 Gate B completed with explicit approval on 2026-08-09. The scoped runner added exactly one remote
+Migration History row for canonical version `20260807120000`; it executed no canonical SQL, Schema write or
+business-data write. Post-adoption verification aligned 67 versions (`000`-`065` plus canonical) and both
+dry-run modes planned zero migrations. Full tests passed at 77 files / 453 tests, Typecheck and Phase18B
+passed, and Build retained only the pre-existing bundle-size warning. `CX-0201` is now `READY`.
+
 ## Immediate Sequencing Rule
 
 CX-0004 is complete. It proved that the existing six `Opportunity.stage` values already matched both SQL constraints and repaired only the validator's parsing scope. `npm run validate:domain-schema` and `npm run validate:phase18b` now pass.
@@ -159,7 +165,9 @@ The repair remained deliberately separate from V1.8 workflow work, so no schema 
 
 The independent prerequisite **CX-0190 — Prepare Remote Supabase Migration Safety Environment** is partially prepared but remains `BLOCKED`. `supabase@2.110.0` is pinned as a project devDependency, project-local CLI validation passes, `supabase/config.toml` exists, migration documentation lists all 24 SQL migrations, and fail-closed environment/production-denylist validators have direct regression coverage. Protected local Staging identity, database credentials, token and marker are now configured with writes disabled; CLI authentication and a read-only remote Migration History query pass. The account exposes exactly one owner-attested cleanable, traffic-free and non-sensitive Project, so no real production Project Ref/Host exists for the mandatory denylist.
 
-Consequently **CX-0201 — Align workflow persistence** remains `BLOCKED`. Before CX-0190 can enable writes, the production-denylist contract must be resolved without fabricated values, and read-only remote Schema baseline inspection plus an executable rollback plan must be completed.
+The historical CX-0190 denylist blocker is superseded by the owner-attested `NO_PRODUCTION_PROJECT` safety
+mode, canonical reconstructability proof, and completed CX-0194 Gate B. **CX-0201 — Align workflow
+persistence** is now `READY`; all migration writes still require task-scoped approval, dry-run and rollback.
 
 ## Validation Strategy
 
@@ -184,5 +192,5 @@ The authoritative W0 card status and evidence are in `.codex/spec-gap-matrix.yam
 - `CX-0101`: `COMPLETED` with a static loader, deterministic failure contract, full V2.5 validation and green local gates.
 - `CX-0102`: `COMPLETED` with a read-only compatibility provider, Legacy default, V2.5 static adapter, validation-only mode, explicit failure contract, and kill switch.
 - `CX-0190`: `BLOCKED`; local CLI/config and protected Staging credentials are prepared, CLI authentication and remote Migration History reads pass, but the production-denylist contract plus dry-run/diff/cleanup evidence are absent.
-- `CX-0201`: dependency-satisfied but still `BLOCKED` by the missing approved migration/dry-run environment recorded in the matrix.
-- `CX-0201` through `CX-0702`: `BLOCKED` by their explicit Backlog dependencies and, where applicable, the baseline/environment blockers recorded in the matrix.
+- `CX-0194`: `COMPLETED`; canonical remote Migration History adoption is verified with an empty incremental plan.
+- `CX-0201`: `READY`; CX-0202 and later cards remain dependency-blocked until their predecessor completes.

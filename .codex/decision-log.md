@@ -386,3 +386,23 @@ decision:
   gate_b_authorized: false
   rollback: "Revert the LF attribute, hash metadata, regression test, and evidence commit; no database rollback required."
 ```
+
+## CX-0194-GATE-B
+
+```yaml
+decision:
+  id: CX-0194-GATE-B
+  issue: "Adopt the canonical baseline version into the attested non-production Migration History without replaying baseline SQL."
+  result: COMPLETED
+  explicit_approval: true
+  canonical_version: "20260807120000"
+  preserved_legacy_versions: "000-065"
+  migration_history_rows_added: 1
+  schema_writes: 0
+  business_data_writes: 0
+  post_adoption_history_rows: 67
+  post_adoption_plan: EMPTY
+  resolution: "Use an exact task-scoped Gate B runner with pre-read, fixed migration repair command, post-read and empty-plan verification."
+  next_task: "CX-0201 - READY"
+  rollback: "Under the same identity and scope guards, mark only 20260807120000 reverted and verify canonical is local-only again; never alter 000-065."
+```

@@ -116,6 +116,27 @@ describe("Supabase migration safety", () => {
       ]));
   });
 
+  it("allows only an explicitly scoped no-production write", () => {
+    const writeEnabled = {
+      ...noProductionEnvironment,
+      PG_OS_ENABLE_MIGRATION_WRITE: "true",
+      PG_OS_MIGRATION_WRITE_SCOPE: "CX-0194_GATE_B_HISTORY_ONLY"
+    };
+    expect(validateMigrationEnvironment(writeEnabled, {
+      now,
+      requireWrite: true,
+      allowedNoProductionWriteScope: "CX-0194_GATE_B_HISTORY_ONLY"
+    })).toEqual([]);
+    expect(validateMigrationEnvironment({
+      ...writeEnabled,
+      PG_OS_MIGRATION_WRITE_SCOPE: "UNRELATED_WRITE"
+    }, {
+      now,
+      requireWrite: true,
+      allowedNoProductionWriteScope: "CX-0194_GATE_B_HISTORY_ONLY"
+    })).toContain("Migration writes are forbidden while no-production-project mode is active.");
+  });
+
   it("does not allow no-production-project mode to bypass staging identity checks", () => {
     expect(validateMigrationEnvironment({
       ...noProductionEnvironment,

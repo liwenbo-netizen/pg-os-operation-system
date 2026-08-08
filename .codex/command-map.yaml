@@ -211,6 +211,18 @@ commands:
     safety: "Local-only aggregate of migration-chain, baseline, reconstructability, Workflow Machine, and compatibility gates; performs no remote operation."
     cx0194_preflight_local_result: PASS
     evidence: "Canonical 20260807120000 is the sole active migration; CX-0193 59 tests, CX-0194 6 tests, Workflow 16 roles/42 transitions/19 tasks, compatibility 14 tests, reconstructability PROVEN."
+  cx0194_gate_b_apply:
+    command: "PG_OS_ENABLE_MIGRATION_WRITE=true PG_OS_MIGRATION_WRITE_SCOPE=CX-0194_GATE_B_HISTORY_ONLY npm run db:cx0194:gate-b -- --apply --approved-task=CX-0194-GATE-B"
+    source: "CX-0194 Gate B"
+    safety: "Exact task-scoped non-production Migration History adoption; pre-read and post-read are mandatory; fixed canonical version only; no canonical SQL execution."
+    result: PASS
+    evidence: "One Migration History row added for 20260807120000; legacy 000-065 preserved; Schema/data writes 0."
+  cx0194_gate_b_post_adoption:
+    command: "npm run validate:cx0194:gate-b:remote"
+    source: "CX-0194 Gate B"
+    safety: "Remote read-only migration list plus default/include-all dry-runs through the runtime ledger adapter."
+    result: PASS
+    evidence: "67 versions aligned; planned migrations 0; Schema/data/history writes during verification 0."
   canonical_sandbox_rebuild:
     command: "npm run db:sandbox:rebuild -- --apply --reset --source=migrations --record-history --output=<evidence>.json"
     source: "CX-0194 Gate A"

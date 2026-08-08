@@ -108,3 +108,13 @@ Repository discovery is complete and CX-0004 restored the local CI baseline to g
   platform-native resolved parent/name checks and still fails closed for unsafe targets.
 - GitHub Actions run `31267604809` passed for commit `6de8788`.
 - Current status: `READY_FOR_GATE_B_APPROVAL`; Gate B remains not started and unauthorized.
+
+## Current Baseline Addendum — CX-0194 Gate B Completed (2026-08-09)
+
+- The repository owner explicitly approved a Migration History-only write to the attested non-production project.
+- The scoped runner added exactly canonical version `20260807120000`; legacy versions `000`-`065` were preserved.
+- Post-adoption read-only verification aligned all 67 versions and both dry-run modes planned zero migrations.
+- Remote Schema writes: 0. Remote business-data writes: 0. Migration History rows added: 1.
+- Focused Gate B tests: 3 files / 26 tests. Full suite: 77 files / 453 tests. Typecheck and Phase18B passed.
+- Build passed with the existing 1.29 MB bundle-size warning; no new failures were introduced.
+- Current status: `CX-0194: COMPLETED`; `CX-0201: READY`.

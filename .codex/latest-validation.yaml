@@ -1,11 +1,11 @@
-task_id: CX-0194-GATE-B-PREFLIGHT-REPEAT
-captured_at: "2026-08-09T00:44:06+08:00"
-result: READY_FOR_GATE_B_APPROVAL
+task_id: CX-0194-GATE-B
+captured_at: "2026-08-09T01:17:30+08:00"
+result: COMPLETED
 task_type: PRE_FLIGHT_SAFETY_GATE
 gate_a: COMPLETED
-gate_b: NOT_STARTED
+gate_b: COMPLETED
 gate_b_preflight: PASSED
-authoritative_current_state: CX_0194_READY_FOR_GATE_B_APPROVAL
+authoritative_current_state: CX_0194_COMPLETED_CX_0201_READY
 baseline_reconstructability: PROVEN
 canonical_baseline:
   version: "20260807120000"
@@ -382,3 +382,31 @@ cx0194_gate_b_preflight_repeat:
     status: NOT_STARTED
   next_required_task: "Obtain separate explicit Gate B write approval; no database write is implied by Preflight readiness."
   rollback: "Revert Preflight evidence and package command wiring; Staging needs no rollback because it was not written."
+
+cx0194_gate_b_current_result:
+  status: COMPLETED
+  explicit_approval: true
+  target_class: NO_PRODUCTION_PROJECT
+  canonical_version: "20260807120000"
+  preserved_legacy_versions: "000-065"
+  migration_history_rows_added: 1
+  schema_writes: 0
+  business_data_writes: 0
+  post_adoption:
+    aligned_versions: 67
+    default_plan: EMPTY
+    include_all_plan: EMPTY
+  validation:
+    focused: "PASS - 3 files / 26 tests"
+    full_tests: "PASS - 77 files / 453 tests"
+    lint_typecheck: PASS
+    build: PASS_WITH_EXISTING_BUNDLE_WARNING
+    phase18b: "PASS - 59.7s"
+    new_failures: []
+  evidence:
+    - .codex/schema-baseline/cx0194-gate-b-adoption.json
+    - .codex/validation/CX-0194-GATE-B.md
+  next_task:
+    id: CX-0201
+    status: READY
+  rollback: "Mark only 20260807120000 reverted under the same target and scope guards, verify 66 legacy rows plus a canonical-only plan, then revert the Gate B tooling commit."
