@@ -118,3 +118,14 @@ Repository discovery is complete and CX-0004 restored the local CI baseline to g
 - Focused Gate B tests: 3 files / 26 tests. Full suite: 77 files / 453 tests. Typecheck and Phase18B passed.
 - Build passed with the existing 1.29 MB bundle-size warning; no new failures were introduced.
 - Current status: `CX-0194: COMPLETED`; `CX-0201: READY`.
+
+## Current Baseline Addendum — CX-0201 Completed (2026-08-09)
+
+- Added expand-only migration `20260809013000_workflow_persistence_foundation.sql` plus a fail-closed rollback.
+- Five state dimensions and all 29 stage-node mappings match Workflow Machine V2.5; browser direct inserts are denied.
+- Sandbox repeat rebuilds: 236/236 twice, zero failures, same hash. Rollback: 1/1, all additive objects removed.
+- Finalized SQL rebuild: 60/60 batches, zero failures, evidence hash matches current files.
+- With explicit owner approval, the scoped runner applied only `20260809013000`; the post-apply plan is empty.
+- Remote read-back: 467/467 `ECOSYSTEM_MAPPED` rows initialized, zero non-mapped rows backfilled, all additive objects present, RLS enabled, browser direct inserts denied.
+- Validation: focused 5 files / 26 tests; full 81 files / 468 tests; Typecheck, Build and Phase18B pass.
+- Current status: `CX-0201: COMPLETED`; `CX-0202: READY`.

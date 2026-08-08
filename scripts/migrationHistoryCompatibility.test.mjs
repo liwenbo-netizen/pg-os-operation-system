@@ -25,7 +25,7 @@ const manifest = {
     sha256: "0f78eb8a4da3304c0a9f4b749e16663bd3f895ad01adc5242bf009d64d0d65e0"
   },
   execution_policy: {
-    repository_active_chain: "canonical_only",
+    repository_active_chain: "canonical_first_with_incrementals",
     compatibility_markers: "runtime_temp_only",
     marker_sql: "select 1;",
     remote_schema_writes_allowed: false,
@@ -72,8 +72,11 @@ describe("migration history compatibility adapter", () => {
     const temp = mkdtempSync(join(tmpdir(), "pgos-cx0195-test-"));
     try {
       const files = materializeCompatibilityMigrations({ destinationDirectory: temp, repositoryRoot: root, manifest });
-      expect(files).toHaveLength(67);
-      expect(readdirSync(temp).filter((name) => name.endsWith(".sql"))).toHaveLength(67);
+      const activeMigrationCount = readdirSync(join(root, "supabase", "migrations"))
+        .filter((name) => name.endsWith(".sql")).length;
+      expect(files).toHaveLength(66 + activeMigrationCount);
+      expect(readdirSync(temp).filter((name) => name.endsWith(".sql")))
+        .toHaveLength(66 + activeMigrationCount);
       expect(readFileSync(join(temp, "000_remote_legacy_history_marker.sql"), "utf8")).toContain("select 1;");
       expect(validateRepositoryCompatibilityContract(root, manifest)).toEqual([]);
     } finally {

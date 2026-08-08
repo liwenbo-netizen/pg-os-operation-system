@@ -1,0 +1,500 @@
+{
+  "overall": "SUCCESS",
+  "gate": [],
+  "baseline_hash": "3dd9cc9b745bc39627de2bee563c55d4ef92121b75da980cf8dbdaeab1e776c1",
+  "baseline_files": [
+    "20260807120000_pg_os_canonical_baseline.sql",
+    "20260809013000_workflow_persistence_foundation.sql"
+  ],
+  "history_versions": [
+    "20260807120000",
+    "20260809013000"
+  ],
+  "migrations_applied": 2,
+  "batches": [
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 0,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 3180
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 1,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 5665
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 2,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2981
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 3,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1784
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 4,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1763
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 5,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 4656
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 6,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2963
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 7,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 4729
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 8,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1992
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 9,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1643
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 10,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 3078
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 11,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 4266
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 12,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2236
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 13,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 4466
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 14,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2540
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 15,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 3456
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 16,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1773
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 17,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2817
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 18,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2354
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 19,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2095
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 20,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 3884
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 21,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2073
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 22,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1411
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 23,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2011
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 24,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2849
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 25,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 3195
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 26,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 3186
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 27,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2879
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 28,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1487
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 29,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1843
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 30,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1582
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 31,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1820
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 32,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1816
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 33,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1965
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 34,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2070
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 35,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 3149
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 36,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1402
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 37,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2600
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 38,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 3373
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 39,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1870
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 40,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1381
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 41,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1628
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 42,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2000
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 43,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1662
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 44,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 3953
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 45,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1692
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 46,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2887
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 47,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 4826
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 48,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1910
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 49,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1686
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 50,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1593
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 51,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1831
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 52,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2528
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 53,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 5857
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 54,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 2090
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 55,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1609
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 56,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 1986
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 57,
+      "status": "success",
+      "error": null,
+      "statement_count": 100,
+      "duration_ms": 5028
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 58,
+      "status": "success",
+      "error": null,
+      "statement_count": 62,
+      "duration_ms": 2371
+    },
+    {
+      "file": "20260809013000_workflow_persistence_foundation.sql",
+      "index": 59,
+      "status": "success",
+      "error": null,
+      "statement_count": 19,
+      "duration_ms": 1927
+    }
+  ],
+  "reset": true,
+  "staging_source_write": false,
+  "started_at": "2026-08-08T17:56:12.218Z",
+  "finished_at": "2026-08-08T17:56:12.219Z"
+}

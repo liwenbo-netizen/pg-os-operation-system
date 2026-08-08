@@ -13,7 +13,7 @@
     "sha256": "0f78eb8a4da3304c0a9f4b749e16663bd3f895ad01adc5242bf009d64d0d65e0"
   },
   "execution_policy": {
-    "repository_active_chain": "canonical_only",
+    "repository_active_chain": "canonical_first_with_incrementals",
     "compatibility_markers": "runtime_temp_only",
     "marker_sql": "select 1;",
     "remote_schema_writes_allowed": false,

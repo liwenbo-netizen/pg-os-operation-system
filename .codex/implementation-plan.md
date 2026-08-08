@@ -1,7 +1,7 @@
 # PG OS Implementation Plan After W0
 
-**Planning status:** W0, CX-0004, CX-0101, CX-0102 and CX-0194 are complete. CX-0201 is the next READY card.
-**Baseline status:** green after canonical version `20260807120000` was adopted into non-production Migration History and the post-adoption plan returned empty.
+**Planning status:** W0, CX-0004, CX-0101, CX-0102, CX-0194 and CX-0201 are complete. CX-0202 is READY.
+**Baseline status:** green through incremental version `20260809013000`; the post-apply remote migration plan is empty.
 
 ## CX-0192 and ADR-001 (2026-08-06)
 
@@ -116,6 +116,15 @@ business-data write. Post-adoption verification aligned 67 versions (`000`-`065`
 dry-run modes planned zero migrations. Full tests passed at 77 files / 453 tests, Typecheck and Phase18B
 passed, and Build retained only the pre-existing bundle-size warning. `CX-0201` is now `READY`.
 
+CX-0201 implementation and non-production apply completed on 2026-08-09. The expand-only migration
+adds the five-dimensional V2.5 state, optimistic version, execution-history foundation, stage-node invariant,
+service-only persistence access, conservative `ECOSYSTEM_MAPPED` backfill and compatibility view. Two
+repeat Sandbox rebuilds passed, its fail-closed rollback removed only the additive objects, and the finalized
+SQL rebuilt with a matching evidence hash. With explicit owner approval, the task-scoped runner applied only
+`20260809013000`; the post-apply plan is empty. Read-back proves 467/467 mapped records were initialized,
+zero non-mapped records were backfilled, RLS is enabled and browser direct writes remain denied. Full
+validation passed at 81 files / 468 tests plus Typecheck, Build and Phase18B. `CX-0202` is now `READY`.
+
 ## Immediate Sequencing Rule
 
 CX-0004 is complete. It proved that the existing six `Opportunity.stage` values already matched both SQL constraints and repaired only the validator's parsing scope. `npm run validate:domain-schema` and `npm run validate:phase18b` now pass.
@@ -193,4 +202,5 @@ The authoritative W0 card status and evidence are in `.codex/spec-gap-matrix.yam
 - `CX-0102`: `COMPLETED` with a read-only compatibility provider, Legacy default, V2.5 static adapter, validation-only mode, explicit failure contract, and kill switch.
 - `CX-0190`: `BLOCKED`; local CLI/config and protected Staging credentials are prepared, CLI authentication and remote Migration History reads pass, but the production-denylist contract plus dry-run/diff/cleanup evidence are absent.
 - `CX-0194`: `COMPLETED`; canonical remote Migration History adoption is verified with an empty incremental plan.
-- `CX-0201`: `READY`; CX-0202 and later cards remain dependency-blocked until their predecessor completes.
+- `CX-0201`: `COMPLETED`; the expand-only persistence foundation is validated locally, in Sandbox and on the attested non-production project.
+- `CX-0202`: `READY`; its persistence dependency is complete.

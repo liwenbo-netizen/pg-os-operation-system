@@ -1,0 +1,25 @@
+{
+  "task_id": "CX-0201",
+  "target": "VERIFIED_DISPOSABLE_MIGRATION_SANDBOX",
+  "method": "SUPABASE_MANAGEMENT_API_READ_ONLY",
+  "captured_at": "2026-08-08T17:56:27.195Z",
+  "proof": {
+    "history_versions": [
+      "20260807120000",
+      "20260809013000"
+    ],
+    "mapped_instances": 0,
+    "compatibility_view": true,
+    "mapped_opportunities": 0,
+    "non_mapped_instances": 0,
+    "workflow_instances_rls": true,
+    "stage_for_node_function": true,
+    "anon_can_insert_instance": false,
+    "workflow_instances_table": true,
+    "stage_node_valid_function": true,
+    "transition_executions_rls": true,
+    "transition_executions_table": true,
+    "authenticated_can_insert_instance": false
+  },
+  "failures": []
+}

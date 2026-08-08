@@ -1,0 +1,14 @@
+{
+  "task_id": "CX-0201",
+  "captured_at": "2026-08-08T18:06:29.326Z",
+  "target_class": "NO_PRODUCTION_PROJECT",
+  "migration_version": "20260809013000",
+  "planned_before": [
+    "20260809013000_workflow_persistence_foundation.sql"
+  ],
+  "applied_migrations": [
+    "20260809013000_workflow_persistence_foundation.sql"
+  ],
+  "planned_after": [],
+  "result": "PASS"
+}

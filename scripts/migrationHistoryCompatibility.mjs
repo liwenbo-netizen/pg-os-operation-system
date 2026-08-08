@@ -47,8 +47,8 @@ export function validateCompatibilityManifest(manifest) {
     failures.push("canonical baseline sha256 must be a lowercase SHA-256 value.");
   }
   const policy = manifest?.execution_policy ?? {};
-  if (policy.repository_active_chain !== "canonical_only") {
-    failures.push("repository active chain must remain canonical_only.");
+  if (policy.repository_active_chain !== "canonical_first_with_incrementals") {
+    failures.push("repository active chain must remain canonical_first_with_incrementals.");
   }
   if (policy.compatibility_markers !== "runtime_temp_only") {
     failures.push("compatibility markers must remain runtime_temp_only.");
@@ -68,8 +68,12 @@ export function validateRepositoryCompatibilityContract(root, manifest) {
   const failures = validateCompatibilityManifest(manifest);
   const migrationsDirectory = join(root, "supabase", "migrations");
   const sqlFiles = readdirSync(migrationsDirectory).filter((name) => name.endsWith(".sql")).sort();
-  if (sqlFiles.length !== 1 || sqlFiles[0] !== manifest.canonical_baseline.file) {
-    failures.push("repository active migration chain must contain only the canonical baseline.");
+  if (sqlFiles.length === 0 || sqlFiles[0] !== manifest.canonical_baseline.file) {
+    failures.push("repository active migration chain must begin with the canonical baseline.");
+  }
+  const canonicalVersion = manifest.canonical_baseline.version;
+  if (sqlFiles.slice(1).some((name) => name.split("_", 1)[0] <= canonicalVersion)) {
+    failures.push("repository incremental migrations must be newer than the canonical baseline.");
   }
   if (sqlFiles.some((name) => /^\d{3}_remote_legacy_history_marker\.sql$/.test(name))) {
     failures.push("runtime compatibility markers must not enter supabase/migrations.");
@@ -93,11 +97,16 @@ export function materializeCompatibilityMigrations({ destinationDirectory, repos
     );
     return file;
   });
-  copyFileSync(
-    join(repositoryRoot, "supabase", "migrations", manifest.canonical_baseline.file),
-    join(destinationDirectory, manifest.canonical_baseline.file)
-  );
-  return [...markerFiles, manifest.canonical_baseline.file];
+  const activeMigrations = readdirSync(join(repositoryRoot, "supabase", "migrations"))
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
+  for (const migration of activeMigrations) {
+    copyFileSync(
+      join(repositoryRoot, "supabase", "migrations", migration),
+      join(destinationDirectory, migration)
+    );
+  }
+  return [...markerFiles, ...activeMigrations];
 }
 
 export function parseMigrationList(output) {

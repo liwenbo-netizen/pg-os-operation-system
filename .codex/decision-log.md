@@ -25,6 +25,35 @@ decision:
   rollback: Revert the scoped validator and regression test; no schema or data rollback is required.
 ```
 
+## CX-0201 Pre-Apply Decision
+
+```yaml
+decision:
+  id: CX-0201
+  issue: "How should Workflow Machine V2.5 state be persisted without reinterpreting legacy records?"
+  result: BLOCKED_REMOTE_APPROVAL_ONLY
+  persistence:
+    dimensions: [lifecycle_stage, workflow_node, node_status, control_status, milestone_code]
+    optimistic_lock: workflow_version
+    stage_node_registry_size: 29
+    browser_direct_writes: denied
+  backfill:
+    mapped_status: ECOSYSTEM_MAPPED
+    mapped_state: [S0_MEDIA_LEAD, S0_SCREENING, IN_PROGRESS, ACTIVE]
+    other_historical_statuses: LEGACY_REVIEW_REQUIRED
+    guessed_mappings: 0
+  sandbox:
+    repeat_rebuilds: PASS
+    rollback: PASS
+    finalized_rebuild: PASS
+  remote_preflight:
+    mode: READ_ONLY
+    planned_migrations: [20260809013000_workflow_persistence_foundation.sql]
+    writes: 0
+  blocker: "Separate explicit approval is required before applying Schema/backfill to the attested non-production project."
+  rollback: "Run the fail-closed additive rollback only while transition history is empty; otherwise retain compatibility reads and stop."
+```
+
 ## CX-0101
 
 ```yaml
@@ -405,4 +434,26 @@ decision:
   resolution: "Use an exact task-scoped Gate B runner with pre-read, fixed migration repair command, post-read and empty-plan verification."
   next_task: "CX-0201 - READY"
   rollback: "Under the same identity and scope guards, mark only 20260807120000 reverted and verify canonical is local-only again; never alter 000-065."
+```
+
+## 2026-08-09 — CX-0201 remote persistence foundation completion
+
+```yaml
+decision:
+  issue: "Apply the validated workflow persistence foundation to the attested non-production project."
+  result: COMPLETED
+  explicit_approval: true
+  applied_migration: "20260809013000_workflow_persistence_foundation.sql"
+  schema_scope: "additive workflow persistence objects only"
+  backfill_scope: "ECOSYSTEM_MAPPED only"
+  mapped_backfill: "467/467"
+  non_mapped_backfill: 0
+  legacy_fields_changed: false
+  other_historical_data_changed: false
+  post_apply_plan: []
+  evidence:
+    - ".codex/schema-baseline/cx0201-remote-apply.json"
+    - ".codex/schema-baseline/cx0201-remote-proof.json"
+  next_task: "CX-0202 - READY"
+  rollback: "Remove only CX-0201 additive objects while transition history is empty; after history exists, fail closed and retain compatibility reads."
 ```

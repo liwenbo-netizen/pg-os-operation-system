@@ -188,16 +188,22 @@ codex_task_cards:
     rollback: "Remove the candidate baseline directory, staging-catalog.json, and CX-0193 scripts/tests/commands; no database rollback is required."
   - id: CX-0201
     title: "Align workflow persistence"
-    status: READY
+    status: COMPLETED
     evidence:
       - "CX-0102 is complete, so the task dependency is satisfied."
       - "Current per-table upserts are documented at src/repositories/supabaseWorkflowRepository.ts:1818-1838."
       - "CX-0194 Gate B completed on 2026-08-09: remote ledger versions 000-065 plus canonical 20260807120000 align, and both post-adoption dry-run modes plan zero migrations."
       - "The owner-attested target is a cleanable, non-sensitive NO_PRODUCTION_PROJECT; the scoped Gate B write added one Migration History row and no Schema or business-data writes."
+      - "Expand-only migration 20260809013000 defines the five-dimensional state, stage-node invariant, positive version lock, immutable execution-history foundation, service-only persistence access, compatibility view, and ECOSYSTEM_MAPPED-only idempotent backfill."
+      - "Disposable Sandbox: two repeat rebuilds succeeded at 236/236 batches, fail-closed rollback removed all five additive objects, and the finalized SQL rebuilt successfully at 60/60 batches with matching hash 3dd9cc9b...."
+      - "With explicit owner approval, the task-scoped runner applied only 20260809013000 to the attested non-production project; the post-apply plan is empty."
+      - "Remote read-back proves 467/467 ECOSYSTEM_MAPPED opportunities have initial workflow instances, zero non-mapped opportunities were backfilled, all additive objects exist, RLS is enabled, and browser direct inserts remain denied."
+      - "Focused validation PASS 5 files/26 tests; full suite PASS 81 files/468 tests; Typecheck, Build and Phase18B PASS; no new failures."
+    rollback: "The fail-closed rollback removes only the additive CX-0201 view/tables/functions when no transition history exists; compatibility reads and all legacy fields remain intact."
   - id: CX-0202
     title: "Implement transition execution"
-    status: BLOCKED
-    evidence: ["Backlog declares dependency CX-0201.", "V2.5 specifies transaction/idempotency/optimistic locks in docs workflow-machine YAML:590+. "]
+    status: READY
+    evidence: ["Backlog declares dependency CX-0201.", "CX-0201 is COMPLETED locally, in the disposable Sandbox, and on the attested non-production project.", "V2.5 specifies transaction/idempotency/optimistic locks in docs workflow-machine YAML:590+. "]
   - id: CX-0194
     title: "Adopt canonical migration baseline"
     status: COMPLETED

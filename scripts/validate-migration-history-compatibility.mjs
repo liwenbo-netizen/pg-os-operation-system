@@ -65,7 +65,7 @@ async function main() {
     if (!remoteReadOnly && !remoteAdoptedReadOnly) {
       console.log("Migration history compatibility validation passed.");
       console.log("legacy_runtime_markers: 66");
-      console.log("repository_active_chain: canonical_only");
+      console.log("repository_active_chain: canonical_first_with_incrementals");
       console.log("remote_writes: 0");
       return;
     }

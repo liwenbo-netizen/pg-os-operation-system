@@ -1,0 +1,14 @@
+{
+  "task_id": "CX-0201",
+  "target": "VERIFIED_DISPOSABLE_MIGRATION_SANDBOX",
+  "method": "SUPABASE_MANAGEMENT_API_READ_ONLY",
+  "captured_at": "2026-08-08T17:53:12.466Z",
+  "proof": {
+    "compatibility_view": false,
+    "stage_for_node_function": false,
+    "workflow_instances_table": false,
+    "stage_node_valid_function": false,
+    "transition_executions_table": false
+  },
+  "failures": []
+}
