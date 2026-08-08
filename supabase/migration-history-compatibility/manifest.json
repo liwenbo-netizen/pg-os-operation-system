@@ -10,7 +10,7 @@
   "canonical_baseline": {
     "version": "20260807120000",
     "file": "20260807120000_pg_os_canonical_baseline.sql",
-    "sha256": "59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb"
+    "sha256": "0f78eb8a4da3304c0a9f4b749e16663bd3f895ad01adc5242bf009d64d0d65e0"
   },
   "execution_policy": {
     "repository_active_chain": "canonical_only",

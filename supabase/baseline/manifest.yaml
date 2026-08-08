@@ -2,9 +2,9 @@ canonical_baseline:
   version: "20260807120000"
   adopted_from: CX-0193
   source_commit: "9be2500"
-  candidate_sha256: "a9f1fce5bc61c936b0c0933405b9d3222628f690b4756b16369b5eb9798a149d"
-  canonical_file_sha256: "59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb"
-  semantic_hash: "59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb"
+  candidate_sha256: "deb164e1caa925d3f3f75a2a66906b851f0b77ca0d752ba5759a0ca806eee435"
+  canonical_file_sha256: "0f78eb8a4da3304c0a9f4b749e16663bd3f895ad01adc5242bf009d64d0d65e0"
+  semantic_hash: "0f78eb8a4da3304c0a9f4b749e16663bd3f895ad01adc5242bf009d64d0d65e0"
   adopted_at: "2026-08-07T00:00:00+08:00"
   schema_counts:
     tables: 178

@@ -1,7 +1,7 @@
 # CX-0194 Gate B Preflight Repeat
 
 - Captured: 2026-08-09 00:11 UTC+8
-- Result: `PASSED_PENDING_GITHUB_CI`
+- Result: `REMEDIATED_PENDING_GITHUB_CI`
 - Task type: preflight safety gate
 - Gate A: completed
 - Gate B: not started and not authorized
@@ -35,11 +35,11 @@ data changes, or Migration History writes.
 | `npm run validate:cx0194:preflight` | PASS |
 | `npm run validate:cx0195:remote-read-only` | PASS; 66 aligned; canonical-only plan; writes 0 |
 | `npm run db:schema:diff -- --output=.codex/schema-baseline/cx0194-gate-b-preflight-repeat-diff.json` | PASS; 178 matched; zero difference |
-| `npm test` | PASS; 76 files / 447 tests |
+| `npm test` | PASS; 76 files / 448 tests |
 | `npm run lint` | PASS |
 | `npm run build` | PASS with existing 1,294.31 kB bundle warning |
-| `npm run validate:secret-hygiene` | PASS; final scan 396 text files |
-| `npm run validate:phase18b` | PASS; 53.6s |
+| `npm run validate:secret-hygiene` | PASS; final scan 397 text files |
+| `npm run validate:phase18b` | PASS; 67.7s |
 
 ## Minimal Validation Command Repair
 
@@ -48,9 +48,18 @@ load the already configured `.env.migration.local`. Direct execution with that p
 `package.json` now uses `--env-file-if-exists=.env.migration.local` for those child commands, preserving CI
 environment injection while making the discovered local aggregate command work. No safety rule was relaxed.
 
+## GitHub CI Cross-Platform Remediation
+
+GitHub Actions run `31266562871` failed before the UAT gate because the frozen Baseline hashes had been
+captured from a Windows working tree containing 154 CRLF lines, while Git stores and Linux checks out the
+same SQL as LF. The committed SQL content and Schema semantics were unchanged. The repository now enforces
+LF for SQL through `.gitattributes`; the Baseline and compatibility manifests freeze the Git-canonical LF
+hashes; and a regression test rejects carriage returns in the Canonical and candidate SQL. Local Preflight,
+448 tests, Build, Phase18B, and the remote read-only canonical-only plan all pass after the repair.
+
 ## Remaining Gate
 
-GitHub CI must pass for the pushed Preflight commit before CX-0194 may be marked
+GitHub CI must pass for the remediation commit before CX-0194 may be marked
 `READY_FOR_GATE_B_APPROVAL`. Even after CI passes, Gate B still requires a separate explicit approval before
 any Staging Migration History write.
 

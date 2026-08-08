@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   baselineFileName,
   baselineVersion,
@@ -22,6 +23,13 @@ const manifest = {
 const migrationFiles = { [baselineFileName]: concat };
 
 describe("validateMigrationChain", () => {
+  it("keeps the repository canonical SQL in LF form", () => {
+    const canonical = readFileSync(`supabase/migrations/${baselineFileName}`, "utf8");
+    const candidate = readFileSync("supabase/baseline-candidate/10_public_schema.sql", "utf8");
+    expect(canonical).not.toContain("\r");
+    expect(candidate).not.toContain("\r");
+  });
+
   it("passes a valid canonical chain with baseline only", () => {
     expect(validateMigrationChain({ manifest, migrationFiles, candidateFiles })).toEqual([]);
   });

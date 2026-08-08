@@ -8,7 +8,7 @@ The active migration chain starts at the canonical baseline:
 
 1. `migrations/20260807120000_pg_os_canonical_baseline.sql`
    - Adopted from the CX-0193 PROVEN candidate baseline (hash
-     `a9f1fce5bc61c936b0c0933405b9d3222628f690b4756b16369b5eb9798a149d`).
+     `deb164e1caa925d3f3f75a2a66906b851f0b77ca0d752ba5759a0ca806eee435`, using repository-canonical LF line endings).
    - Manifest: `baseline/manifest.yaml`; provenance: `baseline/README.md`.
 2. Future migrations must use versions strictly newer than `20260807120000`
    and must never reintroduce legacy pre-baseline versions.

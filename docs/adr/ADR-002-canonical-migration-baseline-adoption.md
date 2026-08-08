@@ -29,8 +29,9 @@ CX-0193 用同一候选 Baseline 在隔离 Sandbox 完成两次独立空环境�
 
 - Canonical Baseline 版本：`20260807120000`
 - 文件：`supabase/migrations/20260807120000_pg_os_canonical_baseline.sql`
-- 候选哈希：`a9f1fce5bc61c936b0c0933405b9d3222628f690b4756b16369b5eb9798a149d`
-- 语义哈希：`59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb`
+- 候选哈希（Git 规范 LF）：`deb164e1caa925d3f3f75a2a66906b851f0b77ca0d752ba5759a0ca806eee435`
+- 语义哈希（Git 规范 LF）：`0f78eb8a4da3304c0a9f4b749e16663bd3f895ad01adc5242bf009d64d0d65e0`
+- 换行策略：SQL 由 `.gitattributes` 强制使用 LF，避免 Windows 与 Linux CI 产生不同完整性哈希；SQL 语义未改变。
 - 截止：所有早于该版本的本地迁移均为历史参考；远程 66 条为历史参考。
 
 ## 5. 未来 Migration 规则

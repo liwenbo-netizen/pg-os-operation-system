@@ -70,8 +70,8 @@ Repository discovery is complete and CX-0004 restored the local CI baseline to g
 
 - CX-0101 and CX-0102 are complete; Workflow V2.5 remains default-off and Legacy remains active.
 - CX-0193 is complete with reconstructability PROVEN.
-- CX-0194 Gate A adopted Canonical migration `20260807120000`; its frozen SHA-256 remains
-  `59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb`.
+- CX-0194 Gate A adopted Canonical migration `20260807120000`; its repository-canonical LF SHA-256 is
+  `0f78eb8a4da3304c0a9f4b749e16663bd3f895ad01adc5242bf009d64d0d65e0`.
 - Local Preflight gates pass: 74 test files / 437 tests, Typecheck, Build, phase18b, migration-chain,
   Workflow Machine, compatibility, and reconstructability.
 - Current read-only Schema Diff passes with 178 matched tables and zero unexplained differences.
@@ -100,6 +100,8 @@ Repository discovery is complete and CX-0004 restored the local CI baseline to g
   checks through the approved CX-0195 adapter.
 - Remote Legacy versions `000`-`065` aligned; both dry-run modes planned only the Canonical Baseline.
 - Current normalized Schema Diff matched 178 tables with zero missing, extra or unexplained differences.
-- Full local validation passed: 76 test files / 447 tests, Typecheck, Build and Phase18B.
+- Full local validation passed after the cross-platform repair: 76 test files / 448 tests, Typecheck, Build and Phase18B.
 - Staging Schema, data and Migration History writes: zero.
-- Current status: `PASSED_PENDING_GITHUB_CI`; Gate B remains not started and unauthorized.
+- GitHub run `31266562871` exposed mixed Windows/LF frozen-hash drift. SQL is now forced to LF, manifests
+  freeze Git-canonical hashes, and SQL semantics remain unchanged.
+- Current status: `REMEDIATED_PENDING_GITHUB_CI`; Gate B remains not started and unauthorized.

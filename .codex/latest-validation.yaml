@@ -1,16 +1,16 @@
 task_id: CX-0194-GATE-B-PREFLIGHT-REPEAT
 captured_at: "2026-08-09T00:11:29+08:00"
-result: PASSED_PENDING_GITHUB_CI
+result: REMEDIATED_PENDING_GITHUB_CI
 task_type: PRE_FLIGHT_SAFETY_GATE
 gate_a: COMPLETED
 gate_b: NOT_STARTED
-gate_b_preflight: PASSED_PENDING_GITHUB_CI
-authoritative_current_state: CX_0194_GATE_B_PREFLIGHT_REPEAT_PENDING_GITHUB_CI
+gate_b_preflight: REMEDIATED_PENDING_GITHUB_CI
+authoritative_current_state: CX_0194_GATE_B_PREFLIGHT_CI_PORTABILITY_REMEDIATED_PENDING_GITHUB_CI
 baseline_reconstructability: PROVEN
 canonical_baseline:
   version: "20260807120000"
-  candidate_sha256: a9f1fce5bc61c936b0c0933405b9d3222628f690b4756b16369b5eb9798a149d
-  canonical_file_sha256: 59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb
+  candidate_sha256: deb164e1caa925d3f3f75a2a66906b851f0b77ca0d752ba5759a0ca806eee435
+  canonical_file_sha256: 0f78eb8a4da3304c0a9f4b749e16663bd3f895ad01adc5242bf009d64d0d65e0
 product_code_changed: false
 runtime_application_behavior_changed: false
 validation_code_changed: true
@@ -351,7 +351,7 @@ cx0195_current_result:
   rollback: "Revert CX-0195 files. Sandbox is canonical-only; Staging needs no rollback because it was not written."
 
 cx0194_gate_b_preflight_repeat:
-  status: PASSED_PENDING_GITHUB_CI
+  status: REMEDIATED_PENDING_GITHUB_CI
   verified_at: "2026-08-09T00:11:29+08:00"
   safety_mode: NO_PRODUCTION_PROJECT
   migration_safety: PASS
@@ -365,12 +365,16 @@ cx0194_gate_b_preflight_repeat:
     data_writes: 0
     migration_history_writes: 0
   validation:
-    full_tests: "PASS - 76 files / 447 tests"
+    full_tests: "PASS - 76 files / 448 tests"
     lint_typecheck: PASS
     build: PASS_WITH_EXISTING_BUNDLE_WARNING
-    phase18b: "PASS - 53.6s"
-    secret_hygiene: "PASS - final scan 396 text files"
-  github_ci: PENDING_PUSH
+    phase18b: "PASS - 67.7s"
+    secret_hygiene: "PASS - final scan 397 text files"
+  github_ci:
+    failed_run: 31266562871
+    failure: "Frozen hashes reflected mixed Windows line endings while Linux checked out LF."
+    remediation: "SQL LF enforced; Git-canonical hashes frozen; regression test added."
+    status: PENDING_REMEDIATION_PUSH
   gate_b:
     authorized: false
     status: NOT_STARTED
