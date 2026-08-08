@@ -79,3 +79,17 @@ Repository discovery is complete and CX-0004 restored the local CI baseline to g
   `000`-`065` in both normal and `--include-all` dry-run modes. Its suggestion to mark all 66 versions
   reverted conflicts with ADR-002 history preservation and was not executed.
 - Remote Schema, data, and Migration History writes performed by this Preflight: zero.
+
+## Current Baseline Addendum — CX-0195 Migration History Compatibility (2026-08-08)
+
+- ADR-003 accepts a runtime-only ledger adapter for preserved remote history `000`-`065`; no marker files
+  enter `supabase/migrations/`, whose active chain remains canonical-only.
+- Read-only Staging `migration list` aligns all 66 legacy versions. Both default and `--include-all`
+  `db push --dry-run` plan only the frozen Canonical Baseline.
+- Disposable Sandbox rehearsal succeeded with 301 compatibility batches and exact 67-version history;
+  Schema Diff matched 178 tables with zero unexplained differences.
+- Sandbox was restored using 235 canonical batches. Exact cleanup removed only `000`-`065`, left
+  `[20260807120000]`, and the final Schema Diff remained zero.
+- Staging Schema, data, and Migration History writes in CX-0195: zero.
+- CX-0195 is complete. CX-0194 Gate B remains unauthorized; the next permitted action is a repeated
+  Preflight through the approved adapter.

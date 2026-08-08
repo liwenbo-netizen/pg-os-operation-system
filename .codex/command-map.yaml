@@ -210,6 +210,27 @@ commands:
     cx0194_result: PASS
     evidence: "canonical-rebuild-1.json / canonical-rebuild-2.json / canonical-cleanup.json: 235 batches each, history=[20260807120000], diffs 0."
 
+  cx0195_compatibility_static:
+    command: "npm run validate:cx0195"
+    source: "CX-0195"
+    safety: "Local tests and manifest/active-chain validation only; no network or database access."
+    cx0195_result: PASS
+    evidence: "2 files / 10 focused tests plus static contract validation; 66 runtime markers, canonical-only active chain, remote writes 0."
+
+  cx0195_remote_read_only:
+    command: "npm run validate:cx0195:remote-read-only"
+    source: "CX-0195"
+    safety: "Creates and removes a temporary Supabase workdir; executes migration list and db push --dry-run only. No remote write command is permitted."
+    cx0195_result: PASS
+    evidence: "All remote versions 000-065 aligned; default and --include-all plans contain only the Canonical Baseline; writes 0."
+
+  cx0195_sandbox_history_cleanup:
+    command: "npm run db:sandbox:cleanup-compat-history -- --apply --output=<evidence>.json"
+    source: "CX-0195"
+    safety: "Requires explicit --apply, migration-sandbox write approval, Management API identity verification, and exact 000-065 version deletion. Staging is always write-disabled."
+    cx0195_result: PASS
+    evidence: "Compatibility markers removed from disposable Sandbox; remaining history=[20260807120000]; staging_source_writes=false."
+
   live_uat_write:
     commands:
       - "verify:uat-live-writes"
@@ -251,7 +272,7 @@ ci:
   commands:
     - "npm run validate:cx0194:preflight"
     - "npm run validate:phase18b"
-  current_assessment: "Local execution passes. GitHub execution is pending push; Gate B Preflight remains blocked by remote migration-history planner incompatibility."
+  current_assessment: "Local execution passes. CX-0195 resolved planner incompatibility through a runtime-only adapter; GitHub execution and a repeated CX-0194 Gate B Preflight remain pending. Gate B writes are not authorized."
 
 known_absences:
   - "No repository-declared formatter check."

@@ -21,16 +21,14 @@ baseline_blockers:
     remediation_scope: "Completed without schema, migration, seed, or data changes."
   - id: "B0-LIVE-MIGRATION"
     status: BLOCKED
-    impact: "No live migration verification can be executed from the local repository."
+    impact: "Canonical reconstruction and planner compatibility are proven, but no Staging Migration History write is authorized yet."
     evidence:
-      - "CX-0192 (2026-08-06): remote migration history has 66 sequential versions (000-065) while the local repository declares 24 date-based versions; the two sets have zero overlap and reconstruction is NOT_PROVEN."
-      - "CX-0193 (2026-08-06): read-only candidate baseline generated (178 tables/3106 columns/125 policies) but sandbox rebuild and normalized diff are BLOCKED because the only second project is INACTIVE and its purpose is unconfirmed; reconstruction remains NOT_PROVEN."
-      - "supabase@2.110.0 is pinned in package.json/package-lock.json and npm run validate:supabase-cli passes through project-local npx execution."
-      - "supabase/config.toml and fail-closed CLI/environment/denylist validators exist; Docker was not started or required."
-      - "Protected local Staging identity, database credentials, marker and access token are configured in a Git-ignored migration environment with writes disabled."
-      - "CLI authentication and a read-only remote Migration History query pass; the account exposes exactly one owner-attested cleanable, traffic-free and non-sensitive Project."
-      - "No real production Project Ref/Host exists for the mandatory denylist, so the environment gate continues to fail closed."
-    remediation_scope: "Resolve the no-production-project denylist contract without fabricated values, then execute read-only Schema baseline inspection before any migration write."
+      - "CX-0193 proved canonical reconstruction with repeated Sandbox rebuilds and zero-diff Schema evidence."
+      - "CX-0194 Gate A adopted and hash-froze canonical version 20260807120000; Gate B remains not started."
+      - "CX-0195 proved a runtime-only compatibility adapter for preserved remote history 000-065; both Staging dry-run modes plan only the Canonical Baseline."
+      - "The independent Sandbox is ACTIVE_HEALTHY, restored canonical-only, and its history is exactly [20260807120000]."
+      - "Staging identity and remote read-only probes pass; Staging Schema, data, and Migration History writes remain zero."
+    remediation_scope: "Repeat CX-0194 Gate B Preflight through the approved adapter, obtain separate explicit write approval, then execute only the approved history adoption action."
   - id: "B0-SEED-PACKAGE"
     status: BLOCKED
     impact: "Complete China-media seed package validation is unavailable."
@@ -204,7 +202,7 @@ codex_task_cards:
     status: BLOCKED
     gate_a: COMPLETED
     gate_b: NOT_STARTED
-    gate_b_preflight: BLOCKED
+    gate_b_preflight: READY_TO_REPEAT
     evidence:
       - "Canonical baseline 20260807120000 adopted from CX-0193 PROVEN candidate; manifest at supabase/baseline/manifest.yaml; semantic hash 59bfb9e7... matches canonical file."
       - "24 legacy migrations archived verbatim to supabase/migrations-legacy/pre-canonical-baseline (git 100% renames); validate:migration-chain protects the active chain."
@@ -213,7 +211,20 @@ codex_task_cards:
       - "Both db push --dry-run and db push --dry-run --include-all fail because remote versions 000-065 are absent locally; the CLI recommends marking all 66 legacy versions reverted, which conflicts with ADR-002 history-preservation requirements."
       - "2026-08-08 remote read-only normalized Schema Diff remains PASS: 178 matched tables and 0 unexplained differences."
       - "No remote schema, data, or migration-history write was executed. Gate B is not authorized until a preservation-compatible CLI/history strategy is proven by dry-run."
+      - "CX-0195 proved the preservation-compatible runtime ledger adapter; CX-0194 remains BLOCKED until the complete Gate B Preflight is repeated and separately approved."
     rollback: "Revert the adoption commit or restore the legacy archive paths; sandbox is disposable; staging untouched."
+  - id: CX-0195
+    title: "Prove preservation-compatible migration history strategy"
+    status: COMPLETED
+    type: "READ_ONLY_ANALYSIS + DISPOSABLE_SANDBOX_REHEARSAL"
+    evidence:
+      - "ADR-003 and supabase/migration-history-compatibility/manifest.json define runtime-only no-op markers for preserved remote versions 000-065; the repository active chain remains canonical-only."
+      - "Read-only Staging migration list aligns all 66 versions; default and --include-all dry-runs both plan only 20260807120000_pg_os_canonical_baseline.sql."
+      - "Disposable Sandbox compatibility rebuild succeeded with 301 batches and exact history 000-065 plus 20260807120000; normalized diff matched 178 tables with 0 unexplained differences."
+      - "Sandbox cleanup rebuild succeeded with 235 canonical batches; exact marker cleanup left only 20260807120000; final normalized diff remained 0."
+      - "Staging Schema, data, and Migration History writes: 0."
+      - "Focused compatibility and cleanup tests cover fail-closed policy, exact ledger range, temporary materialization, CLI parsing, mismatch detection, explicit apply, exact cleanup, and secret redaction."
+    rollback: "Remove ADR-003, the compatibility manifest/scripts/tests/commands, and CX-0195 evidence. Sandbox is already canonical-only; Staging requires no rollback."
   - id: CX-0203
     title: "Implement guards, checklists and target resolvers"
     status: BLOCKED

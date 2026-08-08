@@ -92,6 +92,15 @@ differences, so the blocker is history/planner compatibility rather than Schema 
 performed. `CX-0194 Gate B`, `CX-0190`, and `CX-0201` remain `BLOCKED` until a preservation-compatible
 history strategy passes dry-run.
 
+CX-0195 completed on 2026-08-08. ADR-003 now defines a runtime-only ledger adapter that materializes
+no-op markers for preserved remote versions `000`-`065` in a temporary Supabase workdir while keeping
+the repository migration chain canonical-only. Read-only Staging probes aligned all 66 versions and both
+dry-run modes planned only the Canonical Baseline. A disposable Sandbox rehearsal rebuilt the 67-file
+compatibility chain, produced a zero-diff Schema, and was then restored to canonical-only with exact history
+`[20260807120000]` and another zero-diff result. Staging writes remained zero. The next task is to repeat
+CX-0194 Gate B Preflight through the approved adapter; actual Gate B writes remain separately blocked and
+unauthorized.
+
 ## Immediate Sequencing Rule
 
 CX-0004 is complete. It proved that the existing six `Opportunity.stage` values already matched both SQL constraints and repaired only the validator's parsing scope. `npm run validate:domain-schema` and `npm run validate:phase18b` now pass.

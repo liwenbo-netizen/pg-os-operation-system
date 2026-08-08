@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "strategy": "runtime_ledger_marker_adapter",
+  "remote_legacy_history": {
+    "first": "000",
+    "last": "065",
+    "count": 66,
+    "original_sql_available": false
+  },
+  "canonical_baseline": {
+    "version": "20260807120000",
+    "file": "20260807120000_pg_os_canonical_baseline.sql",
+    "sha256": "59bfb9e7e01a6264b410c02d9614b577201a4cf1e3b79752f4bcf359428481eb"
+  },
+  "execution_policy": {
+    "repository_active_chain": "canonical_only",
+    "compatibility_markers": "runtime_temp_only",
+    "marker_sql": "select 1;",
+    "remote_schema_writes_allowed": false,
+    "remote_data_writes_allowed": false,
+    "remote_history_writes_allowed": false
+  }
+}

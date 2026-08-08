@@ -316,4 +316,32 @@ decision:
   next_required_decision: "Design and prove a preservation-compatible migration-history/CLI strategy, then repeat Gate B Preflight."
   rollback: "Revert the local CI/README/ledger commit; remote database requires no rollback because it was read-only."
 ```
+
+## CX-0195
+
+```yaml
+decision:
+  id: CX-0195
+  issue: "Preserve remote Migration History 000-065 while restoring Supabase CLI planning compatibility."
+  root_cause: "Supabase CLI rejects remote migration versions that are absent from the local planning directory."
+  result: COMPLETED
+  strategy: runtime_ledger_marker_adapter
+  repository_active_chain: canonical_only
+  compatibility_markers: "runtime temporary only; 000-065; select 1;"
+  original_legacy_sql_claimed: false
+  staging_read_only_probe:
+    migration_list: PASS_66_ALIGNED
+    default_dry_run: PLAN_CANONICAL_ONLY
+    include_all_dry_run: PLAN_CANONICAL_ONLY
+    writes: 0
+  sandbox_rehearsal:
+    compatibility_rebuild: SUCCESS_301_BATCHES
+    compatibility_history_count: 67
+    compatibility_schema_diff: PASS_ZERO
+    canonical_cleanup_rebuild: SUCCESS_235_BATCHES
+    final_history: [20260807120000]
+    final_schema_diff: PASS_ZERO
+  gate_b_authorized: false
+  next_task: "Repeat CX-0194 Gate B Preflight through the approved adapter."
+  rollback: "Remove the adapter/manifest/ADR and evidence; Sandbox is canonical-only and Staging was untouched."
 ```

@@ -50,14 +50,14 @@ CX-0193 用同一候选 Baseline 在隔离 Sandbox 完成两次独立空环境�
 | data_loss_risk | 无 | 历史溯源丢失风险 | 低（新项目） | 视策略而定 |
 | CLI_support | `migration repair --status applied <version>` | `repair --status reverted`（不删除行） | `db push` 新项目 | `db push --dry-run` 观察 |
 | rollback | 移除 marker 行 | 恢复原 history（不可逆风险） | 废弃新项目 | 视策略而定 |
-| 与未来 db push 兼容 | 是 | 是 | 是 | 是 |
+| 与未来 db push 兼容 | 仅通过 ADR-003 运行时 ledger adapter | 破坏历史，不采纳 | 是 | 需另行证明 |
 | auditability | 高 | 低 | 高 | 中 |
 | 操作复杂度 | 低 | 高 | 高 | 中 |
 
-**推荐：OPTION_A**（保留 66 条 Legacy History，用
-`supabase migration repair --status applied 20260807120000` 在 Staging 标记 Baseline 已应用；
-未来 `db push` 只推送 Baseline 之后的新迁移）。Gate B 执行前必须再次复核 no-production
-标记、CLI `--db-url` 目标身份与 dry-run。
+**修订后的推荐：OPTION_A + ADR-003 adapter**。保留 66 条 Legacy History，不把伪造的历史 SQL
+加入活动迁移链；所有远程 `migration list` / `db push --dry-run` 规划通过 ADR-003 的运行时临时
+ledger markers 完成。CX-0195 只证明该规划策略，不授权执行 `migration repair`、Schema 写入或
+Migration History 写入。Gate B 执行前必须重新完成完整 Preflight，并单独取得写入批准。
 
 ## 7. 回滚策略
 

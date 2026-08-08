@@ -1,0 +1,1898 @@
+{
+  "overall": "SUCCESS",
+  "gate": [],
+  "baseline_hash": "bc410be88ea0c8f2438167fbda8fcca49136cce262602fd1a73608c5c7000f75",
+  "baseline_files": [
+    "20260807120000_pg_os_canonical_baseline.sql"
+  ],
+  "history_versions": [
+    "20260807120000"
+  ],
+  "migrations_applied": 1,
+  "batches": [
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 0,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1914
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 1,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1864
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 2,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 7461
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 3,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4864
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 4,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3354
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 5,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4689
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 6,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 6212
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 7,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4468
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 8,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3442
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 9,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1414
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 10,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1960
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 11,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1932
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 12,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1878
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 13,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4218
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 14,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2373
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 15,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1395
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 16,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2089
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 17,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2950
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 18,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5842
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 19,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5000
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 20,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2144
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 21,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2145
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 22,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1696
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 23,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2482
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 24,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1644
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 25,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1742
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 26,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2930
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 27,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2522
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 28,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1387
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 29,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1741
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 30,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1589
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 31,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2361
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 32,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2355
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 33,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 6472
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 34,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 10953
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 35,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2279
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 36,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1441
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 37,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5915
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 38,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1948
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 39,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5448
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 40,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 9585
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 41,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 8443
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 42,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 6720
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 43,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2623
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 44,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5005
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 45,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5107
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 46,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2554
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 47,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3359
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 48,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1845
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 49,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1676
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 50,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3265
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 51,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2396
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 52,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2539
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 53,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1994
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 54,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 22880
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 55,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4008
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 56,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4773
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 57,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4718
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 58,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2734
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 59,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1670
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 60,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1699
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 61,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1489
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 62,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1536
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 63,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 27605
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 64,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2132
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 65,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2262
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 66,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1420
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 67,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3743
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 68,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2017
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 69,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1818
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 70,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1608
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 71,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1949
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 72,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 14708
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 73,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3043
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 74,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3857
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 75,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1535
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 76,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3077
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 77,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1465
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 78,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1402
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 79,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1985
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 80,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3350
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 81,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3204
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 82,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3094
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 83,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2120
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 84,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1711
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 85,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3507
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 86,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1609
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 87,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3542
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 88,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1814
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 89,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 15279
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 90,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1904
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 91,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2312
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 92,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2758
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 93,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1734
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 94,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2110
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 95,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1679
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 96,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5823
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 97,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5555
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 98,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 7863
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 99,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3746
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 100,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 25275
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 101,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 14284
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 102,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1958
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 103,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1600
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 104,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1593
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 105,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2805
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 106,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1562
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 107,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3293
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 108,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3475
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 109,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2035
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 110,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1369
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 111,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3614
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 112,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2558
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 113,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2241
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 114,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2815
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 115,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1566
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 116,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1351
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 117,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1411
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 118,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2393
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 119,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 19627
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 120,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3387
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 121,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1649
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 122,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2381
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 123,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1588
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 124,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2013
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 125,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3497
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 126,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2176
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 127,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2807
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 128,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1411
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 129,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1562
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 130,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3348
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 131,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1996
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 132,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1376
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 133,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1955
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 134,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1665
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 135,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5761
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 136,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2234
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 137,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1492
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 138,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2444
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 139,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1485
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 140,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 7382
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 141,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1926
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 142,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5111
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 143,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 9853
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 144,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2848
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 145,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1534
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 146,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1681
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 147,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2108
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 148,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4384
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 149,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4591
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 150,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 13556
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 151,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2050
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 152,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2145
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 153,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 10271
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 154,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5601
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 155,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2969
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 156,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1640
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 157,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1740
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 158,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1444
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 159,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3675
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 160,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3072
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 161,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3584
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 162,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3481
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 163,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5223
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 164,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2378
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 165,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 7043
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 166,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 7884
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 167,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 8038
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 168,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4588
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 169,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2222
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 170,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1636
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 171,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1654
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 172,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2157
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 173,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 7864
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 174,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 9011
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 175,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1855
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 176,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1422
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 177,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2665
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 178,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 14436
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 179,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3997
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 180,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2037
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 181,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2156
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 182,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4302
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 183,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 10074
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 184,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 22902
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 185,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4811
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 186,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3583
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 187,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2353
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 188,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2054
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 189,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3375
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 190,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2251
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 191,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4609
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 192,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 23758
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 193,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 10751
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 194,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4984
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 195,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2593
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 196,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4711
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 197,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3687
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 198,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2866
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 199,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5120
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 200,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2356
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 201,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2504
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 202,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4765
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 203,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2561
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 204,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1433
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 205,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 7167
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 206,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4000
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 207,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2720
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 208,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2190
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 209,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2151
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 210,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2888
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 211,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5018
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 212,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 7556
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 213,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2458
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 214,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2049
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 215,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2046
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 216,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2607731
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 217,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3636
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 218,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1482
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 219,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1446
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 220,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1390
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 221,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1423
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 222,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 5216
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 223,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 8431
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 224,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2192
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 225,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3075
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 226,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1472
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 227,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2630
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 228,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1541
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 229,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 3188
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 230,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 1739
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 231,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2971
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 232,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 4625
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 233,
+      "status": "success",
+      "error": null,
+      "statement_count": 25,
+      "duration_ms": 2337
+    },
+    {
+      "file": "20260807120000_pg_os_canonical_baseline.sql",
+      "index": 234,
+      "status": "success",
+      "error": null,
+      "statement_count": 12,
+      "duration_ms": 7374
+    }
+  ],
+  "reset": true,
+  "staging_source_write": false,
+  "started_at": "2026-08-08T15:39:22.236Z",
+  "finished_at": "2026-08-08T15:39:22.240Z"
+}

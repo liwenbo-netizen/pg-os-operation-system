@@ -1,11 +1,11 @@
-task_id: CX-0194-GATE-B-PREFLIGHT
-captured_at: "2026-08-08T21:41:19+08:00"
-result: BLOCKED
-task_type: PRE_FLIGHT_SAFETY_GATE
+task_id: CX-0195
+captured_at: "2026-08-08T23:52:00+08:00"
+result: COMPLETED
+task_type: "READ_ONLY_ANALYSIS + DISPOSABLE_SANDBOX_REHEARSAL"
 gate_a: COMPLETED
 gate_b: NOT_STARTED
-gate_b_preflight: BLOCKED
-authoritative_current_state: CX-0194_GATE_B_PREFLIGHT_BLOCKED
+gate_b_preflight: READY_TO_REPEAT
+authoritative_current_state: CX_0195_COMPLETED_GATE_B_NOT_AUTHORIZED
 baseline_reconstructability: PROVEN
 canonical_baseline:
   version: "20260807120000"
@@ -65,8 +65,8 @@ baseline_migration_generated: false
 production_accessed: false
 remote_staging_accessed: true
 remote_access_mode: READ_ONLY_SELECT
-sandbox_writes: 0
-project_classification:
+sandbox_writes: "COMPATIBILITY_REHEARSAL_AND_CANONICAL_CLEANUP"
+historical_cx0194_project_classification:
   staging_source:
     project_ref_env: SUPABASE_STAGING_PROJECT_REF
     host_env: SUPABASE_STAGING_DB_HOST
@@ -234,7 +234,7 @@ historical_gate_a_next_task:
   status: NOT_STARTED
   reason: "Staging migration history adoption (recommended OPTION_A) requires explicit Gate B approval."
 
-current_result:
+historical_cx0194_current_result:
   verified_at: "2026-08-08T21:41:19+08:00"
   status: BLOCKED
   canonical_migration:
@@ -290,3 +290,62 @@ current_result:
     allowed_scope: READ_ONLY_ANALYSIS_AND_SANDBOX_REHEARSAL_ONLY
   rollback: "Revert the local Preflight commit. No remote database rollback is required because all remote operations were read-only."
   final_decision: "CX-0194 GATE B READINESS: BLOCKED"
+
+cx0195_current_result:
+  status: COMPLETED
+  product_code_changed: false
+  runtime_application_behavior_changed: false
+  dependencies_changed: false
+  canonical_migration_changed: false
+  staging:
+    mode: READ_ONLY_CLI_PLANNING_AND_SCHEMA_CATALOG
+    schema_writes: 0
+    data_writes: 0
+    migration_history_writes: 0
+  compatibility_strategy:
+    name: runtime_ledger_marker_adapter
+    legacy_versions: "000-065"
+    marker_count: 66
+    marker_sql: "select 1;"
+    markers_enter_active_chain: false
+    repository_active_chain: canonical_only
+    canonical_version: "20260807120000"
+    raw_db_push: FAIL_CLOSED
+  remote_read_only_probe:
+    migration_list: PASS_66_ALIGNED
+    default_dry_run: PLAN_CANONICAL_ONLY
+    include_all_dry_run: PLAN_CANONICAL_ONLY
+  sandbox_rehearsal:
+    target_identity_verified: true
+    compatibility_rebuild: SUCCESS_301_BATCHES
+    compatibility_history_count: 67
+    compatibility_schema_diff: PASS_ZERO_178_TABLES
+    cleanup_rebuild: SUCCESS_235_BATCHES
+    history_cleanup: PASS_ONLY_20260807120000_REMAINS
+    final_schema_diff: PASS_ZERO_178_TABLES
+  validation:
+    cx0195_focused: "PASS - 2 files / 10 tests"
+    cx0195_remote_read_only: PASS
+    cx0194_preflight_local: PASS
+    secret_hygiene: "PASS - final scan 394 text files"
+    full_tests: "PASS - 76 files / 447 tests"
+    lint_typecheck: PASS
+    build: PASS_WITH_EXISTING_BUNDLE_WARNING
+    phase18b: "PASS - 50.8s"
+    new_failures: []
+  evidence:
+    - docs/adr/ADR-003-runtime-migration-ledger-compatibility-adapter.md
+    - supabase/migration-history-compatibility/manifest.json
+    - .codex/validation/CX-0195.md
+    - .codex/schema-baseline/cx0195-compatibility-rebuild.json
+    - .codex/schema-baseline/cx0195-compatibility-diff.json
+    - .codex/schema-baseline/cx0195-sandbox-cleanup.json
+    - .codex/schema-baseline/cx0195-sandbox-history-cleanup.json
+    - .codex/schema-baseline/cx0195-final-diff.json
+  gate_b:
+    authorized: false
+    status: NOT_STARTED
+  next_required_task:
+    id: CX-0194-GATE-B-PREFLIGHT-REPEAT
+    scope: "Repeat full Preflight through the approved adapter; no Staging write without separate approval."
+  rollback: "Revert CX-0195 files. Sandbox is canonical-only; Staging needs no rollback because it was not written."
