@@ -100,8 +100,10 @@ Repository discovery is complete and CX-0004 restored the local CI baseline to g
   checks through the approved CX-0195 adapter.
 - Remote Legacy versions `000`-`065` aligned; both dry-run modes planned only the Canonical Baseline.
 - Current normalized Schema Diff matched 178 tables with zero missing, extra or unexplained differences.
-- Full local validation passed after the cross-platform repair: 76 test files / 448 tests, Typecheck, Build and Phase18B.
+- Full local validation passed after the cross-platform repairs: 76 test files / 449 tests, Typecheck, Build and Phase18B.
 - Staging Schema, data and Migration History writes: zero.
 - GitHub run `31266562871` exposed mixed Windows/LF frozen-hash drift. SQL is now forced to LF, manifests
   freeze Git-canonical hashes, and SQL semantics remain unchanged.
+- GitHub run `31267260465` then exposed a Windows-only temporary cleanup path check. The guard now uses
+  platform-native resolved parent/name checks and still fails closed for unsafe targets.
 - Current status: `REMEDIATED_PENDING_GITHUB_CI`; Gate B remains not started and unauthorized.

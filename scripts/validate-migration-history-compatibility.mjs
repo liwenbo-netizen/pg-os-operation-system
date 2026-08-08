@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   loadCompatibilityManifest,
+  isSafeTemporaryProjectPath,
   materializeCompatibilityMigrations,
   parseDryRunPlan,
   parseMigrationList,
@@ -26,7 +27,7 @@ function materializeTemporaryProject(root, manifest) {
 
 function cleanupTemporaryProject(base, temporaryRoot) {
   const resolved = resolve(temporaryRoot);
-  if (!resolved.startsWith(`${base}\\`) || !resolved.split(/[\\/]/).at(-1)?.startsWith("pgos-cx0195-")) {
+  if (!isSafeTemporaryProjectPath(base, resolved)) {
     throw new Error("Refused unsafe CX-0195 temporary cleanup target.");
   }
   rmSync(resolved, { recursive: true, force: true });

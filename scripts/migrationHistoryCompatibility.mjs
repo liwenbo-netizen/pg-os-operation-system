@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
 export const compatibilityManifestPath = "supabase/migration-history-compatibility/manifest.json";
 
@@ -10,6 +10,12 @@ export function legacyLedgerVersions(first = 0, last = 65) {
 
 export function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+export function isSafeTemporaryProjectPath(base, temporaryRoot) {
+  const resolvedBase = resolve(base);
+  const resolvedTarget = resolve(temporaryRoot);
+  return dirname(resolvedTarget) === resolvedBase && basename(resolvedTarget).startsWith("pgos-cx0195-");
 }
 
 export function validateCompatibilityManifest(manifest) {

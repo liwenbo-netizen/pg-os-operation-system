@@ -365,15 +365,15 @@ cx0194_gate_b_preflight_repeat:
     data_writes: 0
     migration_history_writes: 0
   validation:
-    full_tests: "PASS - 76 files / 448 tests"
+    full_tests: "PASS - 76 files / 449 tests"
     lint_typecheck: PASS
     build: PASS_WITH_EXISTING_BUNDLE_WARNING
-    phase18b: "PASS - 67.7s"
+    phase18b: "PASS - 96.0s"
     secret_hygiene: "PASS - final scan 397 text files"
   github_ci:
-    failed_run: 31266562871
-    failure: "Frozen hashes reflected mixed Windows line endings while Linux checked out LF."
-    remediation: "SQL LF enforced; Git-canonical hashes frozen; regression test added."
+    failed_runs: [31266562871, 31267260465]
+    failure: "Frozen SQL hashes reflected mixed Windows line endings; temporary cleanup used a Windows-only separator check."
+    remediation: "SQL LF enforced with Git-canonical hashes; cleanup validates platform-native resolved parent/name; both have regression tests."
     status: PENDING_REMEDIATION_PUSH
   gate_b:
     authorized: false

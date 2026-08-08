@@ -35,11 +35,11 @@ data changes, or Migration History writes.
 | `npm run validate:cx0194:preflight` | PASS |
 | `npm run validate:cx0195:remote-read-only` | PASS; 66 aligned; canonical-only plan; writes 0 |
 | `npm run db:schema:diff -- --output=.codex/schema-baseline/cx0194-gate-b-preflight-repeat-diff.json` | PASS; 178 matched; zero difference |
-| `npm test` | PASS; 76 files / 448 tests |
+| `npm test` | PASS; 76 files / 449 tests |
 | `npm run lint` | PASS |
 | `npm run build` | PASS with existing 1,294.31 kB bundle warning |
 | `npm run validate:secret-hygiene` | PASS; final scan 397 text files |
-| `npm run validate:phase18b` | PASS; 67.7s |
+| `npm run validate:phase18b` | PASS; 96.0s |
 
 ## Minimal Validation Command Repair
 
@@ -55,7 +55,11 @@ captured from a Windows working tree containing 154 CRLF lines, while Git stores
 same SQL as LF. The committed SQL content and Schema semantics were unchanged. The repository now enforces
 LF for SQL through `.gitattributes`; the Baseline and compatibility manifests freeze the Git-canonical LF
 hashes; and a regression test rejects carriage returns in the Canonical and candidate SQL. Local Preflight,
-448 tests, Build, Phase18B, and the remote read-only canonical-only plan all pass after the repair.
+449 tests, Build, Phase18B, and the remote read-only canonical-only plan all pass after the repair.
+
+Run `31267260465` then passed the hash checks but exposed a second portability defect: the temporary-project
+cleanup guard used a Windows-only backslash prefix. The guard now uses platform-native resolved parent and
+basename checks, still rejects parent, unrelated and nested paths, and has direct regression coverage.
 
 ## Remaining Gate
 

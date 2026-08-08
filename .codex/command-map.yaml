@@ -139,7 +139,7 @@ commands:
     source: "CX-0194 Gate B Preflight Repeat"
     safety: "Local aggregate plus remote read-only migration planning and catalog comparison. No migration repair, real db push, or remote write."
     result: REMEDIATED_PENDING_GITHUB_CI
-    evidence: "Canonical-only plan, 66 aligned Legacy versions, 178 matched tables, zero differences, Staging writes 0. GitHub run 31266562871 exposed Windows/Linux SQL line-ending hash drift; SQL is now LF-canonical with updated frozen hashes and a regression test."
+    evidence: "Canonical-only plan, 66 aligned Legacy versions, 178 matched tables, zero differences, Staging writes 0. Runs 31266562871 and 31267260465 exposed SQL line-ending and temporary-cleanup separator portability defects; both now have cross-platform regression coverage."
 
   baseline_environment_check:
     command: "npm run validate:baseline-environment"

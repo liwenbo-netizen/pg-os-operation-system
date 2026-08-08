@@ -103,9 +103,11 @@ unauthorized.
 
 CX-0194 Gate B Preflight Repeat passed locally and remotely read-only on 2026-08-09. Migration safety,
 Canonical chain, reconstructability, 66-version adapter alignment, both dry-run modes, 178-table Schema Diff,
-448 tests, Typecheck, Build and Phase18B are green. The first pushed Preflight failed GitHub CI because its
+449 tests, Typecheck, Build and Phase18B are green. The first pushed Preflight failed GitHub CI because its
 frozen SQL hashes reflected mixed Windows line endings; SQL is now LF-canonical and the manifests and
-regression coverage are aligned without changing SQL semantics. Staging writes remain zero. Status is
+regression coverage are aligned without changing SQL semantics. A second run exposed a Windows-only
+temporary-cleanup path check; it now uses resolved platform-native parent/name validation without weakening
+the deletion boundary. Staging writes remain zero. Status is
 `REMEDIATED_PENDING_GITHUB_CI`; after the remediation commit passes CI, CX-0194 may move to
 `READY_FOR_GATE_B_APPROVAL`, but Gate B itself still requires separate explicit authorization.
 

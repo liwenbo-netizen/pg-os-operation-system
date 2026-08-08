@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   legacyLedgerVersions,
+  isSafeTemporaryProjectPath,
   materializeCompatibilityMigrations,
   parseDryRunPlan,
   parseMigrationList,
@@ -40,6 +41,14 @@ function alignedRows() {
 }
 
 describe("migration history compatibility adapter", () => {
+  it("accepts only a named direct child of the platform temporary directory for cleanup", () => {
+    const base = join(tmpdir(), "pgos-cx0195-safety-base");
+    expect(isSafeTemporaryProjectPath(base, join(base, "pgos-cx0195-safe"))).toBe(true);
+    expect(isSafeTemporaryProjectPath(base, base)).toBe(false);
+    expect(isSafeTemporaryProjectPath(base, join(base, "unrelated"))).toBe(false);
+    expect(isSafeTemporaryProjectPath(base, join(base, "nested", "pgos-cx0195-unsafe"))).toBe(false);
+  });
+
   it("defines exactly the preserved 000-065 remote ledger range", () => {
     const versions = legacyLedgerVersions();
     expect(versions).toHaveLength(66);
