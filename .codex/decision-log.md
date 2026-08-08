@@ -375,12 +375,13 @@ decision:
   id: CX-0194-GATE-B-PREFLIGHT-CI-PORTABILITY
   issue: "GitHub run 31266562871 rejected Canonical hashes captured from mixed Windows line endings."
   root_cause: "Git stores SQL as LF while the prior manifest froze mixed Windows line endings; after that repair, run 31267260465 exposed a Windows-only temporary cleanup separator check."
-  result: REMEDIATED_PENDING_GITHUB_CI
+  result: READY_FOR_GATE_B_APPROVAL
   sql_semantics_changed: false
   database_changed: false
   migration_executed: false
   resolution: "Enforce LF for SQL, freeze Git-canonical hashes, add a carriage-return test, and make cleanup validation use platform-native resolved parent/name checks."
   local_validation: "PASS - Preflight, 76 files / 449 tests, Typecheck, Build, Phase18B, remote read-only plan"
+  github_ci: "PASS - run 31267604809 - commit 6de8788"
   staging_writes: 0
   gate_b_authorized: false
   rollback: "Revert the LF attribute, hash metadata, regression test, and evidence commit; no database rollback required."

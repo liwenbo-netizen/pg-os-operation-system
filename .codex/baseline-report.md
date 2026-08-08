@@ -106,4 +106,5 @@ Repository discovery is complete and CX-0004 restored the local CI baseline to g
   freeze Git-canonical hashes, and SQL semantics remain unchanged.
 - GitHub run `31267260465` then exposed a Windows-only temporary cleanup path check. The guard now uses
   platform-native resolved parent/name checks and still fails closed for unsafe targets.
-- Current status: `REMEDIATED_PENDING_GITHUB_CI`; Gate B remains not started and unauthorized.
+- GitHub Actions run `31267604809` passed for commit `6de8788`.
+- Current status: `READY_FOR_GATE_B_APPROVAL`; Gate B remains not started and unauthorized.

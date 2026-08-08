@@ -138,8 +138,8 @@ commands:
     command: "npm run validate:cx0194:preflight && npm run validate:cx0195:remote-read-only && npm run db:schema:diff -- --output=<evidence>.json"
     source: "CX-0194 Gate B Preflight Repeat"
     safety: "Local aggregate plus remote read-only migration planning and catalog comparison. No migration repair, real db push, or remote write."
-    result: REMEDIATED_PENDING_GITHUB_CI
-    evidence: "Canonical-only plan, 66 aligned Legacy versions, 178 matched tables, zero differences, Staging writes 0. Runs 31266562871 and 31267260465 exposed SQL line-ending and temporary-cleanup separator portability defects; both now have cross-platform regression coverage."
+    result: PASS
+    evidence: "Canonical-only plan, 66 aligned Legacy versions, 178 matched tables, zero differences, Staging writes 0. Runs 31266562871 and 31267260465 exposed and drove regression coverage for two portability defects; remediation run 31267604809 passed."
 
   baseline_environment_check:
     command: "npm run validate:baseline-environment"

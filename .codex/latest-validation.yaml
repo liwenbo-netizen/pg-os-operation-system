@@ -1,11 +1,11 @@
 task_id: CX-0194-GATE-B-PREFLIGHT-REPEAT
-captured_at: "2026-08-09T00:11:29+08:00"
-result: REMEDIATED_PENDING_GITHUB_CI
+captured_at: "2026-08-09T00:44:06+08:00"
+result: READY_FOR_GATE_B_APPROVAL
 task_type: PRE_FLIGHT_SAFETY_GATE
 gate_a: COMPLETED
 gate_b: NOT_STARTED
-gate_b_preflight: REMEDIATED_PENDING_GITHUB_CI
-authoritative_current_state: CX_0194_GATE_B_PREFLIGHT_CI_PORTABILITY_REMEDIATED_PENDING_GITHUB_CI
+gate_b_preflight: PASSED
+authoritative_current_state: CX_0194_READY_FOR_GATE_B_APPROVAL
 baseline_reconstructability: PROVEN
 canonical_baseline:
   version: "20260807120000"
@@ -351,7 +351,7 @@ cx0195_current_result:
   rollback: "Revert CX-0195 files. Sandbox is canonical-only; Staging needs no rollback because it was not written."
 
 cx0194_gate_b_preflight_repeat:
-  status: REMEDIATED_PENDING_GITHUB_CI
+  status: READY_FOR_GATE_B_APPROVAL
   verified_at: "2026-08-09T00:11:29+08:00"
   safety_mode: NO_PRODUCTION_PROJECT
   migration_safety: PASS
@@ -374,8 +374,11 @@ cx0194_gate_b_preflight_repeat:
     failed_runs: [31266562871, 31267260465]
     failure: "Frozen SQL hashes reflected mixed Windows line endings; temporary cleanup used a Windows-only separator check."
     remediation: "SQL LF enforced with Git-canonical hashes; cleanup validates platform-native resolved parent/name; both have regression tests."
-    status: PENDING_REMEDIATION_PUSH
+    successful_run: 31267604809
+    successful_commit: 6de8788
+    status: PASS
   gate_b:
     authorized: false
     status: NOT_STARTED
+  next_required_task: "Obtain separate explicit Gate B write approval; no database write is implied by Preflight readiness."
   rollback: "Revert Preflight evidence and package command wiring; Staging needs no rollback because it was not written."

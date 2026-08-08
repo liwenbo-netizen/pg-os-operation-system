@@ -1,7 +1,7 @@
 # CX-0194 Gate B Preflight Repeat
 
 - Captured: 2026-08-09 00:11 UTC+8
-- Result: `REMEDIATED_PENDING_GITHUB_CI`
+- Result: `READY_FOR_GATE_B_APPROVAL`
 - Task type: preflight safety gate
 - Gate A: completed
 - Gate B: not started and not authorized
@@ -63,9 +63,9 @@ basename checks, still rejects parent, unrelated and nested paths, and has direc
 
 ## Remaining Gate
 
-GitHub CI must pass for the remediation commit before CX-0194 may be marked
-`READY_FOR_GATE_B_APPROVAL`. Even after CI passes, Gate B still requires a separate explicit approval before
-any Staging Migration History write.
+GitHub Actions run `31267604809` passed for commit `6de8788`. CX-0194 is now
+`READY_FOR_GATE_B_APPROVAL`, but Gate B still requires a separate explicit approval before any Staging
+Migration History write.
 
 ## Rollback
 
