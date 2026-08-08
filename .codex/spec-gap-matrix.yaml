@@ -202,7 +202,7 @@ codex_task_cards:
     status: BLOCKED
     gate_a: COMPLETED
     gate_b: NOT_STARTED
-    gate_b_preflight: READY_TO_REPEAT
+    gate_b_preflight: PASSED_PENDING_GITHUB_CI
     evidence:
       - "Canonical baseline 20260807120000 adopted from CX-0193 PROVEN candidate; manifest at supabase/baseline/manifest.yaml; semantic hash 59bfb9e7... matches canonical file."
       - "24 legacy migrations archived verbatim to supabase/migrations-legacy/pre-canonical-baseline (git 100% renames); validate:migration-chain protects the active chain."
@@ -212,6 +212,7 @@ codex_task_cards:
       - "2026-08-08 remote read-only normalized Schema Diff remains PASS: 178 matched tables and 0 unexplained differences."
       - "No remote schema, data, or migration-history write was executed. Gate B is not authorized until a preservation-compatible CLI/history strategy is proven by dry-run."
       - "CX-0195 proved the preservation-compatible runtime ledger adapter; CX-0194 remains BLOCKED until the complete Gate B Preflight is repeated and separately approved."
+      - "2026-08-09 repeat Preflight passed local safety, canonical-chain, compatibility, full regression and read-only remote checks; 178 tables matched with zero differences and Staging writes remained zero. GitHub CI is pending."
     rollback: "Revert the adoption commit or restore the legacy archive paths; sandbox is disposable; staging untouched."
   - id: CX-0195
     title: "Prove preservation-compatible migration history strategy"

@@ -345,3 +345,25 @@ decision:
   next_task: "Repeat CX-0194 Gate B Preflight through the approved adapter."
   rollback: "Remove the adapter/manifest/ADR and evidence; Sandbox is canonical-only and Staging was untouched."
 ```
+
+## CX-0194-GATE-B-PREFLIGHT-REPEAT
+
+```yaml
+decision:
+  id: CX-0194-GATE-B-PREFLIGHT-REPEAT
+  issue: "Repeat Gate B Preflight through the CX-0195 runtime ledger adapter."
+  result: PASSED_PENDING_GITHUB_CI
+  safety_mode: NO_PRODUCTION_PROJECT
+  migration_safety: PASS
+  canonical_chain: PASS
+  remote_history_alignment: PASS_66
+  dry_run_default: PLAN_CANONICAL_ONLY
+  dry_run_include_all: PLAN_CANONICAL_ONLY
+  schema_diff: PASS_ZERO_178_TABLES
+  full_tests: PASS_76_FILES_447_TESTS
+  phase18b: PASS
+  staging_writes: 0
+  gate_b_authorized: false
+  remaining_gate: GITHUB_CI
+  rollback: "Revert local Preflight evidence and package command wiring; no database rollback required."
+```

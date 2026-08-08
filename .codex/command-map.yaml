@@ -129,9 +129,17 @@ commands:
 
   migration_safety_gate:
     command: "npm run validate:migration-safety"
-    source: "CX-0190"
-    cx0190_result: BLOCKED
-    evidence: "The aggregate gate begins with a passing CLI check, then fails closed on the absent production Project Ref/Host denylist. CLI authentication and remote Migration History reads pass; dry run, schema diff, idempotency, rollback, and cleanup remain unverified."
+    source: "CX-0194 Gate B Preflight Repeat"
+    current_result: PASS
+    historical_cx0190_result: BLOCKED
+    evidence: "2026-08-09 repeat Preflight PASS. Environment-sensitive child commands load optional .env.migration.local while preserving injected CI variables; NO_PRODUCTION_PROJECT declaration is current and source writes are disabled."
+
+  cx0194_gate_b_preflight_repeat:
+    command: "npm run validate:cx0194:preflight && npm run validate:cx0195:remote-read-only && npm run db:schema:diff -- --output=<evidence>.json"
+    source: "CX-0194 Gate B Preflight Repeat"
+    safety: "Local aggregate plus remote read-only migration planning and catalog comparison. No migration repair, real db push, or remote write."
+    result: PASSED_PENDING_GITHUB_CI
+    evidence: "Canonical-only plan, 66 aligned Legacy versions, 178 matched tables, zero differences, Staging writes 0."
 
   baseline_environment_check:
     command: "npm run validate:baseline-environment"

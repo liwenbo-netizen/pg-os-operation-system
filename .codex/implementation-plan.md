@@ -101,6 +101,12 @@ compatibility chain, produced a zero-diff Schema, and was then restored to canon
 CX-0194 Gate B Preflight through the approved adapter; actual Gate B writes remain separately blocked and
 unauthorized.
 
+CX-0194 Gate B Preflight Repeat passed locally and remotely read-only on 2026-08-09. Migration safety,
+Canonical chain, reconstructability, 66-version adapter alignment, both dry-run modes, 178-table Schema Diff,
+447 tests, Typecheck, Build and Phase18B are green. Staging writes remain zero. Status is
+`PASSED_PENDING_GITHUB_CI`; after the pushed commit passes CI, CX-0194 may move to
+`READY_FOR_GATE_B_APPROVAL`, but Gate B itself still requires separate explicit authorization.
+
 ## Immediate Sequencing Rule
 
 CX-0004 is complete. It proved that the existing six `Opportunity.stage` values already matched both SQL constraints and repaired only the validator's parsing scope. `npm run validate:domain-schema` and `npm run validate:phase18b` now pass.

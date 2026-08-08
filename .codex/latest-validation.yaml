@@ -1,11 +1,11 @@
-task_id: CX-0195
-captured_at: "2026-08-08T23:52:00+08:00"
-result: COMPLETED
-task_type: "READ_ONLY_ANALYSIS + DISPOSABLE_SANDBOX_REHEARSAL"
+task_id: CX-0194-GATE-B-PREFLIGHT-REPEAT
+captured_at: "2026-08-09T00:11:29+08:00"
+result: PASSED_PENDING_GITHUB_CI
+task_type: PRE_FLIGHT_SAFETY_GATE
 gate_a: COMPLETED
 gate_b: NOT_STARTED
-gate_b_preflight: READY_TO_REPEAT
-authoritative_current_state: CX_0195_COMPLETED_GATE_B_NOT_AUTHORIZED
+gate_b_preflight: PASSED_PENDING_GITHUB_CI
+authoritative_current_state: CX_0194_GATE_B_PREFLIGHT_REPEAT_PENDING_GITHUB_CI
 baseline_reconstructability: PROVEN
 canonical_baseline:
   version: "20260807120000"
@@ -349,3 +349,29 @@ cx0195_current_result:
     id: CX-0194-GATE-B-PREFLIGHT-REPEAT
     scope: "Repeat full Preflight through the approved adapter; no Staging write without separate approval."
   rollback: "Revert CX-0195 files. Sandbox is canonical-only; Staging needs no rollback because it was not written."
+
+cx0194_gate_b_preflight_repeat:
+  status: PASSED_PENDING_GITHUB_CI
+  verified_at: "2026-08-09T00:11:29+08:00"
+  safety_mode: NO_PRODUCTION_PROJECT
+  migration_safety: PASS
+  canonical_chain: PASS
+  remote_read_only:
+    legacy_versions_aligned: 66
+    default_dry_run: PLAN_CANONICAL_ONLY
+    include_all_dry_run: PLAN_CANONICAL_ONLY
+    schema_diff: PASS_ZERO_178_TABLES
+    schema_writes: 0
+    data_writes: 0
+    migration_history_writes: 0
+  validation:
+    full_tests: "PASS - 76 files / 447 tests"
+    lint_typecheck: PASS
+    build: PASS_WITH_EXISTING_BUNDLE_WARNING
+    phase18b: "PASS - 53.6s"
+    secret_hygiene: "PASS - final scan 396 text files"
+  github_ci: PENDING_PUSH
+  gate_b:
+    authorized: false
+    status: NOT_STARTED
+  rollback: "Revert Preflight evidence and package command wiring; Staging needs no rollback because it was not written."

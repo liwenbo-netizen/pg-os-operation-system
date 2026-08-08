@@ -1,0 +1,18 @@
+{
+  "matched_tables": 178,
+  "missing_tables": [],
+  "extra_tables": [],
+  "column_differences": [],
+  "constraint_differences": [],
+  "index_differences": [],
+  "rls_differences": [],
+  "policy_differences": [],
+  "trigger_differences": [],
+  "function_differences": [],
+  "view_differences": [],
+  "sequence_differences": [],
+  "extension_differences": [],
+  "grant_differences": [],
+  "excluded_differences": [],
+  "unexplained_differences": []
+}

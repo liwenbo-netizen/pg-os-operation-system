@@ -93,3 +93,13 @@ Repository discovery is complete and CX-0004 restored the local CI baseline to g
 - Staging Schema, data, and Migration History writes in CX-0195: zero.
 - CX-0195 is complete. CX-0194 Gate B remains unauthorized; the next permitted action is a repeated
   Preflight through the approved adapter.
+
+## Current Baseline Addendum — CX-0194 Gate B Preflight Repeat (2026-08-09)
+
+- The repeated Preflight passed migration safety, canonical chain, reconstructability and Workflow Machine
+  checks through the approved CX-0195 adapter.
+- Remote Legacy versions `000`-`065` aligned; both dry-run modes planned only the Canonical Baseline.
+- Current normalized Schema Diff matched 178 tables with zero missing, extra or unexplained differences.
+- Full local validation passed: 76 test files / 447 tests, Typecheck, Build and Phase18B.
+- Staging Schema, data and Migration History writes: zero.
+- Current status: `PASSED_PENDING_GITHUB_CI`; Gate B remains not started and unauthorized.
